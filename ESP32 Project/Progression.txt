@@ -1,0 +1,105 @@
+Step Procedures
+1. INSERT COIN (XX) # to Start Cleaning Process
+2. Please put your Headgear inside the Chamber (after Putting the Coin)
+3.1a Please Close the Chamber, Don't remove the Headgear. (Open Enclosure Door) (if the Headgear is Detected and the Enclosure Door is Closed goto 4.1a)
+3.2a Quote from step 2. (Loops 2 and 3 if the Headgear is not Detected and the Door is Closed)
+(4. is just Preparation for the System todo and Measure if the Liquid is enough for the System Humifier)
+4.1a Please Wait... > goto 4.1b 
+4.1b Preparaing... (0% > 100%) goto 4.1c 
+4.1c Starting... goto 5.1a
+5.1a Progression: 0% > 100% > goto 6.1 (there is "Abort" Button from the Top Right of the Screen, if the Button is Pressed goto 5.1b)
+5.1b Notice: Are you sure you want to Abort the Operation? # You can't Refund your Money. 
+5.1bOption YES > goto "6.2" 
+5.1bOption NO > Resume the Progression > goto 5.1a with the Progress
+6.1 Operation Complete (Selecta Music) > goto 7
+6.2 Operation Cancelled (Doom Music) > goto 7
+7. You may now Retrieve your Headgear.
+8.1a Thank you for your Patronage! # We Hope to See you Again! :D (after Getting the Headgear)
+8.1b back to "1"
+
+
+
+             +----------------------------------+
+             |        1. IDLE / WELCOME         |
+             |   "Insert Coin (₱XX) to Start"   |
+             | *the total Amount of Coin can be |
+             Change using the ESP32_DEBUG_SERVER*
+             +----------------------------------+
+                              │
+             +----------------------------------+
+             |  Coin Inserted (₱YY out of ₱XX)  |
+             | *Note every Coin will do a Buzz* |
+             +----------------------------------+
+                              │
+                              ▼
+             +----------------------------------+
+             |          2. INSTRUCTION          |
+             |  "Please Place Headgear Inside"  |
+             +----------------------------------+
+                              │
+                              ▼
+             +----------------------------------+
+             |         3. DOOR & SENSOR         |
+             |   "Close Chamber Door to Start"  |
+             +----------------------------------+
+                              │
+                              ▼
+                 /-------------------------\
+                <    Is Door Closed AND     >
+                <    Headgear Detected?     >
+                 \-------------------------/
+                     │                 │
+                [ will Buzz after detection ]
+                     │                 │
+                  ( YES )            ( NO )
+                     │                 │
+                     ▼                 ▼
+  +--------------------------+    +--------------------------+
+  |  4. SYSTEM PREPARATION   |    |    3.2a NOTICE PROMPT    |
+  |  - Check Alcohol Level   |    | "Please insert headgear  |
+  |  - Display 0% -> 100%    |    |  and close the door!"    |
+  +--------------------------+    +--------------------------+
+                    │                    │
+                    ▼                    └──► (Loop to Step 3)
+           +----------------------------------+
+           |      5.1a SANITIZING PROCESS     |
+           |     - UV Light ON / OFF          |
+           | *UV Lights will go ON for 1 Mins |
+           |   and OFF for 1 Mins to avoid    |
+           |   Burning the UV Lights          |
+           |     - Humidifier ON              |
+           |     - Progress 0% -> 100%        |
+           | *the Duration of how long it is  |
+           can Be Change in ESP32_DEBUG_SERVER*
+           |  - [ABORT] Button the Top Right  |
+           +----------------------------------+
+                    │              │
+         [ Reaches 100% ]      [ ABORT Pressed ]
+                    │              │
+            [ will Buzz after detection ]
+                    │              │
+                    ▼              ▼
+       +-------------------+    +--------------------------+
+       | 6.1 COMPLETED     |    |     5.1b CONFIRMATION    |
+       |   *Double Buzz    |    | "Abort? No Refund Given" |
+       | - Relays OFF      |    |  [ YES ]        [ NO ]   |
+       | - Unlock Door     |    +--------------------------+
+       +-------------------+       │                │
+                   │         [ will Buzz after detection ]
+                   │               │                │
+                   │            ( YES )           ( NO )
+                   │               │                │
+                   │               ▼                │
+                   │      +-------------------+     │
+                   │      | 6.2 CANCELLED     |     │
+                   │      |  *Single Buzz     |
+                   │      | - Relays OFF      |     │
+                   │      | - Unlock Door     |     │
+                   │      +-------------------+     │
+                   │               │                │
+                   ▼               ▼                │
+             +----------------------------------+   │
+             |   7. RETRIEVE YOUR HEADGEAR      |   │
+             +----------------------------------+   │
+                                                    │
+                  ( Loops back to continue 5.1a ) ◄─┘
