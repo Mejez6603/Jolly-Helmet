@@ -4,6 +4,13 @@
 #include <TFT_eSPI.h>
 #include "Shared_Common.h"
 
+// -------------------------------------------------------------
+// NODE C1 - BOX 2 (HEATER) TERMINAL
+// Same role and identical pin mapping as Node A1 - only the
+// device ID differs, so it can run as an independent second unit
+// alongside Box 1 off the same Master.
+// -------------------------------------------------------------
+
 // Hardware Pin Mappings
 #define PIN_COIN_SIGNAL 23
 #define PIN_BUZZER      21
@@ -97,7 +104,7 @@ void IRAM_ATTR onCoinChangeISR() {
     unsigned long nowMillis = millis();
     if (isMuted || (nowMillis < muteUntilMillis)) {
         pulseInProgress = false;
-        ets_printf("[A1] COIN IGNORED: EMI Noise Lockout Active!\n");
+        ets_printf("[C1] COIN IGNORED: EMI Noise Lockout Active!\n");
         return;
     }
 
@@ -113,7 +120,7 @@ void IRAM_ATTR onCoinChangeISR() {
         fallTimeMicros = nowMicros;
         pulseInProgress = true;
         isrPulseCount++;
-        ets_printf("[A1] ISR PULSE DETECTED! Raw count: %u\n", isrPulseCount);
+        ets_printf("[C1] ISR PULSE DETECTED! Raw count: %u\n", isrPulseCount);
     } else if (pinVal == HIGH && pulseInProgress) {
         pulseInProgress = false;
     }
@@ -121,7 +128,7 @@ void IRAM_ATTR onCoinChangeISR() {
 
 // Active Buzzer Hardware Control (Immediate Pin Drive)
 void triggerBuzzerHardware(uint32_t durationMs) {
-    Serial.printf("[A1 ACTION] >>> SOUNDING BUZZER ON PIN 21 FOR %d ms!\n", durationMs);
+    Serial.printf("[C1 ACTION] >>> SOUNDING BUZZER ON PIN 21 FOR %d ms!\n", durationMs);
     digitalWrite(PIN_BUZZER, HIGH);
     delay(durationMs);
     digitalWrite(PIN_BUZZER, LOW);
@@ -143,7 +150,7 @@ void parseDisplayPayload(const char* payload) {
     char* token = strtok_r(buf, "|", &outerSave);
     if (token && token[0] == '#') {
         currentBgColor = parseHexColor(token);
-        Serial.printf("[A1 ACTION] Setting TFT Screen Background: %s\n", token);
+        Serial.printf("[C1 ACTION] Setting TFT Screen Background: %s\n", token);
         token = strtok_r(NULL, "|", &outerSave);
     }
 
@@ -255,17 +262,17 @@ void onDataRecv(const esp_now_recv_info_t *info, const uint8_t *incomingData, in
         memcpy(&cmd, incomingData, sizeof(CommandPacket));
         if (cmd.commandID != CMD_SYNC_VARS) {
             // CMD_SYNC_VARS fires every 1s regardless of activity - logging it drowns out real events
-            Serial.printf("\n[A1 RX] >>> INCOMING COMMAND PACKET! Target: %d | Opcode: %d | Param: %d\n",
+            Serial.printf("\n[C1 RX] >>> INCOMING COMMAND PACKET! Target: %d | Opcode: %d | Param: %d\n",
                           cmd.targetDeviceID, cmd.commandID, cmd.param16);
         }
 
-        if (cmd.targetDeviceID == DEVICE_A1 || cmd.targetDeviceID == 0) {
+        if (cmd.targetDeviceID == DEVICE_C1 || cmd.targetDeviceID == 0) {
             if (cmd.commandID == CMD_BUZZER) {
                 triggerBuzzerHardware(cmd.param16 > 0 ? cmd.param16 : 250);
             } else if (cmd.commandID == CMD_SET_COLOR) {
                 currentBgColor = cmd.param16;
                 screenNeedsRefresh = true;
-                Serial.printf("[A1 ACTION] Updated background color to 0x%04X\n", currentBgColor);
+                Serial.printf("[C1 ACTION] Updated background color to 0x%04X\n", currentBgColor);
             } else if (cmd.commandID == CMD_STEP_RENDER) {
                 parseDisplayPayload(cmd.payloadStr);
             } else if (cmd.commandID == CMD_RESET_COINS) {
@@ -274,12 +281,12 @@ void onDataRecv(const esp_now_recv_info_t *info, const uint8_t *incomingData, in
                 interrupts();
                 confirmedPulses = 0;
                 screenNeedsRefresh = true;
-                Serial.println("[A1 ACTION] Coin pulses reset to 0.");
+                Serial.println("[C1 ACTION] Coin pulses reset to 0.");
             } else if (cmd.commandID == CMD_MUTE_COINS) {
                 isMuted = true;
                 muteUntilMillis = millis() + (cmd.param16 > 0 ? cmd.param16 : 250);
                 pulseInProgress = false;
-                Serial.printf("[A1 LOCKOUT] Muting coin slot for %u ms (Relay EMI protection)\n", cmd.param16 > 0 ? cmd.param16 : 250);
+                Serial.printf("[C1 LOCKOUT] Muting coin slot for %u ms (Relay EMI protection)\n", cmd.param16 > 0 ? cmd.param16 : 250);
             } else if (cmd.commandID == CMD_SYNC_VARS) {
                 currentActiveTimer = cmd.param16;
             }
@@ -291,7 +298,7 @@ void setup() {
     Serial.begin(115200);
     delay(100);
     Serial.println("\n=======================================================");
-    Serial.println("   NODE A1: USER TERMINAL INITIALIZING (CORE 3.3.7)");
+    Serial.println("   NODE C1: BOX 2 (HEATER) TERMINAL INITIALIZING (CORE 3.3.7)");
     Serial.println("=======================================================");
 
     pinMode(PIN_BUZZER, OUTPUT);
@@ -299,29 +306,29 @@ void setup() {
 
     pinMode(PIN_COIN_SIGNAL, INPUT_PULLUP);
     attachInterrupt(digitalPinToInterrupt(PIN_COIN_SIGNAL), onCoinChangeISR, FALLING);
-    Serial.println("[A1] COIN SLOT: Pin 23 configured with INPUT_PULLUP and FALLING ISR.");
+    Serial.println("[C1] COIN SLOT: Pin 23 configured with INPUT_PULLUP and FALLING ISR.");
 
     // Initialize ST7789 TFT on SPI (CS=15, DC=2, RST=4, SCK=14, MOSI=13)
     tft.init();
-    tft.setRotation(1); // 320x240 Landscape
-    uint16_t calData[5] = {327, 3421, 285, 3510, 1};
+    tft.setRotation(3); // 320x240 Landscape, flipped 180 - this unit's TFT is mounted upside down
+    // Real calibration captured at rotation 3 via ESP32_C1_CALIBRATE.ino's touch_calibrate routine.
+    uint16_t calData[5] = {408, 3325, 535, 3051, 7};
     tft.setTouch(calData);
-    Serial.println("[A1] DISPLAY: ST7789 initialized with touch calibration matrix.");
-    
-    // Boot Layout (Step 0)
-    // Matches the Master's SCREEN_WELCOME exactly, so if this device boots before
-    // the Master (and misses the one-shot initial broadcast) it shows something
-    // correct instead of a stale screen with a button the Master doesn't handle.
+    Serial.println("[C1] DISPLAY: ST7789 initialized with touch calibration matrix.");
+
+    // Boot Layout (Step 0) - matches the Master's Box 2 SCREEN_WELCOME, so if this device
+    // boots before the Master (and misses the one-shot initial broadcast) it shows
+    // something correct instead of a stale/dead screen.
     parseDisplayPayload("#000080|ST,10,15,#FFFFFF,WELCOME|TT,10,60,#FFFF00,Please insert a COIN to Proceed,500");
 
     // Force Wi-Fi Channel 1 & ESP-NOW
     WiFi.mode(WIFI_STA);
     WiFi.disconnect();
     esp_wifi_set_channel(ESPNOW_WIFI_CHANNEL, WIFI_SECOND_CHAN_NONE);
-    Serial.println("[A1] WIFI: Forced STA mode on Channel 1.");
+    Serial.println("[C1] WIFI: Forced STA mode on Channel 1.");
 
     if (esp_now_init() != ESP_OK) {
-        Serial.println("[A1] ESP-NOW: Initialization Failed!");
+        Serial.println("[C1] ESP-NOW: Initialization Failed!");
         return;
     }
     esp_now_register_send_cb(onDataSent);
@@ -333,7 +340,7 @@ void setup() {
     peerInfo.channel = ESPNOW_WIFI_CHANNEL;
     peerInfo.encrypt = false;
     esp_now_add_peer(&peerInfo);
-    Serial.println("[A1] ESP-NOW: Broadcast peer registered on Channel 1.");
+    Serial.println("[C1] ESP-NOW: Broadcast peer registered on Channel 1.");
 
     triggerBuzzerHardware(100);
 }
@@ -353,7 +360,7 @@ void loop() {
 
     if (pulses != confirmedPulses) {
         confirmedPulses = pulses;
-        Serial.printf("[A1] COIN VALIDATED: +1 Pulse. Total Pulses sent to Master: %u\n", confirmedPulses);
+        Serial.printf("[C1] COIN VALIDATED: +1 Pulse. Total Pulses sent to Master: %u\n", confirmedPulses);
         triggerBuzzerHardware(60);
     }
 
@@ -366,7 +373,7 @@ void loop() {
         currentTouchY = ty;
         isTouchPressed = true;
 
-        Serial.printf("[A1] TOUCH EVENT: Screen Tapped at Raw X: %d, Y: %d\n", tx, ty);
+        Serial.printf("[C1] TOUCH EVENT: Screen Tapped at Raw X: %d, Y: %d\n", tx, ty);
         tft.fillCircle(tx, ty, 2, TFT_RED);
         tft.drawCircle(tx, ty, 6, TFT_WHITE);
 
@@ -374,10 +381,10 @@ void loop() {
             for (uint8_t i = 0; i < btnItemCount; i++) {
                 if (tx >= btnItems[i].x && tx <= (btnItems[i].x + btnItems[i].w) &&
                     ty >= btnItems[i].y && ty <= (btnItems[i].y + btnItems[i].h)) {
-                    
+
                     lastTouchTime = currentMillis;
                     triggerBuzzerHardware(80);
-                    Serial.printf("[A1] TOUCH MAPPED: Screen Button Hit -> Target Action: %s\n", btnItems[i].action);
+                    Serial.printf("[C1] TOUCH MAPPED: Screen Button Hit -> Target Action: %s\n", btnItems[i].action);
 
                     CommandPacket pkt;
                     memset(&pkt, 0, sizeof(CommandPacket));
@@ -435,7 +442,7 @@ void loop() {
 
         TelemetryPacket packet;
         memset(&packet, 0, sizeof(TelemetryPacket));
-        packet.deviceID     = DEVICE_A1;
+        packet.deviceID     = DEVICE_C1;
         packet.pulseCount   = confirmedPulses;
         packet.touchX       = currentTouchX;
         packet.touchY       = currentTouchY;
