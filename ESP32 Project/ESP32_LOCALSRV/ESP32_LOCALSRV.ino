@@ -23,24 +23,18 @@ AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
 Preferences    prefs;
 
-uint16_t secondsPerCoin = 20;
-
-MachineState currentMachineState = STATE_IDLE;
-uint16_t     stepRemainingSec    = 0; // countdown used by STATE_FINISH only
-uint32_t     activeTimer         = 0;
-uint32_t     lastKnownPulsesA1   = 0;
-
-uint8_t  conditionHoldTicks = 0; // generic ">2 second" debounce counter, reset on relevant state entry
-uint16_t uvBlinkTicks       = 0; // 1Hz ticks since last UV toggle during STATE_CLEANING
-bool     uvBlinkState       = false; // true = UV currently ON
-bool     sensorsWasClosed   = false; // edge-detect for the "closed without helmet" retry nudge in STATE_SENSORS
-bool     retrieveConfirmed  = false; // true once helmet has been taken out; now waiting for door to CLOSE
-
-// A2's solenoid locks are enough to visually glitch A1's TFT (EMI/brownout, not a firmware
-// bug - see PROJECT_HANDOFF.md gotcha #4). Since the machine itself keeps working fine, the
-// pragmatic fix is cosmetic: force A1 to repaint its current screen shortly after every A2
-// relay actuation. 0 = no repaint pending.
-unsigned long a1RedrawAtMillis = 0;
+// Box 1's entire state machine (STATE_IDLE...STATE_FINISH, relay control, coin processing,
+// touch-action handling, AUTO_CALL) now runs on Node S3A, not here - see ESP32_S3A.ino. Local
+// Server just listens to S3A's BoxStatusPacket broadcast (nodeS3AStatus below) for dashboard
+// display, and no longer drives A1/A2 directly for Box 1's automated cycle. Manual relay/
+// buzzer testing from the dashboard still talks to A1/A2 directly, unchanged - that's an
+// independent bench-testing path, separate from the automated cycle.
+BoxStatusPacket nodeS3AStatus;
+uint32_t lastKnownB1SessionSeq = 0;
+bool     b1SessionSeqInitialized = false; // avoids recording a phantom "new session" using
+                                           // stale data on Local Server's very first packet
+uint32_t lastKnownPulsesA1 = 0; // stats-only pulse counter - independent of S3A's own copy,
+                                 // which drives the actual cycle now
 
 TelemetryPacket nodeA1_Data;
 TelemetryPacket nodeA2_Data;
@@ -49,68 +43,94 @@ unsigned long lastSeenA1 = 0;
 unsigned long lastSeenA2 = 0;
 unsigned long lastSeenACS = 0;
 unsigned long lastOneSecTick = 0;
+bool acsWasOnline = false; // edge-detect so a (re)connecting ACS always gets a fresh config push
 
 // -------------------------------------------------------------
-// Box 2 (Heater) - independent second unit (Nodes C1/C2) mirroring Box 1's cycle, sharing
-// this same Master. Master-local only (Shared_Common.h doesn't need to know about this -
-// C1/C2 just receive rendered screen strings and relay commands like A1/A2 do).
+// Box 2's entire state machine now runs on Node S3C, not here - see ESP32_S3C.ino, and the
+// Box2State enum in Shared_Common.h (shared, unlike before, since S3C now needs it too).
+// Local Server just listens to S3C's BoxStatusPacket broadcast (nodeS3CStatus below) for
+// dashboard display, mirroring nodeS3AStatus above. Manual C2 relay testing from the
+// dashboard still talks to C1/C2 directly - independent bench-testing path, unchanged.
 // -------------------------------------------------------------
-enum Box2State : uint8_t {
-    B2_STATE_IDLE           = 0, // Step 0: Welcome, waiting for coin
-    B2_STATE_INSTRUCTIONS   = 1, // Step 1: waiting for Enclosure door OPEN
-    B2_STATE_SENSORS        = 2, // Step 2: waiting for door CLOSED + helmet detected
-    B2_STATE_HEATING        = 3, // Step 3: Heater + Fan active
-    B2_STATE_ABORT_CONFIRM  = 4, // Step 3b: user-initiated abort confirmation dialog
-    B2_STATE_RETRIEVE       = 5, // Step 4: waiting for door OPEN + helmet removed, then CLOSED again
-    B2_STATE_FINISH         = 6, // Step 5: thank-you screen, then loops back to Step 0
-    B2_STATE_PAUSED_SAFETY  = 7  // Mid-heating safety breach (unexpected door/helmet violation)
-};
+BoxStatusPacket nodeS3CStatus;
+uint32_t lastKnownB2SessionSeq = 0;
+bool     b2SessionSeqInitialized = false; // same first-packet-skip guard as b1SessionSeqInitialized
 
-Box2State box2CurrentState     = B2_STATE_IDLE;
-uint16_t  box2StepRemainingSec = 0;
-uint32_t  box2ActiveTimer      = 0;
-uint32_t  lastKnownPulsesC1    = 0;
-
-uint8_t box2ConditionHoldTicks = 0;
-bool    box2SensorsWasClosed   = false;
-bool    box2RetrieveConfirmed  = false;
-
-uint32_t box2SessionStartMillis  = 0;
-uint32_t box2SessionCoinsAtStart = 0;
-
-// Same cosmetic EMI-glitch fix as A1's a1RedrawAtMillis, applied to C1's TFT.
-unsigned long c1RedrawAtMillis = 0;
+uint32_t lastKnownPulsesC1 = 0; // stats-only pulse counter - independent of S3C's own copy,
+                                 // which drives the actual cycle now
 
 TelemetryPacket nodeC1_Data;
 TelemetryPacket nodeC2_Data;
 unsigned long lastSeenC1 = 0;
 unsigned long lastSeenC2 = 0;
+unsigned long lastSeenS3A = 0; // Box 1's Internal Server Management
+unsigned long lastSeenS3C = 0; // Box 2's Internal Server Management
 
 // CommandPacket carries no "who sent this" field, only "who it's addressed to" - so a touch
 // action from A1 and one from C1 look identical except for the sender's MAC. Master learns
-// each terminal's MAC from its own periodic telemetry (which does carry a deviceID), then
-// uses that to route CMD_TOUCH_ACTION to the correct box's state machine.
-uint8_t macA1[6] = {0}; bool macA1Known = false;
-uint8_t macC1[6] = {0}; bool macC1Known = false;
+// each node's MAC from its own periodic telemetry (which does carry a deviceID). Originally
+// just A1/C1 (for touch-action routing); now also used to send outgoing commands as unicast
+// instead of broadcast, once a node's MAC is known - see sendEspNowCmdDirect(). Indexed by
+// DeviceID (index 0/DEVICE_SERVER unused).
+uint8_t knownMac[8][6] = {0};
+bool    macKnown[8]    = {false};
 
 // -------------------------------------------------------------
 // Alcohol Tank (Humidifier Container) Calibration - ultrasonic distance, sensor-to-liquid.
-// Tank is 9cm(H) x 15cm(L) x 8cm(W). Measured against the real unit.
+// Tank is 9cm(H) x 15cm(L) x 8cm(W). Measured against the real unit. The physical geometry
+// (EMPTY/FULL cm, dimensions) stays fixed - it's tied to the actual tank measurements, not
+// something a technician retunes day-of. alcLowPct/alcHighPct ARE dynamic (dashboard-
+// editable) since those are the operational "when to refill" judgment calls - but they are
+// now OWNED and NVS-persisted by Node S3A (Box 1's Internal Server Management), not here.
+// These two vars are just Master's in-RAM cache of S3A's last broadcast; a dashboard save
+// forwards the new value to S3A (pushS3AConfig()) rather than writing it to Local Server's
+// own NVS, so a Local Server replacement/reflash doesn't lose Box 1's saved thresholds.
 // -------------------------------------------------------------
 const float ALC_DIST_EMPTY_CM = 9.0f; // sensor reading when tank is empty (0%) - tank's full height
 const float ALC_DIST_FULL_CM  = 2.0f; // sensor reading when tank is at the safe fill limit (100%)
-const float ALC_LOW_PCT       = 10.0f; // at/below this -> go refill
-const float ALC_HIGH_PCT      = 90.0f; // at/above this -> refill complete
-const float HUMID_LENGTH_CM   = 15.0f;
-const float HUMID_WIDTH_CM    = 8.0f;
-const float HUMID_HEIGHT_CM   = 9.0f;
+float alcLowPct  = 10.0f; // at/below this -> go refill (dynamic, owned by S3A)
+float alcHighPct = 90.0f; // at/above this -> refill complete (dynamic, owned by S3A)
 
-bool humidifierRefillRequested = false; // edge-trigger latch, so the ACS request only fires once per low event
+// AUTO_CALL (requesting an ACS delivery when Box 1's tank runs low), and the tank-geometry
+// constants (HUMID_LENGTH/WIDTH/HEIGHT_CM) it needed, now live entirely on S3A along with
+// the rest of Box 1's state machine - humidifierRefillRequested's edge-latch moved there too.
+
+// Helmet-detection distance cutoffs - dynamic. A2 and C2 have different sensor mounting
+// geometry (side-facing vs top-down), so they're tuned independently. Both are now
+// owned/persisted by each box's own Internal Server Management node (S3A for A2, S3C for
+// C2) - these two vars are just Master's in-RAM cache of the latest broadcast value.
+float helmetDetectDistA2 = 15.0f;
+float helmetDetectDistC2 = 30.0f;
+
+// Box 2's own coin-economy settings, owned/persisted by S3C (Box2ConfigPacket) - independent
+// of Box 1's secondsPerCoin/minCoinsRequired below, same reasoning as helmetDetectDistC2 above.
+uint16_t secondsPerCoinC2   = 20;
+uint32_t minCoinsRequiredC2 = 0;
+uint32_t maxCoinsAllowedC2  = 0; // Box 2 only - coins beyond this stop adding cycle time (0 = no cap)
+// Added 2026-09-14, Box 2 only - fraction of Heating's actual duration that Cool Down runs for.
+// Dashboard constrains this to 1/0.75/0.5/0.25 (Full/Three Quarter/Half/Quarter).
+float    coolDownRatioC2    = 1.0f;
+
+// ACS's own thresholds/ratios, mirrored here so they can be edited from the dashboard and
+// persisted in Master's NVS; pushed to ACS over ESP-NOW via CMD_SET_CONFIG since ACS's
+// automatic refill sequence runs autonomously and needs its own local copy to act on.
+float acsLowDistCm    = 11.0f;
+float acsFullDistCm   = 3.3f;
+float mixRatioAlcohol = 0.70f;
+float mixRatioWater   = 0.28f;
+float mixRatioScented = 0.02f;
 
 // -------------------------------------------------------------
 // Statistics & Financial Analytics (persisted to NVS)
 // -------------------------------------------------------------
-const float COIN_VALUE_PESO = 1.0f; // 1 pulse = PHP 1
+float coinValuePeso = 1.0f; // PHP per pulse (dynamic)
+// Box 1's coin-economy settings, owned/persisted by S3A - these are just Master's in-RAM
+// cache of S3A's last broadcast (Box1ConfigPacket). Box 2's own independent copies
+// (secondsPerCoinC2/minCoinsRequiredC2, cached from S3C) live near helmetDetectDistC2 above.
+uint16_t secondsPerCoin   = 20;
+uint32_t minCoinsRequired = 0; // coins required before STATE_INSERT_COIN lets a session through (0 = any coin works) - cached from S3A
+uint32_t maxCoinsAllowed  = 0; // Added 2026-09-13, mirrors Box 2's maxCoinsAllowedC2 - coins beyond
+                                // this make STATE_TIME_ALLOT reject the selection (0 = no cap) - cached from S3A
 #define STAT_HISTORY_SIZE 10
 
 struct SessionRecord {
@@ -125,91 +145,71 @@ uint32_t statTotalSessions    = 0;
 uint32_t statTotalCoins       = 0;
 uint32_t statTotalDurationSec = 0;
 
-uint32_t sessionStartMillis  = 0;
-uint32_t sessionCoinsAtStart = 0;
+// Box 1's SCREEN_* constants now live on S3A (ESP32_S3A.ino) - it owns A1's rendering now.
+// Box 2's SCREEN_C1_* constants now live on S3C (ESP32_S3C.ino) - it owns C1's rendering now.
 
-// -------------------------------------------------------------
-// Hardcoded Step Screens (tokenized: BG|ST,x,y,col,text|TT,...|BTN,...)
-// -------------------------------------------------------------
-const char* SCREEN_WELCOME =
-    "#000080|ST,10,15,#FFFFFF,WELCOME|TT,10,60,#FFFF00,Please insert a COIN to Proceed,500";
-
-const char* SCREEN_INSTRUCTIONS =
-    "#000080|TT,10,8,#FFFFFF,COIN:{COINS} TIME:{TIMER}s,0|ST,10,70,#FFFFFF,Please Open the|ST,10,95,#FFFFFF,Enclosure Door to Proceed";
-
-const char* SCREEN_CHECKING =
-    "#000080|TT,10,8,#FFFFFF,COIN:{COINS} TIME:{TIMER}s,0|ST,10,80,#FFFFFF,Please Wait...|ST,10,105,#FFFF00,Checking Alcohol Status";
-
-const char* SCREEN_REFILLING =
-    "#000080|TT,10,8,#FFFFFF,COIN:{COINS} TIME:{TIMER}s,0|ST,10,80,#FFFFFF,Please Wait...|ST,10,105,#FFFF00,Refilling Alcohol...";
-
-const char* SCREEN_SENSORS =
-    "#000080|TT,10,8,#FFFFFF,COIN:{COINS} TIME:{TIMER}s,0|ST,10,70,#FFFFFF,Please Place the|ST,10,95,#FFFFFF,Headgear Inside the Chamber";
-
-const char* SCREEN_SENSORS_RETRY =
-    "#800000|ST,10,15,#FFFFFF,No Headgear Detected!|ST,10,50,#FFFFFF,Please Open the Door|ST,10,75,#FFFFFF,and Insert your Headgear";
-
-const char* SCREEN_CLEANING =
-    "#000080|TT,10,8,#FFFFFF,COIN:{COINS} TIME:{TIMER}s,0|ST,10,70,#FFFFFF,Cleaning in Progress...|TT,10,95,#00FF00,Time: {TIMER}s,0|BTN,215,8,95,32,#ef4444,ABORT,ABORT";
-
-const char* SCREEN_ABORT_CONFIRM =
-    "#7f1d1d|ST,10,15,#FFFFFF,Abort Operation?|ST,10,45,#FFFFFF,Coins Won't Be Refunded|BTN,20,100,130,45,#dc2626,ABORT,ABORT_YES|BTN,170,100,130,45,#334155,RESUME,ABORT_NO";
-
-const char* SCREEN_SAFETY_PAUSE =
-    "#800000|ST,10,20,#FFFFFF,SAFETY PAUSE|TT,10,60,#FFFF00,CLOSE DOOR / REPLACE HELMET,300";
-
-const char* SCREEN_RETRIEVE =
-    "#006400|TT,10,8,#FFFFFF,COIN:{COINS} TIME:{TIMER}s,0|ST,10,70,#FFFFFF,Please Open the|ST,10,95,#FFFFFF,Enclosure Door to Retrieve";
-
-const char* SCREEN_RETRIEVE_CLOSE =
-    "#006400|ST,10,20,#FFFFFF,Headgear Retrieved!|ST,10,50,#FFFFFF,Please Close the Door|ST,10,75,#FFFFFF,to Finish";
-
-const char* SCREEN_FINISH =
-    "#006400|ST,10,20,#FFFFFF,Thank you for your|ST,10,45,#FFFFFF,Patronage!|ST,10,80,#FFFF00,We Hope to See you Again! :D";
-
-// -------------------------------------------------------------
-// Box 2 (Heater) Screens - mirrors Box 1's, per the "HEATER PROGRAM FLOW" diagram (no
-// alcohol check/refill steps; Heater+Fan instead of Mist+UV during the active phase).
-// -------------------------------------------------------------
-const char* SCREEN_C1_WELCOME =
-    "#000080|ST,10,15,#FFFFFF,WELCOME|TT,10,60,#FFFF00,Please insert a COIN to Proceed,500";
-
-const char* SCREEN_C1_INSTRUCTIONS =
-    "#000080|TT,10,8,#FFFFFF,COIN:{COINS} TIME:{TIMER}s,0|ST,10,70,#FFFFFF,Please Open the|ST,10,95,#FFFFFF,Enclosure Door to Proceed";
-
-const char* SCREEN_C1_SENSORS =
-    "#000080|TT,10,8,#FFFFFF,COIN:{COINS} TIME:{TIMER}s,0|ST,10,70,#FFFFFF,Please Place the|ST,10,95,#FFFFFF,Headgear Inside the Chamber";
-
-const char* SCREEN_C1_SENSORS_RETRY =
-    "#800000|ST,10,15,#FFFFFF,No Headgear Detected!|ST,10,50,#FFFFFF,Please Open the Door|ST,10,75,#FFFFFF,and Insert your Headgear";
-
-const char* SCREEN_C1_HEATING =
-    "#000080|TT,10,8,#FFFFFF,COIN:{COINS} TIME:{TIMER}s,0|ST,10,70,#FFFFFF,Heating in Progress...|TT,10,95,#00FF00,Time: {TIMER}s,0|BTN,215,8,95,32,#ef4444,ABORT,ABORT";
-
-const char* SCREEN_C1_ABORT_CONFIRM =
-    "#7f1d1d|ST,10,15,#FFFFFF,Abort Operation?|ST,10,45,#FFFFFF,Coins Won't Be Refunded|BTN,20,100,130,45,#dc2626,ABORT,ABORT_YES|BTN,170,100,130,45,#334155,RESUME,ABORT_NO";
-
-const char* SCREEN_C1_SAFETY_PAUSE =
-    "#800000|ST,10,20,#FFFFFF,SAFETY PAUSE|TT,10,60,#FFFF00,CLOSE DOOR / REPLACE HELMET,300";
-
-const char* SCREEN_C1_RETRIEVE =
-    "#006400|TT,10,8,#FFFFFF,COIN:{COINS} TIME:{TIMER}s,0|ST,10,70,#FFFFFF,Please Open the|ST,10,95,#FFFFFF,Enclosure Door to Retrieve";
-
-const char* SCREEN_C1_RETRIEVE_CLOSE =
-    "#006400|ST,10,20,#FFFFFF,Headgear Retrieved!|ST,10,50,#FFFFFF,Please Close the Door|ST,10,75,#FFFFFF,to Finish";
-
-const char* SCREEN_C1_FINISH =
-    "#006400|ST,10,20,#FFFFFF,Thank you for your|ST,10,45,#FFFFFF,Patronage!|ST,10,80,#FFFF00,We Hope to See you Again! :D";
+// Forward declaration - pushAcsConfig()/pushS3AConfig() below call this, but it's defined
+// further down the file. Arduino's auto-prototype generator doesn't reliably handle this
+// particular forward-reference (function with a default argument, called before its own
+// definition), so it needs an explicit prototype here rather than relying on that.
+void sendEspNowCmdDirect(uint8_t targetDev, uint8_t cmdId, uint8_t subIdx, uint16_t param, uint8_t state, const char* str = nullptr);
 
 void loadSettingsFromNVS() {
     prefs.begin("vending_nvs", false);
-    secondsPerCoin = prefs.getUShort("sec_coin", 20);
 
     statTotalSessions    = prefs.getUInt("st_sess", 0);
     statTotalCoins       = prefs.getUInt("st_coins", 0);
     statTotalDurationSec = prefs.getUInt("st_dur", 0);
 
+    coinValuePeso         = prefs.getFloat("coin_val", 1.0f);
+    lastKnownPulsesA1     = prefs.getUInt("last_a1_pulses", 0); // survives Local Server reboot - see onDataRecv's A1 branch
+    lastKnownPulsesC1     = prefs.getUInt("last_c1_pulses", 0); // same, for Box 2/C1
+    // secondsPerCoin/minCoinsRequired/alcLowPct/alcHighPct/helmetDetectDistA2 (Box 1) and
+    // secondsPerCoinC2/minCoinsRequiredC2/helmetDetectDistC2 (Box 2) are NOT loaded here -
+    // Node S3A and Node S3C own and persist their own box's settings now (each box's own
+    // Internal Server Management), so Local Server can be replaced/reflashed without losing
+    // them. They stay at their compiled-in defaults until each S3 node's first broadcast
+    // arrives (usually within ~1s of both being powered).
+    acsLowDistCm          = prefs.getFloat("acs_low_cm", 11.0f);
+    acsFullDistCm         = prefs.getFloat("acs_full_cm", 3.3f);
+    mixRatioAlcohol       = prefs.getFloat("mix_alc", 0.70f);
+    mixRatioWater         = prefs.getFloat("mix_wat", 0.28f);
+    mixRatioScented       = prefs.getFloat("mix_sce", 0.02f);
+
     Serial.println("[MASTER NVS] Settings & Statistics Loaded.");
+}
+
+// Sends ACS's current dynamic config over ESP-NOW - called on every dashboard save that
+// touches an ACS-relevant field, and once whenever ACS is (re)detected online, so a reboot
+// on either side still converges on the latest values within a few seconds.
+void pushAcsConfig() {
+    char payload[64];
+    snprintf(payload, sizeof(payload), "%.2f,%.2f,%.3f,%.3f,%.3f",
+             acsLowDistCm, acsFullDistCm, mixRatioAlcohol, mixRatioWater, mixRatioScented);
+    sendEspNowCmdDirect(DEVICE_ACS, CMD_SET_CONFIG, 0, 0, 0, payload);
+    Serial.printf("[MASTER CONFIG] Pushed ACS config: %s\n", payload);
+}
+
+// Pushes a dashboard-driven edit to S3A (Box 1's Internal Server Management), which owns
+// and persists these values now. S3A re-broadcasts immediately on receipt, so the in-RAM
+// cache updated alongside this call in the "save_config" handler gets confirmed within
+// a moment rather than waiting for S3A's next regular 1s broadcast.
+void pushS3AConfig() {
+    char payload[64];
+    snprintf(payload, sizeof(payload), "%.1f,%.1f,%.1f,%u,%u,%u",
+             helmetDetectDistA2, alcLowPct, alcHighPct, secondsPerCoin, minCoinsRequired, maxCoinsAllowed);
+    sendEspNowCmdDirect(DEVICE_S3A, CMD_SET_CONFIG, 0, 0, 0, payload);
+    Serial.printf("[MASTER CONFIG] Pushed S3A config: %s\n", payload);
+}
+
+// Pushes a dashboard-driven edit to S3C (Box 2's Internal Server Management), mirroring
+// pushS3AConfig() above - S3C owns and persists these values, independent of Box 1's.
+void pushS3CConfig() {
+    char payload[64];
+    snprintf(payload, sizeof(payload), "%.1f,%u,%u,%u,%.2f",
+             helmetDetectDistC2, secondsPerCoinC2, minCoinsRequiredC2, maxCoinsAllowedC2, coolDownRatioC2);
+    sendEspNowCmdDirect(DEVICE_S3C, CMD_SET_CONFIG, 0, 0, 0, payload);
+    Serial.printf("[MASTER CONFIG] Pushed S3C config: %s\n", payload);
 }
 
 // -------------------------------------------------------------
@@ -220,7 +220,19 @@ void onDataSent(const wifi_tx_info_t *tx_info, esp_now_send_status_t status) {
     Serial.printf("[MASTER ESP-NOW TX] Broadcast Status: %s\n", (status == ESP_NOW_SEND_SUCCESS) ? "SUCCESS (ACK)" : "FAIL (NO-ACK)");
 }
 
-void sendEspNowCmdDirect(uint8_t targetDev, uint8_t cmdId, uint8_t subIdx, uint16_t param, uint8_t state, const char* str = nullptr) {
+// Registers a specific peer MAC for unicast sending, if it isn't already registered.
+// Broadcast doesn't need this - BROADCAST_MAC is implicitly always sendable.
+void ensureUnicastPeer(const uint8_t* peerMac) {
+    if (esp_now_is_peer_exist(peerMac)) return;
+    esp_now_peer_info_t peerInfo;
+    memset(&peerInfo, 0, sizeof(esp_now_peer_info_t));
+    memcpy(peerInfo.peer_addr, peerMac, 6);
+    peerInfo.channel = ESPNOW_WIFI_CHANNEL;
+    peerInfo.encrypt = false;
+    esp_now_add_peer(&peerInfo);
+}
+
+void sendEspNowCmdDirect(uint8_t targetDev, uint8_t cmdId, uint8_t subIdx, uint16_t param, uint8_t state, const char* str) {
     CommandPacket cmd;
     memset(&cmd, 0, sizeof(CommandPacket));
     cmd.targetDeviceID = targetDev;
@@ -235,75 +247,37 @@ void sendEspNowCmdDirect(uint8_t targetDev, uint8_t cmdId, uint8_t subIdx, uint1
 
     const char* devName = (targetDev == DEVICE_A1) ? "Node A1" : (targetDev == DEVICE_A2) ? "Node A2" :
                           (targetDev == DEVICE_ACS) ? "Node ACS" : (targetDev == DEVICE_C1) ? "Node C1" :
-                          (targetDev == DEVICE_C2) ? "Node C2" : "Broadcast";
-    Serial.printf("[MASTER ESP-NOW TX] >>> Sending Command Opcode %d to %s (Param: %d, State: %d)...\n", cmdId, devName, param, state);
+                          (targetDev == DEVICE_C2) ? "Node C2" : (targetDev == DEVICE_S3A) ? "Node S3A" :
+                          (targetDev == DEVICE_S3C) ? "Node S3C" : "Broadcast";
 
-    esp_err_t result = esp_now_send(BROADCAST_MAC, (uint8_t*)&cmd, sizeof(CommandPacket));
+    // Unicast once the target's MAC is known (learned from its own telemetry) - only that
+    // node's radio has to receive/process it, instead of every node on the mesh. Falls back
+    // to broadcast automatically until a MAC is learned (e.g. right after Master's own boot,
+    // before any node has sent its first telemetry packet yet).
+    bool haveUnicast = (targetDev < 8) && macKnown[targetDev];
+    const uint8_t* destMac = haveUnicast ? knownMac[targetDev] : BROADCAST_MAC;
+    if (haveUnicast) ensureUnicastPeer(destMac);
+
+    Serial.printf("[MASTER ESP-NOW TX] >>> Sending Command Opcode %d to %s (%s) (Param: %d, State: %d)...\n",
+                  cmdId, devName, haveUnicast ? "unicast" : "broadcast", param, state);
+
+    esp_err_t result = esp_now_send(destMac, (uint8_t*)&cmd, sizeof(CommandPacket));
     if (result != ESP_OK) {
         Serial.printf("[MASTER ESP-NOW TX] ERROR: Send failed with code %d\n", result);
     }
 }
 
-// Mutes A1's coin ISR for the EMI burst window and schedules a TFT repaint shortly after,
-// to paint over any visual glitch the solenoid/relay switching causes on A1's display.
-void muteA1AndScheduleRedraw() {
-    sendEspNowCmdDirect(DEVICE_A1, CMD_MUTE_COINS, 0, 250, 0); // 250ms EMI Lockout
-    a1RedrawAtMillis = millis() + 300; // let the switching transient settle, then force a clean repaint
-}
-
-void applyRelayBitmask(uint8_t mask) {
-    Serial.printf("[MASTER ACTUATION] Applying Relay Bitmask 0b%05b across Node A2.\n", mask);
-    muteA1AndScheduleRedraw();
-    for (uint8_t i = 0; i < 5; i++) {
-        uint8_t state = (mask >> i) & 0x01;
-        sendEspNowCmdDirect(DEVICE_A2, CMD_SET_RELAY, i, 0, state);
-    }
-}
-
-// Mist stays on for the whole cleaning step; UV follows uvBlinkState (60s on/off).
-void applyCleaningRelays() {
-    applyRelayBitmask(0b00001000 | (uvBlinkState ? 0b00010000 : 0b00000000));
-}
-
-// Same EMI-glitch cosmetic fix as muteA1AndScheduleRedraw(), for C1's TFT.
-void muteC1AndScheduleRedraw() {
-    sendEspNowCmdDirect(DEVICE_C1, CMD_MUTE_COINS, 0, 250, 0);
-    c1RedrawAtMillis = millis() + 300;
-}
-
-void applyC2RelayBitmask(uint8_t mask) {
-    Serial.printf("[MASTER ACTUATION] Applying Relay Bitmask 0b%06b across Node C2.\n", mask);
-    muteC1AndScheduleRedraw();
-    for (uint8_t i = 0; i < 6; i++) {
-        uint8_t state = (mask >> i) & 0x01;
-        sendEspNowCmdDirect(DEVICE_C2, CMD_SET_RELAY, i, 0, state);
-    }
-}
-
-// Heater + Fan both stay on for the whole heating step - no blink cycle needed (diagram
-// doesn't call for one, unlike Box 1's UV toggle).
-void applyC2HeatingRelays() {
-    applyC2RelayBitmask(0b101000); // bit3=Heater ON, bit5=Fan ON
-}
+// A2's manual relay testing from the dashboard still sends CMD_SET_RELAY directly (see the
+// "target == DEVICE_A2" branch in handleWebSocketMessage) - that's an independent bench-
+// testing path. The automated applyRelayBitmask()/applyCleaningRelays() that used to drive
+// A2 during Box 1's actual cycle now live on S3A, since it owns that cycle.
 
 // -------------------------------------------------------------
 // Sensor / Threshold Helpers
 // -------------------------------------------------------------
-bool helmetPresent() {
-    return (nodeA2_Data.usHelmetDistance > 0.0f && nodeA2_Data.usHelmetDistance < 15.0f);
-}
-
-bool enclosureClosed() {
-    return !nodeA2_Data.doorEnclosure;
-}
-
-bool box2HelmetPresent() {
-    return (nodeC2_Data.usHelmetDistance > 0.0f && nodeC2_Data.usHelmetDistance < 30.0f);
-}
-
-bool box2EnclosureClosed() {
-    return !nodeC2_Data.doorEnclosure;
-}
+// helmetPresent()/enclosureClosed() (Box 1) and their Box 2 equivalents removed - S3A/S3C
+// each compute handshakeValid themselves now and broadcast it directly (nodeS3AStatus.
+// handshakeValid / nodeS3CStatus.handshakeValid).
 
 const char* acsAutoStateName(uint8_t s) {
     switch (s) {
@@ -327,75 +301,39 @@ float alcoholPercent(float distCm) {
     return pct;
 }
 
-// How much mL the Humidifier Container needs to reach its safe fill line, same L*W*(H-dist)
-// math ACS uses for its own tanks.
-uint16_t humidifierVolumeNeededML(float distCm) {
-    float liquidHeight = HUMID_HEIGHT_CM - distCm;
-    if (liquidHeight < 0.0f) liquidHeight = 0.0f;
-    float remainML = HUMID_LENGTH_CM * HUMID_WIDTH_CM * liquidHeight;
-
-    float safeHeight = HUMID_HEIGHT_CM - ALC_DIST_FULL_CM;
-    float capacityML = HUMID_LENGTH_CM * HUMID_WIDTH_CM * safeHeight;
-
-    float needed = capacityML - remainML;
-    if (needed < 0.0f) needed = 0.0f;
-    if (needed > 65535.0f) needed = 65535.0f; // fits param16
-    return (uint16_t)needed;
-}
-
-// Maps the machine's current state back to whichever SCREEN_* is currently showing on A1,
-// for the post-solenoid repaint (a1RedrawAtMillis). Mirrors the two states with a
-// sub-variant driven by an edge-detect flag rather than the state alone.
-const char* screenForCurrentState() {
-    switch (currentMachineState) {
-        case STATE_IDLE:          return SCREEN_WELCOME;
-        case STATE_INSTRUCTIONS:  return SCREEN_INSTRUCTIONS;
-        case STATE_CHECKING:      return SCREEN_CHECKING;
-        case STATE_REFILLING:     return SCREEN_REFILLING;
-        case STATE_SENSORS:       return sensorsWasClosed ? SCREEN_SENSORS_RETRY : SCREEN_SENSORS;
-        case STATE_CLEANING:      return SCREEN_CLEANING;
-        case STATE_ABORT_CONFIRM: return SCREEN_ABORT_CONFIRM;
-        case STATE_PAUSED_SAFETY: return SCREEN_SAFETY_PAUSE;
-        case STATE_RETRIEVE:      return retrieveConfirmed ? SCREEN_RETRIEVE_CLOSE : SCREEN_RETRIEVE;
-        case STATE_FINISH:        return SCREEN_FINISH;
-        default:                  return SCREEN_WELCOME;
-    }
-}
+// humidifierVolumeNeededML() and screenForCurrentState() (Box 1) removed - AUTO_CALL and
+// A1's screen rendering both moved to S3A, which has its own copies of this math/logic.
 
 const char* stateName(MachineState s) {
     switch (s) {
-        case STATE_IDLE:          return "IDLE - Insert Coin";
-        case STATE_INSTRUCTIONS:  return "Open Enclosure Door";
-        case STATE_CHECKING:      return "Checking Alcohol Level";
-        case STATE_REFILLING:     return "Refilling Alcohol";
-        case STATE_SENSORS:       return "Place Headgear & Close Door";
-        case STATE_CLEANING:      return "Cleaning In Progress";
-        case STATE_ABORT_CONFIRM: return "Abort Confirmation";
-        case STATE_RETRIEVE:      return "Retrieve Headgear";
-        case STATE_FINISH:        return "Cycle Complete";
-        case STATE_PAUSED_SAFETY: return "Paused - Safety";
-        default:                  return "UNKNOWN";
+        case STATE_IDLE:           return "IDLE (superseded - see Taps)";
+        case STATE_INSTRUCTIONS:   return "Open Enclosure Door";
+        case STATE_CHECKING:       return "Checking Alcohol Level";
+        case STATE_REFILLING:      return "Refilling Alcohol";
+        case STATE_SENSORS:        return "Place Headgear & Close Door";
+        case STATE_CLEANING:       return "Cleaning In Progress";
+        case STATE_ABORT_CONFIRM:  return "Abort Confirmation";
+        case STATE_RETRIEVE:       return "Retrieve Headgear";
+        case STATE_FINISH:         return "Cycle Complete";
+        case STATE_PAUSED_SAFETY:  return "Paused - Safety";
+        // --- Added 2026-09-13 for the redesigned Steps 1-5, 11 customer flow ---
+        case STATE_TAPS:           return "Tap to Start";
+        case STATE_WELCOME:        return "Welcome";
+        case STATE_RATE_A:         return "Rating Helmet (Before)";
+        case STATE_TIME_ALLOT:     return "Picking Cleaning Time";
+        case STATE_INSERT_COIN:    return "Insert Coin";
+        case STATE_RATE_B:         return "Rating Helmet (After)";
+        case STATE_CANCEL_CONFIRM: return "Cancel Confirmation";
+        default:                   return "UNKNOWN";
     }
 }
 
-// Mirrors screenForCurrentState(), for Box 2 / C1's post-solenoid repaint.
-const char* screenForCurrentBox2State() {
-    switch (box2CurrentState) {
-        case B2_STATE_IDLE:          return SCREEN_C1_WELCOME;
-        case B2_STATE_INSTRUCTIONS:  return SCREEN_C1_INSTRUCTIONS;
-        case B2_STATE_SENSORS:       return box2SensorsWasClosed ? SCREEN_C1_SENSORS_RETRY : SCREEN_C1_SENSORS;
-        case B2_STATE_HEATING:       return SCREEN_C1_HEATING;
-        case B2_STATE_ABORT_CONFIRM: return SCREEN_C1_ABORT_CONFIRM;
-        case B2_STATE_PAUSED_SAFETY: return SCREEN_C1_SAFETY_PAUSE;
-        case B2_STATE_RETRIEVE:      return box2RetrieveConfirmed ? SCREEN_C1_RETRIEVE_CLOSE : SCREEN_C1_RETRIEVE;
-        case B2_STATE_FINISH:        return SCREEN_C1_FINISH;
-        default:                     return SCREEN_C1_WELCOME;
-    }
-}
+// screenForCurrentBox2State() (Box 2's post-solenoid repaint helper) removed - now lives on
+// S3C, which owns C1's rendering (mirrors screenForCurrentState()'s removal for Box 1/S3A).
 
 const char* box2StateName(Box2State s) {
     switch (s) {
-        case B2_STATE_IDLE:          return "IDLE - Insert Coin";
+        case B2_STATE_IDLE:          return "IDLE (superseded - see Taps)";
         case B2_STATE_INSTRUCTIONS:  return "Open Enclosure Door";
         case B2_STATE_SENSORS:       return "Place Headgear & Close Door";
         case B2_STATE_HEATING:       return "Heating In Progress";
@@ -403,18 +341,25 @@ const char* box2StateName(Box2State s) {
         case B2_STATE_RETRIEVE:      return "Retrieve Headgear";
         case B2_STATE_FINISH:        return "Cycle Complete";
         case B2_STATE_PAUSED_SAFETY: return "Paused - Safety";
+        // --- Added 2026-09-14 for the redesigned Steps 1-5, 10 customer flow ---
+        case B2_STATE_TAPS:           return "Tap to Start";
+        case B2_STATE_WELCOME:        return "Welcome";
+        case B2_STATE_RATE_A:         return "Rating Helmet (Before)";
+        case B2_STATE_TIME_ALLOT:     return "Picking Heat Time";
+        case B2_STATE_INSERT_COIN:    return "Insert Coin";
+        case B2_STATE_COOL_DOWN:      return "Cooling Down";
+        case B2_STATE_RATE_B:         return "Rating Helmet (After)";
+        case B2_STATE_CANCEL_CONFIRM: return "Cancel Confirmation";
         default:                     return "UNKNOWN";
     }
 }
 
-void recordCompletedSession() {
-    uint32_t durationSec = (millis() - sessionStartMillis) / 1000UL;
-    uint32_t coinsUsed = (lastKnownPulsesA1 >= sessionCoinsAtStart) ? (lastKnownPulsesA1 - sessionCoinsAtStart) : 0;
-    uint16_t durSec16 = (durationSec > 65535UL) ? 65535 : (uint16_t)durationSec;
-    uint16_t coins16  = (coinsUsed  > 65535UL) ? 65535 : (uint16_t)coinsUsed;
-
+// Both boxes' state machines (and the sessions they just finished) now run on S3A/S3C - this
+// just records what either one reported (via BoxStatusPacket) into Local Server's shared
+// stats (combined revenue dashboard, not split per-box - simplest option, easy to split later).
+void recordCompletedSession(uint16_t durSec16, uint16_t coins16) {
     statTotalSessions++;
-    statTotalDurationSec += durationSec;
+    statTotalDurationSec += durSec16;
     statHistory[statHistoryHead] = { durSec16, coins16 };
     statHistoryHead = (statHistoryHead + 1) % STAT_HISTORY_SIZE;
     if (statHistoryCount < STAT_HISTORY_SIZE) statHistoryCount++;
@@ -422,25 +367,6 @@ void recordCompletedSession() {
     prefs.putUInt("st_sess", statTotalSessions);
     prefs.putUInt("st_dur", statTotalDurationSec);
     Serial.printf("[MASTER STATS] Session #%d recorded: %ds, %d coins.\n", statTotalSessions, durSec16, coins16);
-}
-
-// Box 2 sessions feed the SAME shared stat counters/history as Box 1 (combined revenue
-// dashboard) rather than a separate per-box breakdown - simplest option, easy to split later.
-void recordCompletedBox2Session() {
-    uint32_t durationSec = (millis() - box2SessionStartMillis) / 1000UL;
-    uint32_t coinsUsed = (lastKnownPulsesC1 >= box2SessionCoinsAtStart) ? (lastKnownPulsesC1 - box2SessionCoinsAtStart) : 0;
-    uint16_t durSec16 = (durationSec > 65535UL) ? 65535 : (uint16_t)durationSec;
-    uint16_t coins16  = (coinsUsed  > 65535UL) ? 65535 : (uint16_t)coinsUsed;
-
-    statTotalSessions++;
-    statTotalDurationSec += durationSec;
-    statHistory[statHistoryHead] = { durSec16, coins16 };
-    statHistoryHead = (statHistoryHead + 1) % STAT_HISTORY_SIZE;
-    if (statHistoryCount < STAT_HISTORY_SIZE) statHistoryCount++;
-
-    prefs.putUInt("st_sess", statTotalSessions);
-    prefs.putUInt("st_dur", statTotalDurationSec);
-    Serial.printf("[MASTER STATS] Box 2 Session #%d recorded: %ds, %d coins.\n", statTotalSessions, durSec16, coins16);
 }
 
 // -------------------------------------------------------------
@@ -456,7 +382,7 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len) {
         char* msg = (char*)data;
 
         if (msg[0] == '{') {
-            StaticJsonDocument<768> doc;
+            StaticJsonDocument<1024> doc; // bumped from 768 to fit the "save_config" message's ~11 fields
             if (deserializeJson(doc, msg) == DeserializationError::Ok) {
                 // "target" messages (buzzer/color/relay) also carry a numeric "cmd" field, so
                 // "target" must be checked first - otherwise every one of them gets misrouted
@@ -469,7 +395,11 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len) {
                         sendEspNowCmdDirect(DEVICE_A1, cmdId, 0, doc["param"] | 0, 0);
                     } else if (target == DEVICE_A2) {
                         Serial.printf("[MASTER WS] Dispatching relay %d (State: %d) to Node A2...\n", doc["relayIdx"] | 0, doc["state"] | 0);
-                        muteA1AndScheduleRedraw();
+                        // Manual bench-testing path, independent of S3A's automated cycle.
+                        // Still mutes A1's coin ISR against the EMI burst; the TFT-repaint-
+                        // after-relay cosmetic fix doesn't apply here anymore since S3A (not
+                        // Local Server) owns A1's screen now.
+                        sendEspNowCmdDirect(DEVICE_A1, CMD_MUTE_COINS, 0, 250, 0);
                         sendEspNowCmdDirect(DEVICE_A2, CMD_SET_RELAY, doc["relayIdx"] | 0, 0, doc["state"] | 0);
                     } else if (target == DEVICE_ACS) {
                         Serial.printf("[MASTER WS] Dispatching relay %d (State: %d) to Node ACS...\n", doc["relayIdx"] | 0, doc["state"] | 0);
@@ -479,15 +409,28 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len) {
                         sendEspNowCmdDirect(DEVICE_C1, cmdId, 0, doc["param"] | 0, 0);
                     } else if (target == DEVICE_C2) {
                         Serial.printf("[MASTER WS] Dispatching relay %d (State: %d) to Node C2...\n", doc["relayIdx"] | 0, doc["state"] | 0);
-                        muteC1AndScheduleRedraw();
+                        // Manual bench-testing path, independent of S3C's automated cycle.
+                        // Still mutes C1's coin ISR against the EMI burst; the TFT-repaint-
+                        // after-relay cosmetic fix doesn't apply here anymore since S3C (not
+                        // Local Server) owns C1's screen now.
+                        sendEspNowCmdDirect(DEVICE_C1, CMD_MUTE_COINS, 0, 250, 0);
                         sendEspNowCmdDirect(DEVICE_C2, CMD_SET_RELAY, doc["relayIdx"] | 0, 0, doc["state"] | 0);
                     }
                 } else if (doc.containsKey("cmd")) {
                     const char* cmd = doc["cmd"];
                     if (cmd && strcmp(cmd, "save_spc") == 0) {
+                        // secondsPerCoin is S3A-owned now (Box1ConfigPacket) - update the
+                        // in-RAM cache for instant dashboard feedback, and push to S3A so it
+                        // actually persists it and re-broadcasts, instead of saving locally.
                         secondsPerCoin = doc["val"] | 20;
-                        prefs.putUShort("sec_coin", secondsPerCoin);
-                        Serial.printf("[MASTER WS] Updated secondsPerCoin to %d sec.\n", secondsPerCoin);
+                        pushS3AConfig();
+                        Serial.printf("[MASTER WS] Pushed secondsPerCoin=%d to S3A.\n", secondsPerCoin);
+                    } else if (cmd && strcmp(cmd, "save_spc_c2") == 0) {
+                        // Mirrors save_spc above, for Box 2's own independent copy (S3C-owned,
+                        // Box2ConfigPacket).
+                        secondsPerCoinC2 = doc["val"] | 20;
+                        pushS3CConfig();
+                        Serial.printf("[MASTER WS] Pushed secondsPerCoin=%d to S3C.\n", secondsPerCoinC2);
                     } else if (cmd && strcmp(cmd, "reset_stats") == 0) {
                         statTotalSessions = 0;
                         statTotalCoins = 0;
@@ -502,6 +445,49 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len) {
                         uint8_t state = doc["state"] | 0;
                         Serial.printf("[MASTER WS] Setting ACS Maintenance Mode to %s...\n", state ? "ON" : "OFF");
                         sendEspNowCmdDirect(DEVICE_ACS, CMD_SET_MAINTENANCE, 0, 0, state);
+                    } else if (cmd && strcmp(cmd, "save_config") == 0) {
+                        coinValuePeso         = doc["coin_value"]         | coinValuePeso;
+                        minCoinsRequired      = doc["min_coins_required"] | minCoinsRequired;
+                        maxCoinsAllowed       = doc["max_coins_allowed"]  | maxCoinsAllowed;
+                        minCoinsRequiredC2    = doc["min_coins_required_c2"] | minCoinsRequiredC2;
+                        maxCoinsAllowedC2     = doc["max_coins_allowed_c2"] | maxCoinsAllowedC2;
+                        coolDownRatioC2       = doc["cool_down_ratio_c2"]  | coolDownRatioC2;
+                        alcLowPct             = doc["alc_low_pct"]     | alcLowPct;
+                        alcHighPct            = doc["alc_high_pct"]    | alcHighPct;
+                        helmetDetectDistA2    = doc["helmet_a2_cm"]    | helmetDetectDistA2;
+                        helmetDetectDistC2    = doc["helmet_c2_cm"]    | helmetDetectDistC2;
+                        acsLowDistCm          = doc["acs_low_cm"]      | acsLowDistCm;
+                        acsFullDistCm         = doc["acs_full_cm"]     | acsFullDistCm;
+
+                        // Mix ratios come in as 0-100 percentages and are normalized here so
+                        // they always sum to exactly 1.0 regardless of rounding/typos on input.
+                        float mAlc = doc["mix_alcohol_pct"] | (mixRatioAlcohol * 100.0f);
+                        float mWat = doc["mix_water_pct"]   | (mixRatioWater   * 100.0f);
+                        float mSce = doc["mix_scented_pct"] | (mixRatioScented * 100.0f);
+                        float mSum = mAlc + mWat + mSce;
+                        if (mSum > 0.0f) {
+                            mixRatioAlcohol = mAlc / mSum;
+                            mixRatioWater   = mWat / mSum;
+                            mixRatioScented = mSce / mSum;
+                        }
+
+                        // alcLowPct/alcHighPct/helmetDetectDistA2/secondsPerCoin/minCoinsRequired
+                        // (Box 1) and helmetDetectDistC2/secondsPerCoinC2/minCoinsRequiredC2
+                        // (Box 2) are NOT saved to Local Server's NVS - Node S3A/S3C own and
+                        // persist their own box's values. They're applied to the in-RAM cache
+                        // above (for an instant-feeling dashboard save), and pushed to S3A/S3C
+                        // here so they actually persist them and re-broadcast.
+                        prefs.putFloat("coin_val", coinValuePeso);
+                        prefs.putFloat("acs_low_cm", acsLowDistCm);
+                        prefs.putFloat("acs_full_cm", acsFullDistCm);
+                        prefs.putFloat("mix_alc", mixRatioAlcohol);
+                        prefs.putFloat("mix_wat", mixRatioWater);
+                        prefs.putFloat("mix_sce", mixRatioScented);
+
+                        pushAcsConfig();
+                        pushS3AConfig();
+                        pushS3CConfig();
+                        Serial.println("[MASTER WS] Dynamic config saved and pushed.");
                     }
                 }
             }
@@ -511,6 +497,14 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len) {
 
 void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len) {
     if (type == WS_EVT_DATA) handleWebSocketMessage(arg, data, len);
+}
+
+void learnMac(uint8_t deviceId, const uint8_t* mac) {
+    if (deviceId >= 8 || macKnown[deviceId]) return; // learn once - a node's MAC never changes
+    memcpy(knownMac[deviceId], mac, 6);
+    macKnown[deviceId] = true;
+    Serial.printf("[MASTER] Learned MAC for device %d: %02X:%02X:%02X:%02X:%02X:%02X\n",
+                  deviceId, mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
 }
 
 // -------------------------------------------------------------
@@ -527,65 +521,84 @@ void onDataRecv(const esp_now_recv_info_t *info, const uint8_t *incomingData, in
         Serial.printf("[MASTER ESP-NOW RX] Command from MAC %02X:%02X:%02X:%02X:%02X:%02X | Opcode: %d\n",
                       mac[0], mac[1], mac[2], mac[3], mac[4], mac[5], cmd.commandID);
 
-        if (cmd.commandID == CMD_TOUCH_ACTION) {
-            Serial.printf("[MASTER TOUCH TRIGGER] Received action: '%s'\n", cmd.payloadStr);
-
-            // CommandPacket carries no source device ID - route by which terminal's learned
-            // MAC this came from. Defaults to Box 1 handling if C1's MAC isn't known yet.
-            bool fromC1 = macC1Known && memcmp(mac, macC1, 6) == 0;
-
-            if (fromC1) {
-                if (strcmp(cmd.payloadStr, "RESET") == 0) {
-                    box2ActiveTimer = 0;
-                    box2CurrentState = B2_STATE_IDLE;
-                    applyC2RelayBitmask(0b000000);
-                    sendEspNowCmdDirect(DEVICE_C1, CMD_STEP_RENDER, 0, 0, 0, SCREEN_C1_WELCOME);
-                } else if (strcmp(cmd.payloadStr, "ABORT") == 0 && box2CurrentState == B2_STATE_HEATING) {
-                    box2CurrentState = B2_STATE_ABORT_CONFIRM;
-                    sendEspNowCmdDirect(DEVICE_C1, CMD_STEP_RENDER, 0, 0, 0, SCREEN_C1_ABORT_CONFIRM);
-                } else if (strcmp(cmd.payloadStr, "ABORT_YES") == 0 && box2CurrentState == B2_STATE_ABORT_CONFIRM) {
-                    Serial.println("[MASTER STEP ENGINE] Box 2 Cycle Cancelled by user (Abort Confirmed).");
-                    box2ActiveTimer = 0;
-                    box2CurrentState = B2_STATE_RETRIEVE;
-                    box2ConditionHoldTicks = 0;
-                    box2RetrieveConfirmed = false;
-                    applyC2RelayBitmask(0b000001); // unlock enclosure only
-                    sendEspNowCmdDirect(DEVICE_C1, CMD_STEP_RENDER, 0, 0, 0, SCREEN_C1_RETRIEVE);
-                    sendEspNowCmdDirect(DEVICE_C1, CMD_BUZZER, 0, 500, 0);
-                } else if (strcmp(cmd.payloadStr, "ABORT_NO") == 0 && box2CurrentState == B2_STATE_ABORT_CONFIRM) {
-                    box2CurrentState = B2_STATE_HEATING;
-                    sendEspNowCmdDirect(DEVICE_C1, CMD_STEP_RENDER, 0, 0, 0, SCREEN_C1_HEATING);
-                }
-            } else {
-                if (strcmp(cmd.payloadStr, "RESET") == 0) {
-                    activeTimer = 0;
-                    currentMachineState = STATE_IDLE;
-                    applyRelayBitmask(0b00000000);
-                    sendEspNowCmdDirect(DEVICE_A1, CMD_STEP_RENDER, 0, 0, 0, SCREEN_WELCOME);
-                } else if (strcmp(cmd.payloadStr, "ABORT") == 0 && currentMachineState == STATE_CLEANING) {
-                    currentMachineState = STATE_ABORT_CONFIRM;
-                    sendEspNowCmdDirect(DEVICE_A1, CMD_STEP_RENDER, 0, 0, 0, SCREEN_ABORT_CONFIRM);
-                } else if (strcmp(cmd.payloadStr, "ABORT_YES") == 0 && currentMachineState == STATE_ABORT_CONFIRM) {
-                    Serial.println("[MASTER STEP ENGINE] Cycle Cancelled by user (Abort Confirmed).");
-                    activeTimer = 0;
-                    currentMachineState = STATE_RETRIEVE;
-                    conditionHoldTicks = 0;
-                    retrieveConfirmed = false;
-                    applyRelayBitmask(0b00000001); // unlock enclosure only
-                    sendEspNowCmdDirect(DEVICE_A1, CMD_STEP_RENDER, 0, 0, 0, SCREEN_RETRIEVE);
-                    sendEspNowCmdDirect(DEVICE_A1, CMD_BUZZER, 0, 500, 0);
-                } else if (strcmp(cmd.payloadStr, "ABORT_NO") == 0 && currentMachineState == STATE_ABORT_CONFIRM) {
-                    currentMachineState = STATE_CLEANING;
-                    sendEspNowCmdDirect(DEVICE_A1, CMD_STEP_RENDER, 0, 0, 0, SCREEN_CLEANING);
-                }
-            }
-        }
+        // Both boxes' touch actions (A1/C1 -> RESET/ABORT/etc.) now go straight to their own
+        // Internal Server Management node (S3A/S3C), which owns that state machine - A1/C1
+        // address them to DEVICE_S3A/DEVICE_S3C, not DEVICE_SERVER, so they never reach here
+        // at all (this node only cares about commands addressed to it).
         return;
     }
 
     if (len == sizeof(ACSTelemetryPacket)) {
+        learnMac(DEVICE_ACS, mac);
         memcpy(&nodeACS_Data, incomingData, sizeof(ACSTelemetryPacket));
         lastSeenACS = millis();
+        return;
+    }
+
+    if (len == sizeof(Box1ConfigPacket)) {
+        learnMac(DEVICE_S3A, mac);
+        Box1ConfigPacket cfg;
+        memcpy(&cfg, incomingData, sizeof(Box1ConfigPacket));
+        helmetDetectDistA2    = cfg.helmetDetectCmA2;
+        alcLowPct             = cfg.alcLowPct;
+        alcHighPct            = cfg.alcHighPct;
+        secondsPerCoin        = cfg.secondsPerCoin;
+        minCoinsRequired      = cfg.minCoinsRequired;
+        maxCoinsAllowed       = cfg.maxCoinsAllowed;
+        lastSeenS3A = millis();
+        return;
+    }
+
+    if (len == sizeof(Box2ConfigPacket)) {
+        learnMac(DEVICE_S3C, mac);
+        Box2ConfigPacket cfg;
+        memcpy(&cfg, incomingData, sizeof(Box2ConfigPacket));
+        helmetDetectDistC2 = cfg.helmetDetectCmC2;
+        secondsPerCoinC2   = cfg.secondsPerCoin;
+        minCoinsRequiredC2 = cfg.minCoinsRequired;
+        maxCoinsAllowedC2  = cfg.maxCoinsAllowed;
+        coolDownRatioC2    = cfg.coolDownRatio;
+        lastSeenS3C = millis();
+        return;
+    }
+
+    // Box 1's (from S3A) and Box 2's (from S3C) live status share the same BoxStatusPacket
+    // shape (same disambiguate-by-deviceID pattern as TelemetryPacket, shared by A1/A2/C1/C2)
+    // - deviceID says which one this is.
+    if (len == sizeof(BoxStatusPacket)) {
+        BoxStatusPacket status;
+        memcpy(&status, incomingData, sizeof(BoxStatusPacket));
+
+        if (status.deviceID == DEVICE_S3A) {
+            learnMac(DEVICE_S3A, mac);
+            nodeS3AStatus = status;
+            lastSeenS3A = millis();
+
+            // Session-completion tracking: completedSessionSeq only changes when S3A actually
+            // finishes a session. Skip recording on the very first packet ever seen (that
+            // would otherwise replay S3A's entire pre-existing history as one phantom
+            // "session" using stale duration/coins data) - just learn the starting point.
+            if (!b1SessionSeqInitialized) {
+                lastKnownB1SessionSeq = nodeS3AStatus.completedSessionSeq;
+                b1SessionSeqInitialized = true;
+            } else if (nodeS3AStatus.completedSessionSeq != lastKnownB1SessionSeq) {
+                lastKnownB1SessionSeq = nodeS3AStatus.completedSessionSeq;
+                recordCompletedSession(nodeS3AStatus.lastSessionDurationSec, nodeS3AStatus.lastSessionCoins);
+            }
+        } else if (status.deviceID == DEVICE_S3C) {
+            learnMac(DEVICE_S3C, mac);
+            nodeS3CStatus = status;
+            lastSeenS3C = millis();
+
+            // Same first-packet-skip guard as Box 1/S3A above.
+            if (!b2SessionSeqInitialized) {
+                lastKnownB2SessionSeq = nodeS3CStatus.completedSessionSeq;
+                b2SessionSeqInitialized = true;
+            } else if (nodeS3CStatus.completedSessionSeq != lastKnownB2SessionSeq) {
+                lastKnownB2SessionSeq = nodeS3CStatus.completedSessionSeq;
+                recordCompletedSession(nodeS3CStatus.lastSessionDurationSec, nodeS3CStatus.lastSessionCoins);
+            }
+        }
         return;
     }
 
@@ -595,35 +608,57 @@ void onDataRecv(const esp_now_recv_info_t *info, const uint8_t *incomingData, in
     memcpy(&packet, incomingData, sizeof(TelemetryPacket));
 
     if (packet.deviceID == DEVICE_A1) {
-        if (!macA1Known) { memcpy(macA1, mac, 6); macA1Known = true; }
+        learnMac(DEVICE_A1, mac);
+        // S3A now owns activeTimer/coin-to-time conversion for Box 1 (see ESP32_S3A.ino) -
+        // Local Server just independently watches the same raw pulse count for revenue stats.
+        // lastKnownPulsesA1 is NVS-persisted (below) so a Local Server reboot doesn't forget
+        // where it left off and double-count A1's already-tallied pulses on reconnect - this
+        // exact bug happened once already (Local Server rebooted mid-session, reported double
+        // the real revenue for that session even though Box 1's own display stayed accurate).
         if (packet.pulseCount > lastKnownPulsesA1) {
             uint32_t newPulses = packet.pulseCount - lastKnownPulsesA1;
-            uint32_t addedSeconds = newPulses * secondsPerCoin;
-            activeTimer += addedSeconds;
             lastKnownPulsesA1 = packet.pulseCount;
+            prefs.putUInt("last_a1_pulses", lastKnownPulsesA1);
             statTotalCoins += newPulses;
             prefs.putUInt("st_coins", statTotalCoins);
-            Serial.printf("[MASTER COIN RECEIPT] Validated +%d seconds from A1. activeTimer = %d sec\n", addedSeconds, activeTimer);
+            Serial.printf("[MASTER STATS] +%d coin(s) from A1 (revenue tracking only - S3A drives the actual cycle).\n", newPulses);
+        } else if (packet.pulseCount < lastKnownPulsesA1) {
+            // A1 itself rebooted (its own counter reset, e.g. power-cycled) - resync the
+            // baseline down rather than either double-counting or freezing stat updates
+            // until A1's counter climbs back above the old (now stale) baseline.
+            Serial.printf("[MASTER STATS] A1 pulse count dropped (%u -> %u) - A1 likely rebooted, resyncing baseline.\n", lastKnownPulsesA1, packet.pulseCount);
+            lastKnownPulsesA1 = packet.pulseCount;
+            prefs.putUInt("last_a1_pulses", lastKnownPulsesA1);
         }
         nodeA1_Data = packet;
         lastSeenA1  = millis();
     } else if (packet.deviceID == DEVICE_A2) {
+        learnMac(DEVICE_A2, mac);
         nodeA2_Data = packet;
         lastSeenA2  = millis();
     } else if (packet.deviceID == DEVICE_C1) {
-        if (!macC1Known) { memcpy(macC1, mac, 6); macC1Known = true; }
+        learnMac(DEVICE_C1, mac);
+        // S3C now owns activeTimer/coin-to-time conversion for Box 2 (see ESP32_S3C.ino) -
+        // Local Server just independently watches the same raw pulse count for revenue stats,
+        // same as A1's branch above. lastKnownPulsesC1 is NVS-persisted so a Local Server
+        // reboot doesn't forget where it left off and double-count C1's already-tallied pulses.
         if (packet.pulseCount > lastKnownPulsesC1) {
             uint32_t newPulses = packet.pulseCount - lastKnownPulsesC1;
-            uint32_t addedSeconds = newPulses * secondsPerCoin;
-            box2ActiveTimer += addedSeconds;
             lastKnownPulsesC1 = packet.pulseCount;
+            prefs.putUInt("last_c1_pulses", lastKnownPulsesC1);
             statTotalCoins += newPulses;
             prefs.putUInt("st_coins", statTotalCoins);
-            Serial.printf("[MASTER COIN RECEIPT] Validated +%d seconds from C1 (Box 2). box2ActiveTimer = %d sec\n", addedSeconds, box2ActiveTimer);
+            Serial.printf("[MASTER STATS] +%d coin(s) from C1 (revenue tracking only - S3C drives the actual cycle).\n", newPulses);
+        } else if (packet.pulseCount < lastKnownPulsesC1) {
+            // C1 itself rebooted - resync the baseline down, same as A1's branch above.
+            Serial.printf("[MASTER STATS] C1 pulse count dropped (%u -> %u) - C1 likely rebooted, resyncing baseline.\n", lastKnownPulsesC1, packet.pulseCount);
+            lastKnownPulsesC1 = packet.pulseCount;
+            prefs.putUInt("last_c1_pulses", lastKnownPulsesC1);
         }
         nodeC1_Data = packet;
         lastSeenC1  = millis();
     } else if (packet.deviceID == DEVICE_C2) {
+        learnMac(DEVICE_C2, mac);
         nodeC2_Data = packet;
         lastSeenC2  = millis();
     }
@@ -641,6 +676,8 @@ void setup() {
     memset(&nodeACS_Data, 0, sizeof(ACSTelemetryPacket));
     memset(&nodeC1_Data, 0, sizeof(TelemetryPacket));
     memset(&nodeC2_Data, 0, sizeof(TelemetryPacket));
+    memset(&nodeS3AStatus, 0, sizeof(BoxStatusPacket));
+    memset(&nodeS3CStatus, 0, sizeof(BoxStatusPacket));
 
     loadSettingsFromNVS();
 
@@ -724,7 +761,7 @@ void setup() {
         if (request->hasParam("state")) rState = request->getParam("state")->value().toInt();
 
         Serial.printf("\n[MASTER HTTP API] >>> /api/relay HIT! Setting Relay %d to State %d...\n", rIdx, rState);
-        muteA1AndScheduleRedraw();
+        sendEspNowCmdDirect(DEVICE_A1, CMD_MUTE_COINS, 0, 250, 0);
         sendEspNowCmdDirect(DEVICE_A2, CMD_SET_RELAY, rIdx, 0, rState);
         request->send(200, "text/plain", "OK: Relay Command Dispatched");
     });
@@ -745,12 +782,12 @@ void setup() {
     server.begin();
     Serial.println("[MASTER HTTP] Web Server Online & Direct Routes Bound.");
 
-    // Initial Broadcast of Step 0 (Welcome) Screen
-    Serial.println("[MASTER BOOT] Broadcasting Welcome screen to Node A1...");
-    sendEspNowCmdDirect(DEVICE_A1, CMD_STEP_RENDER, 0, 0, 0, SCREEN_WELCOME);
+    // A1's and C1's initial Welcome screens are now S3A's/S3C's job respectively (each owns
+    // its own box's rendering) - Local Server no longer sends either on boot.
 
-    Serial.println("[MASTER BOOT] Broadcasting Welcome screen to Node C1 (Box 2)...");
-    sendEspNowCmdDirect(DEVICE_C1, CMD_STEP_RENDER, 0, 0, 0, SCREEN_C1_WELCOME);
+    // Best-effort initial push in case ACS is already up when Master boots; the online
+    // edge-detect in loop() covers ACS booting after (or rebooting independently of) Master.
+    pushAcsConfig();
 }
 
 void loop() {
@@ -759,359 +796,78 @@ void loop() {
 
     unsigned long currentMillis = millis();
 
-    // Post-solenoid TFT repaint - checked every loop pass (not the 1s gate below) so the
-    // 300ms window from muteA1AndScheduleRedraw() is honored promptly.
-    if (a1RedrawAtMillis != 0 && currentMillis >= a1RedrawAtMillis) {
-        a1RedrawAtMillis = 0;
-        sendEspNowCmdDirect(DEVICE_A1, CMD_STEP_RENDER, 0, 0, 0, screenForCurrentState());
-    }
-    if (c1RedrawAtMillis != 0 && currentMillis >= c1RedrawAtMillis) {
-        c1RedrawAtMillis = 0;
-        sendEspNowCmdDirect(DEVICE_C1, CMD_STEP_RENDER, 0, 0, 0, screenForCurrentBox2State());
-    }
+    // Post-solenoid TFT repaint for both boxes now lives on S3A/S3C respectively, since each
+    // owns its own box's rendering.
 
     // 1-Second Master Execution Tick
     if (currentMillis - lastOneSecTick >= 1000) {
         lastOneSecTick = currentMillis;
 
-        bool handshakeValid = enclosureClosed() && helmetPresent();
+        // Both boxes' entire step engines (coin -> ... -> finish), relay control, and AUTO_CALL
+        // now run on S3A/S3C (ESP32_S3A.ino / ESP32_S3C.ino) - see nodeS3AStatus/nodeS3CStatus
+        // for what Local Server still needs (dashboard display + session stats), populated in
+        // onDataRecv().
 
-        // AUTO_CALL: A2's own humidifier level drives a delivery request to ACS, routed
-        // through here (not A2 -> ACS directly) so it gets logged and stays visible on the
-        // dashboard. Edge-triggered so it only fires once per low event, not every second.
-        float humidPct = alcoholPercent(nodeA2_Data.usAlcoholDistance);
-        if (humidPct <= ALC_LOW_PCT && !humidifierRefillRequested) {
-            humidifierRefillRequested = true;
-            uint16_t neededML = humidifierVolumeNeededML(nodeA2_Data.usAlcoholDistance);
-            Serial.printf("[MASTER AUTO_CALL] Humidifier low (%.0f%%) -> requesting %umL delivery from ACS.\n", humidPct, neededML);
-            sendEspNowCmdDirect(DEVICE_ACS, CMD_REQUEST_DELIVERY, 0, neededML, 0);
-        } else if (humidPct > ALC_LOW_PCT) {
-            humidifierRefillRequested = false; // re-arm for the next time it drops low
+        // Broadcast a heartbeat every second so A1/A2/C1/C2 can each independently tell whether
+        // Master is reachable - S3A/S3C broadcast their own equivalent, so any node that hears
+        // neither for a stretch knows nobody is coordinating it (see each node's OUT OF ORDER
+        // detection). subIndex identifies the sender since CommandPacket has no sender field.
+        {
+            CommandPacket hb;
+            memset(&hb, 0, sizeof(CommandPacket));
+            hb.targetDeviceID = 0; // broadcast - every node listens for this opcode regardless
+            hb.commandID      = CMD_HEARTBEAT;
+            hb.subIndex       = DEVICE_SERVER;
+            esp_now_send(BROADCAST_MAC, (uint8_t*)&hb, sizeof(CommandPacket));
         }
 
-        switch (currentMachineState) {
-            case STATE_IDLE:
-                // Step 0: waiting for a coin
-                if (activeTimer > 0) {
-                    Serial.println("[MASTER STEP ENGINE] Coin detected -> Step 1 (Instructions)");
-                    currentMachineState = STATE_INSTRUCTIONS;
-                    conditionHoldTicks = 0;
-                    applyRelayBitmask(0b00000001); // unlock enclosure
-                    sendEspNowCmdDirect(DEVICE_A1, CMD_STEP_RENDER, 0, 0, 0, SCREEN_INSTRUCTIONS);
-                    sendEspNowCmdDirect(DEVICE_A1, CMD_BUZZER, 0, 250, 0);
-                }
-                break;
-
-            case STATE_INSTRUCTIONS:
-                // Step 1: wait for enclosure door OPEN for >2 seconds
-                if (nodeA2_Data.doorEnclosure) {
-                    conditionHoldTicks++;
-                } else {
-                    conditionHoldTicks = 0;
-                }
-                if (conditionHoldTicks >= 2) {
-                    Serial.println("[MASTER STEP ENGINE] Door opened -> Step 2 (Checking Alcohol)");
-                    currentMachineState = STATE_CHECKING;
-                    applyRelayBitmask(0b00000000); // re-lock enclosure
-                    sendEspNowCmdDirect(DEVICE_A1, CMD_STEP_RENDER, 0, 0, 0, SCREEN_CHECKING);
-                    sendEspNowCmdDirect(DEVICE_A1, CMD_BUZZER, 0, 250, 0);
-                }
-                break;
-
-            case STATE_CHECKING: {
-                // Step 2: branch on alcohol level
-                float pct = alcoholPercent(nodeA2_Data.usAlcoholDistance);
-                if (pct <= ALC_LOW_PCT) {
-                    Serial.printf("[MASTER STEP ENGINE] Alcohol low (%.0f%%) -> Step 3 (Refilling)\n", pct);
-                    currentMachineState = STATE_REFILLING;
-                    sendEspNowCmdDirect(DEVICE_A1, CMD_STEP_RENDER, 0, 0, 0, SCREEN_REFILLING);
-                } else {
-                    Serial.printf("[MASTER STEP ENGINE] Alcohol OK (%.0f%%) -> Step 4 (Sensors)\n", pct);
-                    currentMachineState = STATE_SENSORS;
-                    sensorsWasClosed = false;
-                    applyRelayBitmask(0b00000001); // unlock enclosure so the helmet can be placed
-                    sendEspNowCmdDirect(DEVICE_A1, CMD_STEP_RENDER, 0, 0, 0, SCREEN_SENSORS);
-                }
-                break;
-            }
-
-            case STATE_REFILLING: {
-                // Step 3: wait for alcohol to reach HIGH threshold
-                float pct = alcoholPercent(nodeA2_Data.usAlcoholDistance);
-                if (pct >= ALC_HIGH_PCT) {
-                    Serial.println("[MASTER STEP ENGINE] Refill complete -> Step 4 (Sensors)");
-                    currentMachineState = STATE_SENSORS;
-                    sensorsWasClosed = false;
-                    applyRelayBitmask(0b00000001); // unlock enclosure so the helmet can be placed
-                    sendEspNowCmdDirect(DEVICE_A1, CMD_STEP_RENDER, 0, 0, 0, SCREEN_SENSORS);
-                }
-                break;
-            }
-
-            case STATE_SENSORS: {
-                // Step 4: enclosure is unlocked here so the user can open it and place the helmet.
-                bool closedNow = enclosureClosed();
-                if (closedNow && helmetPresent()) {
-                    Serial.println("[MASTER STEP ENGINE] Handshake verified -> Step 5 (Cleaning)");
-                    currentMachineState = STATE_CLEANING;
-                    sessionStartMillis  = millis();
-                    sessionCoinsAtStart = lastKnownPulsesA1;
-                    uvBlinkTicks  = 0;
-                    uvBlinkState  = true;
-                    applyCleaningRelays(); // also re-locks the enclosure
-                    sendEspNowCmdDirect(DEVICE_A1, CMD_STEP_RENDER, 0, 0, 0, SCREEN_CLEANING);
-                    sendEspNowCmdDirect(DEVICE_A1, CMD_BUZZER, 0, 250, 0);
-                } else if (closedNow && !helmetPresent() && !sensorsWasClosed) {
-                    // Door was just closed without a helmet inside - it's still unlocked, so
-                    // nudge the user to open it again and try once instead of hanging forever.
-                    Serial.println("[MASTER STEP ENGINE] Door closed without helmet - prompting retry (still unlocked).");
-                    sendEspNowCmdDirect(DEVICE_A1, CMD_STEP_RENDER, 0, 0, 0, SCREEN_SENSORS_RETRY);
-                    sendEspNowCmdDirect(DEVICE_A1, CMD_BUZZER, 0, 250, 0);
-                }
-                sensorsWasClosed = closedNow;
-                break;
-            }
-
-            case STATE_CLEANING:
-                if (!handshakeValid) {
-                    // Unexpected safety breach mid-cleaning (distinct from a deliberate Abort)
-                    Serial.println("[MASTER STEP ENGINE] Safety Breach! Door opened or helmet removed.");
-                    currentMachineState = STATE_PAUSED_SAFETY;
-                    applyRelayBitmask(0b00000000);
-                    sendEspNowCmdDirect(DEVICE_A1, CMD_STEP_RENDER, 0, 0, 0, SCREEN_SAFETY_PAUSE);
-                } else if (activeTimer > 0) {
-                    activeTimer--;
-
-                    uvBlinkTicks++;
-                    if (uvBlinkTicks >= 60) {
-                        uvBlinkTicks = 0;
-                        uvBlinkState = !uvBlinkState;
-                        applyCleaningRelays();
-                    }
-
-                    if (activeTimer == 0) {
-                        Serial.println("[MASTER STEP ENGINE] Cycle Complete! -> Step 6 (Retrieve)");
-                        recordCompletedSession();
-                        currentMachineState = STATE_RETRIEVE;
-                        conditionHoldTicks = 0;
-                        retrieveConfirmed = false;
-                        applyRelayBitmask(0b00000001); // unlock enclosure, mist+UV off
-                        sendEspNowCmdDirect(DEVICE_A1, CMD_STEP_RENDER, 0, 0, 0, SCREEN_RETRIEVE);
-                        sendEspNowCmdDirect(DEVICE_A1, CMD_BUZZER, 0, 500, 0);
-                    }
-                }
-                break;
-
-            case STATE_PAUSED_SAFETY:
-                if (handshakeValid) {
-                    Serial.println("[MASTER STEP ENGINE] Safety Restored. Resuming Step 5 (Cleaning).");
-                    currentMachineState = STATE_CLEANING;
-                    applyCleaningRelays();
-                    sendEspNowCmdDirect(DEVICE_A1, CMD_STEP_RENDER, 0, 0, 0, SCREEN_CLEANING);
-                }
-                break;
-
-            case STATE_ABORT_CONFIRM:
-                // Countdown/UV blink is frozen here; touch actions ABORT_YES/ABORT_NO drive the transition.
-                break;
-
-            case STATE_RETRIEVE:
-                // Step 6a: wait for door OPEN + helmet removed, both for >2 seconds
-                if (!retrieveConfirmed) {
-                    if (nodeA2_Data.doorEnclosure && !helmetPresent()) {
-                        conditionHoldTicks++;
-                    } else {
-                        conditionHoldTicks = 0;
-                    }
-                    if (conditionHoldTicks >= 2) {
-                        Serial.println("[MASTER STEP ENGINE] Headgear retrieved -> waiting for door to close");
-                        retrieveConfirmed = true;
-                        conditionHoldTicks = 0;
-                        sendEspNowCmdDirect(DEVICE_A1, CMD_STEP_RENDER, 0, 0, 0, SCREEN_RETRIEVE_CLOSE);
-                        sendEspNowCmdDirect(DEVICE_A1, CMD_BUZZER, 0, 250, 0);
-                    }
-                } else {
-                    // Step 6b: wait for the door to be CLOSED again for >2 seconds before finishing
-                    if (!nodeA2_Data.doorEnclosure) {
-                        conditionHoldTicks++;
-                    } else {
-                        conditionHoldTicks = 0;
-                    }
-                    if (conditionHoldTicks >= 2) {
-                        Serial.println("[MASTER STEP ENGINE] Door closed -> Step 7 (Finish)");
-                        currentMachineState = STATE_FINISH;
-                        retrieveConfirmed = false;
-                        stepRemainingSec = 4;
-                        applyRelayBitmask(0b00000000); // lock enclosure
-                        sendEspNowCmdDirect(DEVICE_A1, CMD_STEP_RENDER, 0, 0, 0, SCREEN_FINISH);
-                    }
-                }
-                break;
-
-            case STATE_FINISH:
-                if (stepRemainingSec > 0) {
-                    stepRemainingSec--;
-                } else {
-                    activeTimer = 0;
-                    currentMachineState = STATE_IDLE;
-                    sendEspNowCmdDirect(DEVICE_A1, CMD_STEP_RENDER, 0, 0, 0, SCREEN_WELCOME);
-                }
-                break;
+        // Push the current dynamic config to ACS whenever it (re)connects, so a reboot on
+        // either side still converges on the latest dashboard-saved values within seconds.
+        bool acsOnlineNow = (lastSeenACS > 0) && (currentMillis - lastSeenACS <= 3000);
+        if (acsOnlineNow && !acsWasOnline) {
+            Serial.println("[MASTER CONFIG] ACS (re)connected - pushing current config.");
+            pushAcsConfig();
         }
-
-        // -------------------------------------------------------------
-        // Box 2 (Heater) Step Engine - independent parallel cycle, same 1s tick.
-        // -------------------------------------------------------------
-        switch (box2CurrentState) {
-            case B2_STATE_IDLE:
-                // Step 0: waiting for a coin
-                if (box2ActiveTimer > 0) {
-                    Serial.println("[MASTER STEP ENGINE] Box 2: Coin detected -> Step 1 (Instructions)");
-                    box2CurrentState = B2_STATE_INSTRUCTIONS;
-                    box2ConditionHoldTicks = 0;
-                    applyC2RelayBitmask(0b000001); // unlock enclosure
-                    sendEspNowCmdDirect(DEVICE_C1, CMD_STEP_RENDER, 0, 0, 0, SCREEN_C1_INSTRUCTIONS);
-                    sendEspNowCmdDirect(DEVICE_C1, CMD_BUZZER, 0, 250, 0);
-                }
-                break;
-
-            case B2_STATE_INSTRUCTIONS:
-                // Step 1: wait for enclosure door OPEN for >2 seconds
-                if (nodeC2_Data.doorEnclosure) {
-                    box2ConditionHoldTicks++;
-                } else {
-                    box2ConditionHoldTicks = 0;
-                }
-                if (box2ConditionHoldTicks >= 2) {
-                    Serial.println("[MASTER STEP ENGINE] Box 2: Door opened -> Step 2 (Sensors)");
-                    box2CurrentState = B2_STATE_SENSORS;
-                    box2SensorsWasClosed = false;
-                    applyC2RelayBitmask(0b000000); // re-lock enclosure
-                    sendEspNowCmdDirect(DEVICE_C1, CMD_STEP_RENDER, 0, 0, 0, SCREEN_C1_SENSORS);
-                    sendEspNowCmdDirect(DEVICE_C1, CMD_BUZZER, 0, 250, 0);
-                }
-                break;
-
-            case B2_STATE_SENSORS: {
-                // Step 2: enclosure was already opened during Step 1 - door doesn't need to
-                // stay unlocked here, just watch for it to close again with a helmet inside.
-                bool closedNow = box2EnclosureClosed();
-                if (closedNow && box2HelmetPresent()) {
-                    Serial.println("[MASTER STEP ENGINE] Box 2: Handshake verified -> Step 3 (Heating)");
-                    box2CurrentState = B2_STATE_HEATING;
-                    box2SessionStartMillis  = millis();
-                    box2SessionCoinsAtStart = lastKnownPulsesC1;
-                    applyC2HeatingRelays();
-                    sendEspNowCmdDirect(DEVICE_C1, CMD_STEP_RENDER, 0, 0, 0, SCREEN_C1_HEATING);
-                    sendEspNowCmdDirect(DEVICE_C1, CMD_BUZZER, 0, 250, 0);
-                } else if (closedNow && !box2HelmetPresent() && !box2SensorsWasClosed) {
-                    Serial.println("[MASTER STEP ENGINE] Box 2: Door closed without helmet - prompting retry.");
-                    sendEspNowCmdDirect(DEVICE_C1, CMD_STEP_RENDER, 0, 0, 0, SCREEN_C1_SENSORS_RETRY);
-                    sendEspNowCmdDirect(DEVICE_C1, CMD_BUZZER, 0, 250, 0);
-                }
-                box2SensorsWasClosed = closedNow;
-                break;
-            }
-
-            case B2_STATE_HEATING: {
-                bool handshakeValidB2 = box2EnclosureClosed() && box2HelmetPresent();
-                if (!handshakeValidB2) {
-                    Serial.println("[MASTER STEP ENGINE] Box 2: Safety Breach! Door opened or helmet removed.");
-                    box2CurrentState = B2_STATE_PAUSED_SAFETY;
-                    applyC2RelayBitmask(0b000000);
-                    sendEspNowCmdDirect(DEVICE_C1, CMD_STEP_RENDER, 0, 0, 0, SCREEN_C1_SAFETY_PAUSE);
-                } else if (box2ActiveTimer > 0) {
-                    box2ActiveTimer--;
-                    if (box2ActiveTimer == 0) {
-                        Serial.println("[MASTER STEP ENGINE] Box 2: Cycle Complete! -> Step 4 (Retrieve)");
-                        recordCompletedBox2Session();
-                        box2CurrentState = B2_STATE_RETRIEVE;
-                        box2ConditionHoldTicks = 0;
-                        box2RetrieveConfirmed = false;
-                        applyC2RelayBitmask(0b000001); // unlock enclosure, heater+fan off
-                        sendEspNowCmdDirect(DEVICE_C1, CMD_STEP_RENDER, 0, 0, 0, SCREEN_C1_RETRIEVE);
-                        sendEspNowCmdDirect(DEVICE_C1, CMD_BUZZER, 0, 500, 0);
-                    }
-                }
-                break;
-            }
-
-            case B2_STATE_PAUSED_SAFETY:
-                if (box2EnclosureClosed() && box2HelmetPresent()) {
-                    Serial.println("[MASTER STEP ENGINE] Box 2: Safety Restored. Resuming Step 3 (Heating).");
-                    box2CurrentState = B2_STATE_HEATING;
-                    applyC2HeatingRelays();
-                    sendEspNowCmdDirect(DEVICE_C1, CMD_STEP_RENDER, 0, 0, 0, SCREEN_C1_HEATING);
-                }
-                break;
-
-            case B2_STATE_ABORT_CONFIRM:
-                // Touch actions ABORT_YES/ABORT_NO (routed by MAC in onDataRecv) drive the transition.
-                break;
-
-            case B2_STATE_RETRIEVE:
-                // Step 4a: wait for door OPEN + helmet removed, both for >2 seconds
-                if (!box2RetrieveConfirmed) {
-                    if (nodeC2_Data.doorEnclosure && !box2HelmetPresent()) {
-                        box2ConditionHoldTicks++;
-                    } else {
-                        box2ConditionHoldTicks = 0;
-                    }
-                    if (box2ConditionHoldTicks >= 2) {
-                        Serial.println("[MASTER STEP ENGINE] Box 2: Headgear retrieved -> waiting for door to close");
-                        box2RetrieveConfirmed = true;
-                        box2ConditionHoldTicks = 0;
-                        sendEspNowCmdDirect(DEVICE_C1, CMD_STEP_RENDER, 0, 0, 0, SCREEN_C1_RETRIEVE_CLOSE);
-                        sendEspNowCmdDirect(DEVICE_C1, CMD_BUZZER, 0, 250, 0);
-                    }
-                } else {
-                    // Step 4b: wait for the door to be CLOSED again for >2 seconds before finishing
-                    if (!nodeC2_Data.doorEnclosure) {
-                        box2ConditionHoldTicks++;
-                    } else {
-                        box2ConditionHoldTicks = 0;
-                    }
-                    if (box2ConditionHoldTicks >= 2) {
-                        Serial.println("[MASTER STEP ENGINE] Box 2: Door closed -> Step 5 (Finish)");
-                        box2CurrentState = B2_STATE_FINISH;
-                        box2RetrieveConfirmed = false;
-                        box2StepRemainingSec = 2; // per the Heater flow diagram's own spec
-                        applyC2RelayBitmask(0b000000); // lock enclosure
-                        sendEspNowCmdDirect(DEVICE_C1, CMD_STEP_RENDER, 0, 0, 0, SCREEN_C1_FINISH);
-                    }
-                }
-                break;
-
-            case B2_STATE_FINISH:
-                if (box2StepRemainingSec > 0) {
-                    box2StepRemainingSec--;
-                } else {
-                    box2ActiveTimer = 0;
-                    box2CurrentState = B2_STATE_IDLE;
-                    sendEspNowCmdDirect(DEVICE_C1, CMD_STEP_RENDER, 0, 0, 0, SCREEN_C1_WELCOME);
-                }
-                break;
-        }
-
-        // Push Real-Time Telemetry to Node A1
-        sendEspNowCmdDirect(DEVICE_A1, CMD_SYNC_VARS, 0, (uint16_t)activeTimer, 0);
-        sendEspNowCmdDirect(DEVICE_C1, CMD_SYNC_VARS, 0, (uint16_t)box2ActiveTimer, 0);
+        acsWasOnline = acsOnlineNow;
 
         // Broadcast Real-time Status over WebSockets
         if (ws.count() > 0) {
-            StaticJsonDocument<2048> doc; // bumped from 1536 to fit Box 2's fields
+            StaticJsonDocument<2560> doc; // bumped from 2048 to also fit the dynamic-config fields
             doc["heap"]         = heap_caps_get_free_size(MALLOC_CAP_INTERNAL);
+            doc["free_psram"]   = heap_caps_get_free_size(MALLOC_CAP_SPIRAM); // 0 if PSRAM isn't actually initialized
             doc["a1_online"]    = (lastSeenA1 > 0) && (currentMillis - lastSeenA1 <= 3000);
             doc["a2_online"]    = (lastSeenA2 > 0) && (currentMillis - lastSeenA2 <= 3000);
             doc["c1_online"]    = (lastSeenC1 > 0) && (currentMillis - lastSeenC1 <= 3000);
             doc["c2_online"]    = (lastSeenC2 > 0) && (currentMillis - lastSeenC2 <= 3000);
+            doc["s3a_online"]   = (lastSeenS3A > 0) && (currentMillis - lastSeenS3A <= 3000);
+            doc["s3c_online"]   = (lastSeenS3C > 0) && (currentMillis - lastSeenS3C <= 3000);
 
-            doc["mach_state"]   = (uint8_t)currentMachineState;
-            doc["step_name"]    = stateName(currentMachineState);
-            doc["step_sec_rem"] = stepRemainingSec;
-            doc["active_timer"] = activeTimer;
-            doc["handshake_ok"] = handshakeValid;
+            // Box 1's live status now comes from S3A's broadcast (nodeS3AStatus), not local
+            // computation - S3A owns the state machine now.
+            doc["mach_state"]   = nodeS3AStatus.machineState;
+            doc["step_name"]    = stateName((MachineState)nodeS3AStatus.machineState);
+            doc["step_sec_rem"] = nodeS3AStatus.stepRemainingSec;
+            doc["active_timer"] = nodeS3AStatus.activeTimer;
+            doc["handshake_ok"] = nodeS3AStatus.handshakeValid;
             doc["sec_per_coin"] = secondsPerCoin;
+            doc["sec_per_coin_c2"] = secondsPerCoinC2;
+
+            // Current dynamic config, for the Settings tab to populate itself with live values.
+            doc["cfg_coin_value"]      = coinValuePeso;
+            doc["cfg_min_coins_required"] = minCoinsRequired;
+            doc["cfg_max_coins_allowed"] = maxCoinsAllowed;
+            doc["cfg_min_coins_required_c2"] = minCoinsRequiredC2;
+            doc["cfg_max_coins_allowed_c2"] = maxCoinsAllowedC2;
+            doc["cfg_cool_down_ratio_c2"] = coolDownRatioC2;
+            doc["cfg_alc_low_pct"]     = alcLowPct;
+            doc["cfg_alc_high_pct"]    = alcHighPct;
+            doc["cfg_helmet_a2_cm"]    = helmetDetectDistA2;
+            doc["cfg_helmet_c2_cm"]    = helmetDetectDistC2;
+            doc["cfg_acs_low_cm"]      = acsLowDistCm;
+            doc["cfg_acs_full_cm"]     = acsFullDistCm;
+            doc["cfg_mix_alcohol_pct"] = mixRatioAlcohol * 100.0f;
+            doc["cfg_mix_water_pct"]   = mixRatioWater * 100.0f;
+            doc["cfg_mix_scented_pct"] = mixRatioScented * 100.0f;
 
             doc["a1_pulses"]    = nodeA1_Data.pulseCount;
             doc["a1_tx"]        = nodeA1_Data.touchX;
@@ -1131,11 +887,13 @@ void loop() {
             doc["a2_r_hum"]     = nodeA2_Data.relayStates[RELAY_HUMIDIFIER];
             doc["a2_r_uv"]      = nodeA2_Data.relayStates[RELAY_UV_LIGHT];
 
-            doc["box2_mach_state"]   = (uint8_t)box2CurrentState;
-            doc["box2_step_name"]    = box2StateName(box2CurrentState);
-            doc["box2_step_sec_rem"] = box2StepRemainingSec;
-            doc["box2_active_timer"] = box2ActiveTimer;
-            doc["box2_handshake_ok"] = box2EnclosureClosed() && box2HelmetPresent();
+            // Box 2's live status now comes from S3C's broadcast (nodeS3CStatus), not local
+            // computation - S3C owns the state machine now (mirrors Box 1/S3A above).
+            doc["box2_mach_state"]   = nodeS3CStatus.machineState;
+            doc["box2_step_name"]    = box2StateName((Box2State)nodeS3CStatus.machineState);
+            doc["box2_step_sec_rem"] = nodeS3CStatus.stepRemainingSec;
+            doc["box2_active_timer"] = nodeS3CStatus.activeTimer;
+            doc["box2_handshake_ok"] = nodeS3CStatus.handshakeValid;
 
             doc["c1_pulses"]    = nodeC1_Data.pulseCount;
             doc["c1_tx"]        = nodeC1_Data.touchX;
@@ -1155,7 +913,7 @@ void loop() {
             doc["c2_r_fan"]     = nodeC2_Data.relayStates[C2_RELAY_FAN];
 
             doc["stat_sessions"] = statTotalSessions;
-            doc["stat_revenue"]  = statTotalCoins * COIN_VALUE_PESO;
+            doc["stat_revenue"]  = statTotalCoins * coinValuePeso;
             doc["stat_coins"]    = statTotalCoins;
             doc["stat_avg_dur"]  = (statTotalSessions > 0) ? (statTotalDurationSec / statTotalSessions) : 0;
 
@@ -1164,7 +922,7 @@ void loop() {
                 uint8_t idx = (statHistoryHead + STAT_HISTORY_SIZE - statHistoryCount + i) % STAT_HISTORY_SIZE;
                 JsonObject rec = hist.createNestedObject();
                 rec["d"] = statHistory[idx].durationSec;
-                rec["r"] = statHistory[idx].coinsUsed * COIN_VALUE_PESO;
+                rec["r"] = statHistory[idx].coinsUsed * coinValuePeso;
             }
 
             doc["acs_online"]  = (lastSeenACS > 0) && (currentMillis - lastSeenACS <= 3000);

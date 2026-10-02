@@ -34,8 +34,10 @@ const uint8_t RELAY_PINS[6] = {
 // Low/Full thresholds for all 4 ACS tanks. The empty-tank baseline readings were noisy
 // (10-17cm across sensors due to beam bounce in the narrow tanks), so these give margin:
 // 10cm+ reads as Low, 3.3cm or less reads as Safe/Full.
-const float ACS_LOW_DIST_CM  = 11.0f;
-const float ACS_FULL_DIST_CM = 3.3f;
+// Dynamic (Master-editable via CMD_SET_CONFIG) - values below are the boot default, used
+// until/unless Master pushes an updated config. Not `const` for that reason.
+float ACS_LOW_DIST_CM  = 11.0f;
+float ACS_FULL_DIST_CM = 3.3f;
 
 const unsigned long SIDE_LOCK_AUTO_MS = 5000; // auto-relock after 5s so the solenoid doesn't burn
 
@@ -50,10 +52,11 @@ const float SCENTED_LENGTH_CM = 8.0f;
 const float ALCOHOL_LENGTH_CM = 8.0f;
 const float MIXER_LENGTH_CM   = 20.0f;
 
-// Mixer target ratio: 70% Alcohol, 28% Water, 2% Scented Liquid
-const float MIX_RATIO_ALCOHOL = 0.70f;
-const float MIX_RATIO_WATER   = 0.28f;
-const float MIX_RATIO_SCENTED = 0.02f;
+// Mixer target ratio: 70% Alcohol, 28% Water, 2% Scented Liquid.
+// Dynamic (Master-editable via CMD_SET_CONFIG) - see note on ACS_LOW_DIST_CM above.
+float MIX_RATIO_ALCOHOL = 0.70f;
+float MIX_RATIO_WATER   = 0.28f;
+float MIX_RATIO_SCENTED = 0.02f;
 
 bool relayStates[6] = {false, false, false, false, false, false};
 bool sideLockAutoTimerActive = false;
@@ -90,20 +93,30 @@ const unsigned long MAX_PHASE_DURATION_MS = 90000; // hard ceiling per pump phas
 
 // -------------------------------------------------------------
 // Sensor Reading (median of 5 samples - filters the wall-bounce noise)
+//
+// Non-blocking: spreads the 4 sensors x 5 samples across many loop() passes
+// (5ms apart, same spacing the old code used) instead of blocking the whole
+// loop for up to ~600ms in one uninterrupted stretch (4 sensors x 5 samples x
+// up to 25ms pulseIn timeout + 5ms delay each, worst case). That stretch was
+// found to worsen Box 1's ESP-NOW relay-toggle responsiveness under load -
+// every device sharing channel 1 costs airtime, and a long blocking run here
+// meant ACS wasn't yielding at all while it held the channel busy.
 // -------------------------------------------------------------
-float measureDistanceMedian(uint8_t trigPin, uint8_t echoPin) {
-    float samples[5];
-    for (uint8_t i = 0; i < 5; i++) {
-        digitalWrite(trigPin, LOW);
-        delayMicroseconds(2);
-        digitalWrite(trigPin, HIGH);
-        delayMicroseconds(10);
-        digitalWrite(trigPin, LOW);
+enum SensorSampleState : uint8_t {
+    SAMPLE_IDLE = 0,
+    SAMPLE_WATER,
+    SAMPLE_SCENTED,
+    SAMPLE_ALCOHOL,
+    SAMPLE_MIXER
+};
 
-        long duration = pulseIn(echoPin, HIGH, 25000); // 25ms timeout
-        samples[i] = (duration == 0) ? 0.0f : (float)duration * 0.0343f / 2.0f;
-        delay(5);
-    }
+SensorSampleState sampleState = SAMPLE_IDLE;
+uint8_t sampleIndex = 0;
+float sampleBuf[5];
+unsigned long lastSampleStepMillis = 0;
+const unsigned long SAMPLE_GAP_MS = 5; // same spacing the old delay(5) used, just non-blocking now
+
+float medianOf5(float samples[5]) {
     // Insertion sort (5 elements), then take the middle value.
     for (uint8_t i = 1; i < 5; i++) {
         float key = samples[i];
@@ -115,6 +128,52 @@ float measureDistanceMedian(uint8_t trigPin, uint8_t echoPin) {
         samples[j + 1] = key;
     }
     return samples[2];
+}
+
+float takeOneSample(uint8_t trigPin, uint8_t echoPin) {
+    digitalWrite(trigPin, LOW);
+    delayMicroseconds(2);
+    digitalWrite(trigPin, HIGH);
+    delayMicroseconds(10);
+    digitalWrite(trigPin, LOW);
+
+    long duration = pulseIn(echoPin, HIGH, 25000); // 25ms timeout
+    return (duration == 0) ? 0.0f : (float)duration * 0.0343f / 2.0f;
+}
+
+// Advances the sampling state machine by at most one measurement per call.
+// Returns true on the exact tick a full 4-sensor cycle finishes (all of
+// waterDist/scentedDist/alcoholDist/mixerDist freshly updated) - false otherwise.
+bool tickSensorSampling() {
+    if (sampleState == SAMPLE_IDLE) return false;
+
+    unsigned long now = millis();
+    if (now - lastSampleStepMillis < SAMPLE_GAP_MS) return false;
+    lastSampleStepMillis = now;
+
+    uint8_t trigPin, echoPin;
+    switch (sampleState) {
+        case SAMPLE_WATER:   trigPin = US_WATER_TRIG;   echoPin = US_WATER_ECHO;   break;
+        case SAMPLE_SCENTED: trigPin = US_SCENTED_TRIG; echoPin = US_SCENTED_ECHO; break;
+        case SAMPLE_ALCOHOL: trigPin = US_ALCOHOL_TRIG; echoPin = US_ALCOHOL_ECHO; break;
+        case SAMPLE_MIXER:   trigPin = US_MIXER_TRIG;   echoPin = US_MIXER_ECHO;   break;
+        default: return false;
+    }
+
+    sampleBuf[sampleIndex] = takeOneSample(trigPin, echoPin);
+    sampleIndex++;
+    if (sampleIndex < 5) return false; // this sensor isn't done yet
+
+    float median = medianOf5(sampleBuf);
+    sampleIndex = 0;
+
+    switch (sampleState) {
+        case SAMPLE_WATER:   waterDist   = median; sampleState = SAMPLE_SCENTED; return false;
+        case SAMPLE_SCENTED: scentedDist = median; sampleState = SAMPLE_ALCOHOL; return false;
+        case SAMPLE_ALCOHOL: alcoholDist = median; sampleState = SAMPLE_MIXER;   return false;
+        case SAMPLE_MIXER:   mixerDist   = median; sampleState = SAMPLE_IDLE;    return true; // full cycle done
+        default: return false;
+    }
 }
 
 bool isLow(float distCm) {
@@ -438,6 +497,20 @@ void onDataRecv(const esp_now_recv_info_t *info, const uint8_t *incomingData, in
         deliveryPending = true;
         deliveryTargetML = cmd.param16;
         Serial.printf("[ACS] Delivery requested: %umL to Box 1 Humidifier.\n", deliveryTargetML);
+    } else if (cmd.commandID == CMD_SET_CONFIG) {
+        float lowCm, fullCm, mixAlc, mixWat, mixSce;
+        int parsed = sscanf(cmd.payloadStr, "%f,%f,%f,%f,%f", &lowCm, &fullCm, &mixAlc, &mixWat, &mixSce);
+        if (parsed == 5) {
+            ACS_LOW_DIST_CM  = lowCm;
+            ACS_FULL_DIST_CM = fullCm;
+            MIX_RATIO_ALCOHOL = mixAlc;
+            MIX_RATIO_WATER   = mixWat;
+            MIX_RATIO_SCENTED = mixSce;
+            Serial.printf("[ACS CONFIG] Updated: Low=%.1fcm Full=%.1fcm Ratio A/W/S=%.2f/%.2f/%.2f\n",
+                          ACS_LOW_DIST_CM, ACS_FULL_DIST_CM, MIX_RATIO_ALCOHOL, MIX_RATIO_WATER, MIX_RATIO_SCENTED);
+        } else {
+            Serial.printf("[ACS CONFIG] REJECTED: malformed payload '%s' (parsed %d/5 fields)\n", cmd.payloadStr, parsed);
+        }
     }
 }
 
@@ -468,6 +541,10 @@ void setup() {
 
     // 3. Force Wi-Fi Channel 1 for exact Master SoftAP Alignment
     WiFi.mode(WIFI_STA);
+    WiFi.setSleep(false); // modem sleep periodically powers down the receiver to save power,
+                           // even with no AP joined - causes several-second gaps in ESP-NOW
+                           // reception on a roughly-periodic cycle otherwise (Master already
+                           // disables this; every other node was missing it)
     WiFi.disconnect();
     esp_wifi_set_channel(ESPNOW_WIFI_CHANNEL, WIFI_SECOND_CHAN_NONE);
     Serial.println("[ACS] WIFI INIT: STA Mode, Channel forced to 1 to match Master SoftAP.");
@@ -498,18 +575,21 @@ void loop() {
         Serial.println("[ACS] Side Lock auto-relocked after 5s.");
     }
 
-    // 2. Sample all 4 ultrasonic sensors (median-of-5 each) every 1s, then run
-    //    one tick of the automatic refill sequence against the fresh readings.
-    if (currentMillis - lastSensorMillis >= SENSOR_INTERVAL_MS) {
+    // 2. Kick off a new non-blocking sampling cycle every 1s (sampleState is always
+    //    IDLE by then in practice - each cycle finishes well within one second).
+    if (sampleState == SAMPLE_IDLE && currentMillis - lastSensorMillis >= SENSOR_INTERVAL_MS) {
         lastSensorMillis = currentMillis;
-        waterDist   = measureDistanceMedian(US_WATER_TRIG, US_WATER_ECHO);
-        scentedDist = measureDistanceMedian(US_SCENTED_TRIG, US_SCENTED_ECHO);
-        alcoholDist = measureDistanceMedian(US_ALCOHOL_TRIG, US_ALCOHOL_ECHO);
-        mixerDist   = measureDistanceMedian(US_MIXER_TRIG, US_MIXER_ECHO);
+        sampleState = SAMPLE_WATER;
+        sampleIndex = 0;
+    }
 
+    // 3. Advance the sampling state machine by at most one measurement per loop()
+    //    pass. When a full 4-sensor cycle finishes, run one tick of the automatic
+    //    refill sequence against the fresh readings - same cadence as before, just
+    //    no longer blocking loop() for the whole ~600ms worst case in one go.
+    if (tickSensorSampling()) {
         Serial.printf("[ACS] SENSORS: Water=%.1fcm Scented=%.1fcm Alcohol=%.1fcm Mixer=%.1fcm\n",
                       waterDist, scentedDist, alcoholDist, mixerDist);
-
         runAutoRefillTick();
     }
 

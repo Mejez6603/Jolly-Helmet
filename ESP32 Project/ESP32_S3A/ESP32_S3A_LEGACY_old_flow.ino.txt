@@ -1,0 +1,991 @@
+#include <WiFi.h>
+#include <esp_wifi.h>
+#include <esp_now.h>
+#include <Preferences.h>
+#include "Shared_Common.h"
+
+// -------------------------------------------------------------
+// NODE S3A - BOX 1 INTERNAL SERVER MANAGEMENT (ESP32-S3)
+//
+// Owns and RUNS Box 1's entire cycle (coin -> instructions -> checking ->
+// refilling -> sensors -> cleaning -> retrieve -> finish) directly against
+// A1/A2, with zero dependency on Local Server being reachable. Also owns
+// AUTO_CALL (requesting an alcohol delivery from ACS when Box 1's tank runs
+// low) for the same reason - Box 1's supply chain has to keep working even
+// if Local Server is gone for an extended period.
+//
+// Local Server's role narrows to: displaying S3A's broadcast status on the
+// dashboard, pushing "User Configuration" overrides down (once presets
+// exist - not yet built), and owning statistics (via completedSessionSeq).
+//
+// This is the "Default Preset" - today's hardcoded flow, run directly here.
+// -------------------------------------------------------------
+
+Preferences prefs;
+
+// -------------------------------------------------------------
+// Dynamic settings (NVS-owned here, not on Local Server - survives a Local
+// Server replacement/reflash). Broadcast every 1s via Box1ConfigPacket.
+// -------------------------------------------------------------
+float    helmetDetectCmA2    = 15.0f;
+float    alcLowPct           = 10.0f;
+float    alcHighPct          = 90.0f;
+uint16_t secondsPerCoin      = 20;
+// Minimum number of coins that must be inserted before STATE_INSERT_COIN will let a session
+// through - 0 (default) means any single coin works, matching the original behavior, until a
+// technician explicitly requires more via the dashboard.
+uint32_t minCoinsRequired    = 0;
+// Added 2026-09-13, mirrors Box 2/S3C's own field - coins beyond this make STATE_TIME_ALLOT's
+// Confirm reject the selection instead of proceeding (0 = no cap, same convention as Box 2).
+uint32_t maxCoinsAllowed     = 0;
+
+// -------------------------------------------------------------
+// Redesigned customer flow state (Steps 1-5, 11 of the 16-step cycle) - added 2026-09-13.
+// -------------------------------------------------------------
+uint8_t  rateBeforeValue          = 5;   // Step 3 rating (1-10), captured before cleaning
+uint8_t  rateAfterValue           = 5;   // Step 11 rating (1-10), captured after cleaning
+uint32_t selectedTimeSec          = 0;   // Step 4: customer-picked cleaning duration
+const uint32_t TIME_STEP_SEC      = 15;  // +/- increment on Step 4
+const uint32_t TIME_SEC_MIN       = 15;
+const uint32_t TIME_SEC_MAX       = 1800; // 30 min ceiling - a sanity bound independent of
+                                           // whatever minCoinsRequired/maxCoinsAllowed happen
+                                           // to be configured to
+uint32_t requiredCoinsForSession  = 0;   // ceil(selectedTimeSec / secondsPerCoin), computed by
+                                          // recomputeRequiredCoins() below
+char     dynamicScreenBuf[200];          // scratch buffer for screens built with live numbers
+                                          // baked in (Rate A/B, Time Allot) - see buildRateScreen()/
+                                          // buildTimeAllotScreen()
+
+// -------------------------------------------------------------
+// Alcohol Tank (Humidifier Container) Calibration - fixed physical geometry,
+// not dynamic (see ESP32_LOCALSRV.ino's original rationale - tied to the
+// actual tank measurements, not something retuned day-of).
+// -------------------------------------------------------------
+const float ALC_DIST_EMPTY_CM = 9.0f;
+const float ALC_DIST_FULL_CM  = 2.0f;
+const float HUMID_LENGTH_CM   = 15.0f;
+const float HUMID_WIDTH_CM    = 8.0f;
+const float HUMID_HEIGHT_CM   = 9.0f;
+
+bool humidifierRefillRequested = false; // edge-trigger latch, so the ACS request only fires once per low event
+
+// -------------------------------------------------------------
+// Box 1 State Machine
+// -------------------------------------------------------------
+MachineState currentMachineState = STATE_TAPS; // was STATE_IDLE - see STATE_TAPS's own comment
+                                                 // in Shared_Common.h for why
+uint16_t     stepRemainingSec    = 0;
+uint32_t     activeTimer         = 0;
+uint32_t     lastKnownPulsesA1   = 0;
+
+uint8_t  conditionHoldTicks = 0;
+uint16_t uvBlinkTicks       = 0;
+bool     uvBlinkState       = false;
+bool     sensorsWasClosed   = false;
+uint8_t  safetyBreachTicks  = 0; // debounce for STATE_CLEANING's handshake check - a single
+                                  // noisy sensor tick shouldn't be enough to pause a real cycle
+
+// STATE_SENSORS and STATE_RETRIEVE's shared debounce state: enclosureUnlockedForRetry/
+// doorOpenTicks track the enclosure lock separately from conditionHoldTicks (which both states
+// reuse for debouncing the door-CLOSED check). Whenever the enclosure gets unlocked so the user
+// can open it, this confirms the door has genuinely been opened (not just reed-switch bounce)
+// for 2 ticks and then immediately releases the solenoid - it must never be left energized
+// waiting on the user's own pace (a helmet sitting unretrieved, or the door just never being
+// opened, for 10+ minutes overheated a solenoid badly enough to be a real fire-risk incident).
+bool    enclosureUnlockedForRetry = false;
+uint8_t doorOpenTicks      = 0;
+
+// STATE_PAUSED_SAFETY reuses enclosureUnlockedForRetry/doorOpenTicks (declared above) for the
+// same reason Sensors/Retrieve do: while paused with the door closed, handshakeValid being
+// false there means the helmet must be missing (otherwise handshakeValid would already be true
+// and we'd be resuming instead) - it gets unlocked immediately once that's confirmed, released
+// again once the door's confirmed open, and rechecked the next time it closes.
+
+// The breach direction (handshake bad -> pause) was already debounced via safetyBreachTicks,
+// but the restore direction (handshake good -> resume) fired on a single good tick with no
+// debounce at all - a single noisy "helmet present" reading (real helmet sensors read noisy
+// near their threshold) was enough to resume, immediately re-breach on the very next bad tick,
+// and repeat indefinitely. restoreHoldTicks closes that gap with the same 2-tick pattern.
+uint8_t restoreHoldTicks = 0;
+
+unsigned long a1RedrawAtMillis = 0; // same cosmetic EMI-glitch fix Local Server used
+
+TelemetryPacket nodeA1_Data;
+TelemetryPacket nodeA2_Data;
+
+// Session completion tracking, for Local Server's stats (see BoxStatusPacket).
+uint32_t completedSessionSeq    = 0;
+uint32_t sessionStartMillis     = 0;
+uint32_t sessionCoinsAtStart    = 0;
+uint16_t lastSessionDurationSec = 0;
+uint16_t lastSessionCoins       = 0;
+
+unsigned long lastOneSecTick   = 0;
+unsigned long lastConfigBcastMillis = 0;
+const unsigned long BCAST_INTERVAL_MS = 1000;
+unsigned long lastRelayReassertMillis = 0;
+const unsigned long RELAY_REASSERT_INTERVAL_MS = 2000; // self-heal a dropped relay packet within a couple seconds without flooding the mesh
+
+// -------------------------------------------------------------
+// Hardcoded Step Screens - identical to what Local Server used to own.
+// -------------------------------------------------------------
+// Steps 1-2 (added 2026-09-13): resting/intro screens - A1 advances on ANY tap on these two,
+// not a specific button (see anyTapFlagForCurrentState() and CMD_STEP_RENDER's state field).
+const char* SCREEN_TAPS =
+    "#000000|ST,160,110,#FFFFFF,TAP! to,MC,2|TT,160,136,#FFFF00,CONTINUE,500,MC,4";
+
+const char* SCREEN_WELCOME_INTRO =
+    "#000000|ST,160,70,#FFFFFF,Welcome to,MC,2|ST,160,100,#FFFF00,JOLLY HELMET,MC,4|ST,160,150,#FFFFFF,Make your Helmet HAPPY AGAIN :D,MC,2|TT,160,195,#FFFF00,TAP! to Continue,500,MC,2";
+
+// Step 5 (added 2026-09-13): coin accumulation against this session's own requiredCoinsForSession
+// (computed on Step 4's Confirm) instead of the old flat minCoinsRequired*secondsPerCoin check.
+const char* SCREEN_INSERT_COIN =
+    "#000000|ST,160,30,#FFFFFF,INSERT COIN,MC,4|TT,160,100,#FFFFFF,/ {REQUIREDCOIN} Coin,0,ML,2|TT,140,100,#FFFF00,{COINS},500,MR,2|BTN,20,190,90,32,#1C1C20,CANCEL,CC";
+
+// Step 5's "are you sure?" (added 2026-09-13) - YES resets exactly like the existing RESET
+// touch action (back to Step 1/Taps), NO returns to Insert Coin unchanged.
+const char* SCREEN_CANCEL_CONFIRM =
+    "#7f1d1d|ST,160,60,#FFFFFF,Cancel operation?,MC,2|BTN,20,140,130,45,#dc2626,YES,CY|BTN,170,140,130,45,#334155,NO,CN";
+
+// Step 14 (added 2026-09-13): defined per the user's own design export but deliberately wired
+// to nothing - it was an empty "NONE" placeholder with no described trigger. Kept as a plain
+// constant so the screen exists to look at, not reachable by any real transition.
+const char* SCREEN_CONFIRM_PLACEHOLDER =
+    "#000000|ST,10,15,#FFFFFF,NONE,TL,2";
+
+const char* SCREEN_INSTRUCTIONS =
+    "#000080|TT,10,8,#FFFFFF,COIN:{COINS} TIME:{TIMER}s,0|ST,10,70,#FFFFFF,Please Open the|ST,10,95,#FFFFFF,Enclosure Door to Proceed";
+
+const char* SCREEN_CHECKING =
+    "#000080|TT,10,8,#FFFFFF,COIN:{COINS} TIME:{TIMER}s,0|ST,10,80,#FFFFFF,Please Wait...|ST,10,105,#FFFF00,Checking Alcohol Status";
+
+const char* SCREEN_REFILLING =
+    "#000080|TT,10,8,#FFFFFF,COIN:{COINS} TIME:{TIMER}s,0|ST,10,80,#FFFFFF,Please Wait...|ST,10,105,#FFFF00,Refilling Alcohol...";
+
+const char* SCREEN_SENSORS =
+    "#000080|TT,10,8,#FFFFFF,COIN:{COINS} TIME:{TIMER}s,0|ST,10,70,#FFFFFF,Please Place the|ST,10,95,#FFFFFF,Headgear Inside the Chamber";
+
+const char* SCREEN_SENSORS_RETRY =
+    "#800000|ST,10,15,#FFFFFF,No Headgear Detected!|ST,10,50,#FFFFFF,Please Open the Door|ST,10,75,#FFFFFF,and Insert your Headgear";
+
+const char* SCREEN_CLEANING =
+    "#000080|TT,10,8,#FFFFFF,COIN:{COINS} TIME:{TIMER}s,0|ST,10,70,#FFFFFF,Cleaning in Progress...|TT,10,95,#00FF00,Time: {TIMER}s,0|BTN,215,8,95,32,#ef4444,ABORT,ABORT";
+
+// Content reskinned 2026-09-13 per the user's new design - trigger/action strings unchanged.
+const char* SCREEN_ABORT_CONFIRM =
+    "#7f1d1d|ST,160,50,#FFFFFF,Abort operation?,MC,2|ST,160,80,#FFFFFF,Coin(s) won't be Refunded.,MC,2|BTN,20,140,130,45,#dc2626,ABORT,ABORT_YES|BTN,170,140,130,45,#334155,RESUME,ABORT_NO";
+
+const char* SCREEN_SAFETY_PAUSE =
+    "#800000|ST,10,20,#FFFFFF,SAFETY PAUSE|TT,10,60,#FFFF00,CLOSE DOOR / REPLACE HELMET,300";
+
+const char* SCREEN_RETRIEVE =
+    "#006400|TT,10,8,#FFFFFF,COIN:{COINS} TIME:{TIMER}s,0|ST,10,70,#FFFFFF,Please Open the|ST,10,95,#FFFFFF,Enclosure Door to Retrieve";
+
+const char* SCREEN_FINISH =
+    "#006400|ST,10,20,#FFFFFF,Thank you for your|ST,10,45,#FFFFFF,Patronage!|ST,10,80,#FFFF00,We Hope to See you Again! :D";
+
+// -------------------------------------------------------------
+// NVS
+// -------------------------------------------------------------
+void loadConfigFromNVS() {
+    prefs.begin("s3a_nvs", false);
+    helmetDetectCmA2       = prefs.getFloat("helm_a2_cm", 15.0f);
+    alcLowPct              = prefs.getFloat("alc_low", 10.0f);
+    alcHighPct             = prefs.getFloat("alc_high", 90.0f);
+    secondsPerCoin         = prefs.getUShort("sec_coin", 20);
+    // Default 0 = no minimum enforced, matching the original "any coin works" behavior until
+    // this is explicitly configured higher via the dashboard.
+    minCoinsRequired       = prefs.getUInt("min_coins", 0);
+    maxCoinsAllowed        = prefs.getUInt("max_coins", 0);
+    lastKnownPulsesA1      = prefs.getUInt("last_a1_pulses", 0); // survives an S3A reboot mid-session
+    Serial.printf("[S3A NVS] Loaded: helmetA2=%.1f alcLow=%.1f alcHigh=%.1f secPerCoin=%u minCoins=%u maxCoins=%u\n",
+                  helmetDetectCmA2, alcLowPct, alcHighPct, secondsPerCoin, minCoinsRequired, maxCoinsAllowed);
+}
+
+void saveConfigToNVS() {
+    prefs.putFloat("helm_a2_cm", helmetDetectCmA2);
+    prefs.putFloat("alc_low", alcLowPct);
+    prefs.putFloat("alc_high", alcHighPct);
+    prefs.putUShort("sec_coin", secondsPerCoin);
+    prefs.putUInt("min_coins", minCoinsRequired);
+    prefs.putUInt("max_coins", maxCoinsAllowed);
+}
+
+// -------------------------------------------------------------
+// ESP-NOW send/receive
+// -------------------------------------------------------------
+void onDataSent(const wifi_tx_info_t *tx_info, esp_now_send_status_t status) {
+    if (!tx_info) return;
+}
+
+void sendCmd(uint8_t targetDev, uint8_t cmdId, uint8_t subIdx, uint16_t param, uint8_t state, const char* str = nullptr) {
+    CommandPacket cmd;
+    memset(&cmd, 0, sizeof(CommandPacket));
+    cmd.targetDeviceID = targetDev;
+    cmd.commandID      = cmdId;
+    cmd.subIndex       = subIdx;
+    cmd.param16        = param;
+    cmd.state          = state;
+    if (str != nullptr) {
+        strncpy(cmd.payloadStr, str, sizeof(cmd.payloadStr) - 1);
+        cmd.payloadStr[sizeof(cmd.payloadStr) - 1] = '\0';
+    }
+    esp_now_send(BROADCAST_MAC, (uint8_t*)&cmd, sizeof(CommandPacket));
+}
+
+void broadcastConfig() {
+    Box1ConfigPacket packet;
+    memset(&packet, 0, sizeof(Box1ConfigPacket));
+    packet.deviceID              = DEVICE_S3A;
+    packet.helmetDetectCmA2      = helmetDetectCmA2;
+    packet.alcLowPct             = alcLowPct;
+    packet.alcHighPct            = alcHighPct;
+    packet.secondsPerCoin        = secondsPerCoin;
+    packet.minCoinsRequired      = minCoinsRequired;
+    packet.maxCoinsAllowed       = maxCoinsAllowed;
+    esp_now_send(BROADCAST_MAC, (uint8_t*)&packet, sizeof(Box1ConfigPacket));
+}
+
+// -------------------------------------------------------------
+// Sensor / Relay Helpers
+// -------------------------------------------------------------
+bool helmetPresentFn() {
+    return (nodeA2_Data.usHelmetDistance > 0.0f && nodeA2_Data.usHelmetDistance < helmetDetectCmA2);
+}
+
+bool enclosureClosedFn() {
+    return !nodeA2_Data.doorEnclosure;
+}
+
+void broadcastStatus() {
+    BoxStatusPacket packet;
+    memset(&packet, 0, sizeof(BoxStatusPacket));
+    packet.deviceID               = DEVICE_S3A;
+    packet.machineState           = (uint8_t)currentMachineState;
+    packet.activeTimer            = activeTimer;
+    packet.stepRemainingSec       = stepRemainingSec;
+    packet.handshakeValid         = enclosureClosedFn() && helmetPresentFn();
+    packet.completedSessionSeq    = completedSessionSeq;
+    packet.lastSessionDurationSec = lastSessionDurationSec;
+    packet.lastSessionCoins       = lastSessionCoins;
+    esp_now_send(BROADCAST_MAC, (uint8_t*)&packet, sizeof(BoxStatusPacket));
+}
+
+float alcoholPercent(float distCm) {
+    if (distCm <= 0.0f) return 0.0f;
+    float pct = (ALC_DIST_EMPTY_CM - distCm) / (ALC_DIST_EMPTY_CM - ALC_DIST_FULL_CM) * 100.0f;
+    if (pct < 0.0f) pct = 0.0f;
+    if (pct > 100.0f) pct = 100.0f;
+    return pct;
+}
+
+uint16_t humidifierVolumeNeededML(float distCm) {
+    float liquidHeight = HUMID_HEIGHT_CM - distCm;
+    if (liquidHeight < 0.0f) liquidHeight = 0.0f;
+    float remainML = HUMID_LENGTH_CM * HUMID_WIDTH_CM * liquidHeight;
+
+    float safeHeight = HUMID_HEIGHT_CM - ALC_DIST_FULL_CM;
+    float capacityML = HUMID_LENGTH_CM * HUMID_WIDTH_CM * safeHeight;
+
+    float needed = capacityML - remainML;
+    if (needed < 0.0f) needed = 0.0f;
+    if (needed > 65535.0f) needed = 65535.0f;
+    return (uint16_t)needed;
+}
+
+bool a1HardRefreshPending = false; // set only when the pending redraw must also fully re-init
+                                    // the ST7789 controller - see CMD_TFT_HARD_REFRESH's comment
+                                    // in Shared_Common.h
+
+void muteA1AndScheduleRedraw(bool hardRefresh) {
+    sendCmd(DEVICE_A1, CMD_MUTE_COINS, 0, 250, 0);
+    a1RedrawAtMillis = millis() + 300;
+    if (hardRefresh) a1HardRefreshPending = true;
+}
+
+// Tracks the last commanded relay bitmask so it can be periodically re-sent (see loop()) -
+// applyRelayBitmask() only fires once, at the moment of a state transition, so if that one
+// burst of ESP-NOW packets gets dropped, A2 is left stuck in the previous state's relay
+// configuration (e.g. door still locked) until the next transition, which may be a long time
+// away or may never come. Re-sending the current mask periodically means a single dropped
+// packet self-heals within a few seconds instead of staying stuck (same fix applied to Box 2/
+// S3C after a live test caught it stuck mid-cycle there).
+uint8_t desiredA2Mask = 0;
+
+void sendA2RelayMask(uint8_t mask) {
+    for (uint8_t i = 0; i < 5; i++) {
+        uint8_t state = (mask >> i) & 0x01;
+        sendCmd(DEVICE_A2, CMD_SET_RELAY, i, 0, state);
+        delay(2); // firing several broadcasts back-to-back with zero gap can overflow ESP-NOW's
+                  // send queue and silently drop some - a couple ms between each gives the radio
+                  // time to actually clear the previous one first
+    }
+}
+
+void applyRelayBitmask(uint8_t mask) {
+    // Bit 0 is the enclosure lock relay (1=unlocked, 0=locked). The TFT-white-screen glitch is
+    // specifically caused by the lock solenoid re-engaging (Unlocked->Locked), so only that exact
+    // transition should force A1 to re-init its display controller - not every relay change.
+    bool lockJustEngaged = (desiredA2Mask & 0x01) && !(mask & 0x01);
+    desiredA2Mask = mask;
+    muteA1AndScheduleRedraw(lockJustEngaged);
+    sendA2RelayMask(mask);
+}
+
+// Zeroes A1's own live coin display and this node's pulse-tracking baseline together, so a
+// customer never sees a leftover total from a previous completed cycle (A1's confirmedPulses
+// otherwise only resets on its own reboot). Call whenever returning to STATE_TAPS (was STATE_IDLE).
+void resetCoinSession() {
+    sendCmd(DEVICE_A1, CMD_RESET_COINS, 0, 0, 0);
+    lastKnownPulsesA1 = 0;
+    prefs.putUInt("last_a1_pulses", 0);
+}
+
+void applyCleaningRelays() {
+    applyRelayBitmask(0b00001000 | (uvBlinkState ? 0b00010000 : 0b00000000));
+}
+
+// TAPS/WELCOME (Steps 1-2) advance on ANY tap, not a specific button - piggybacked on
+// CMD_STEP_RENDER's otherwise-unused state field (1 = any-tap-advances) rather than a new
+// command, same "reuse a free scalar field" convention CMD_SYNC_VARS.subIndex already uses for
+// {MINCOINS}. Centralized here so every place that (re)sends a screen - the periodic post-relay
+// redraw, the hard-refresh path, and every touch-action handler below - agrees on when it's set.
+uint8_t anyTapFlagForCurrentState() {
+    return (currentMachineState == STATE_TAPS || currentMachineState == STATE_WELCOME) ? 1 : 0;
+}
+
+// Step 4's cost math: whole coins only, always rounding up (a customer can't pay a fractional
+// coin), matching Box 2/S3C's identical ceil() pattern for the same kind of conversion.
+void recomputeRequiredCoins() {
+    requiredCoinsForSession = (selectedTimeSec + secondsPerCoin - 1) / secondsPerCoin;
+}
+
+// Steps 3/11 share one screen layout (a live 1-10 value plus -/+/OK) - only the confirm action
+// code and which variable is being edited differ between "before" and "after" cleaning.
+void buildRateScreen(bool isAfter) {
+    uint8_t val = isAfter ? rateAfterValue : rateBeforeValue;
+    snprintf(dynamicScreenBuf, sizeof(dynamicScreenBuf),
+        "#000000|ST,160,30,#FFFFFF,RATE HELMET,MC,4|TT,160,100,#00FF00,%u / 10,0,MC,4|"
+        "BTN,20,170,80,50,#334155,-,RM|BTN,120,170,80,50,#334155,+,RP|"
+        "BTN,220,170,80,50,#22c55e,OK,%s",
+        val, isAfter ? "RBC" : "RAC");
+}
+void sendRateScreen(bool isAfter) {
+    buildRateScreen(isAfter);
+    sendCmd(DEVICE_A1, CMD_STEP_RENDER, 0, 0, 0, dynamicScreenBuf);
+}
+
+// Step 4's screen either shows the live time/cost readout (warning == nullptr/empty), or swaps
+// the title line for a rejection message when Confirm's min/max check fails (see the "TC" touch
+// action below) - drawn into the screen itself, not a popup (native dialogs don't exist on a
+// real TFT any more than they exist in the sandboxed design tool this was prototyped in).
+void buildTimeAllotScreen(const char* warning) {
+    if (warning && warning[0]) {
+        snprintf(dynamicScreenBuf, sizeof(dynamicScreenBuf),
+            "#000000|ST,160,30,#FF6666,%s,MC,2|TT,160,90,#00FF00,%lus=%luCoin,0,MC,2|"
+            "BTN,20,180,80,40,#334155,-,TM|BTN,120,180,80,40,#334155,+,TP|"
+            "BTN,220,180,80,40,#22c55e,OK,TC",
+            warning, (unsigned long)selectedTimeSec, (unsigned long)requiredCoinsForSession);
+    } else {
+        snprintf(dynamicScreenBuf, sizeof(dynamicScreenBuf),
+            "#000000|ST,160,30,#FFFFFF,PICK TIME,MC,4|TT,160,90,#00FF00,%lus=%luCoin,0,MC,2|"
+            "BTN,20,180,80,40,#334155,-,TM|BTN,120,180,80,40,#334155,+,TP|"
+            "BTN,220,180,80,40,#22c55e,OK,TC",
+            (unsigned long)selectedTimeSec, (unsigned long)requiredCoinsForSession);
+    }
+}
+void sendTimeAllotScreen(const char* warning) {
+    buildTimeAllotScreen(warning);
+    sendCmd(DEVICE_A1, CMD_STEP_RENDER, 0, 0, 0, dynamicScreenBuf);
+}
+
+const char* screenForCurrentState() {
+    switch (currentMachineState) {
+        case STATE_IDLE:           return SCREEN_TAPS; // superseded - see Shared_Common.h
+        case STATE_INSTRUCTIONS:   return SCREEN_INSTRUCTIONS;
+        case STATE_CHECKING:       return SCREEN_CHECKING;
+        case STATE_REFILLING:      return SCREEN_REFILLING;
+        case STATE_SENSORS:        return sensorsWasClosed ? SCREEN_SENSORS_RETRY : SCREEN_SENSORS;
+        case STATE_CLEANING:       return SCREEN_CLEANING;
+        case STATE_ABORT_CONFIRM:  return SCREEN_ABORT_CONFIRM;
+        case STATE_PAUSED_SAFETY:  return SCREEN_SAFETY_PAUSE;
+        case STATE_RETRIEVE:       return SCREEN_RETRIEVE;
+        case STATE_FINISH:         return SCREEN_FINISH;
+        case STATE_TAPS:           return SCREEN_TAPS;
+        case STATE_WELCOME:        return SCREEN_WELCOME_INTRO;
+        case STATE_RATE_A:         buildRateScreen(false); return dynamicScreenBuf;
+        case STATE_TIME_ALLOT:     buildTimeAllotScreen(nullptr); return dynamicScreenBuf;
+        case STATE_INSERT_COIN:    return SCREEN_INSERT_COIN;
+        case STATE_RATE_B:         buildRateScreen(true); return dynamicScreenBuf;
+        case STATE_CANCEL_CONFIRM: return SCREEN_CANCEL_CONFIRM;
+        default:                   return SCREEN_TAPS;
+    }
+}
+
+void recordCompletedSession() {
+    uint32_t durationSec = (millis() - sessionStartMillis) / 1000UL;
+    uint32_t coinsUsed = (lastKnownPulsesA1 >= sessionCoinsAtStart) ? (lastKnownPulsesA1 - sessionCoinsAtStart) : 0;
+    lastSessionDurationSec = (durationSec > 65535UL) ? 65535 : (uint16_t)durationSec;
+    lastSessionCoins       = (coinsUsed  > 65535UL) ? 65535 : (uint16_t)coinsUsed;
+    completedSessionSeq++;
+    Serial.printf("[S3A STATS] Session #%u recorded: %ds, %d coins.\n", completedSessionSeq, lastSessionDurationSec, lastSessionCoins);
+}
+
+// -------------------------------------------------------------
+// ESP-NOW Receive
+// -------------------------------------------------------------
+void onDataRecv(const esp_now_recv_info_t *info, const uint8_t *incomingData, int len) {
+    if (!info || !info->src_addr || !incomingData || len <= 0) return;
+
+    if (len == sizeof(CommandPacket)) {
+        CommandPacket cmd;
+        memcpy(&cmd, incomingData, sizeof(CommandPacket));
+        if (cmd.targetDeviceID != DEVICE_S3A) return; // broadcast traffic meant for another node
+
+        if (cmd.commandID != CMD_SYNC_VARS) {
+            Serial.printf("[S3A RX] Opcode %d\n", cmd.commandID);
+        }
+
+        if (cmd.commandID == CMD_SET_CONFIG) {
+            // Accepts 5 fields (pre-2026-09-13 dashboards, no Max Coins yet) or 6 (with it) -
+            // same backward-compatible parsed==N||N+1 pattern Box 2/S3C already uses for its
+            // own maxCoinsAllowed field.
+            float helmCm, lowPct, highPct, secPerCoinF, minCoinsF, maxCoinsF;
+            int parsed = sscanf(cmd.payloadStr, "%f,%f,%f,%f,%f,%f", &helmCm, &lowPct, &highPct, &secPerCoinF, &minCoinsF, &maxCoinsF);
+            if (parsed == 5 || parsed == 6) {
+                helmetDetectCmA2 = helmCm;
+                alcLowPct        = lowPct;
+                alcHighPct       = highPct;
+                secondsPerCoin   = (uint16_t)secPerCoinF;
+                minCoinsRequired = (uint32_t)minCoinsF;
+                if (parsed == 6) maxCoinsAllowed = (uint32_t)maxCoinsF;
+                saveConfigToNVS();
+                broadcastConfig();
+                Serial.printf("[S3A CONFIG] Updated & saved: helmA2=%.1f alcLow=%.1f alcHigh=%.1f secPerCoin=%u minCoins=%u maxCoins=%u\n",
+                              helmetDetectCmA2, alcLowPct, alcHighPct, secondsPerCoin, minCoinsRequired, maxCoinsAllowed);
+            } else {
+                Serial.printf("[S3A CONFIG] REJECTED: malformed payload '%s' (parsed %d/5-6)\n", cmd.payloadStr, parsed);
+            }
+        } else if (cmd.commandID == CMD_TOUCH_ACTION) {
+            Serial.printf("[S3A TOUCH] Action: '%s'\n", cmd.payloadStr);
+            if (strcmp(cmd.payloadStr, "RESET") == 0) {
+                activeTimer = 0;
+                currentMachineState = STATE_TAPS;
+                applyRelayBitmask(0b00000000);
+                resetCoinSession();
+                sendCmd(DEVICE_A1, CMD_STEP_RENDER, 0, 0, anyTapFlagForCurrentState(), SCREEN_TAPS);
+            } else if (strcmp(cmd.payloadStr, "ABORT") == 0 && currentMachineState == STATE_CLEANING) {
+                currentMachineState = STATE_ABORT_CONFIRM;
+                sendCmd(DEVICE_A1, CMD_STEP_RENDER, 0, 0, 0, SCREEN_ABORT_CONFIRM);
+            } else if (strcmp(cmd.payloadStr, "ABORT_YES") == 0 && currentMachineState == STATE_ABORT_CONFIRM) {
+                Serial.println("[S3A] Cycle Cancelled by user (Abort Confirmed).");
+                activeTimer = 0;
+                currentMachineState = STATE_RETRIEVE;
+                conditionHoldTicks = 0;
+                enclosureUnlockedForRetry = true;
+                doorOpenTicks = 0;
+                applyRelayBitmask(0b00000001);
+                sendCmd(DEVICE_A1, CMD_STEP_RENDER, 0, 0, 0, SCREEN_RETRIEVE);
+                sendCmd(DEVICE_A1, CMD_BUZZER, 0, 500, 0);
+            } else if (strcmp(cmd.payloadStr, "ABORT_NO") == 0 && currentMachineState == STATE_ABORT_CONFIRM) {
+                currentMachineState = STATE_CLEANING;
+                sendCmd(DEVICE_A1, CMD_STEP_RENDER, 0, 0, 0, SCREEN_CLEANING);
+
+            // --- Added 2026-09-13 for the redesigned Steps 1-5, 11 customer flow ---
+            } else if (strcmp(cmd.payloadStr, "TAP_ADVANCE") == 0 && currentMachineState == STATE_TAPS) {
+                currentMachineState = STATE_WELCOME;
+                sendCmd(DEVICE_A1, CMD_STEP_RENDER, 0, 0, anyTapFlagForCurrentState(), SCREEN_WELCOME_INTRO);
+            } else if (strcmp(cmd.payloadStr, "TAP_ADVANCE") == 0 && currentMachineState == STATE_WELCOME) {
+                currentMachineState = STATE_RATE_A;
+                rateBeforeValue = 5;
+                sendRateScreen(false);
+            } else if (strcmp(cmd.payloadStr, "RM") == 0 && (currentMachineState == STATE_RATE_A || currentMachineState == STATE_RATE_B)) {
+                uint8_t* val = (currentMachineState == STATE_RATE_A) ? &rateBeforeValue : &rateAfterValue;
+                if (*val > 1) (*val)--;
+                sendRateScreen(currentMachineState == STATE_RATE_B);
+            } else if (strcmp(cmd.payloadStr, "RP") == 0 && (currentMachineState == STATE_RATE_A || currentMachineState == STATE_RATE_B)) {
+                uint8_t* val = (currentMachineState == STATE_RATE_A) ? &rateBeforeValue : &rateAfterValue;
+                if (*val < 10) (*val)++;
+                sendRateScreen(currentMachineState == STATE_RATE_B);
+            } else if (strcmp(cmd.payloadStr, "RAC") == 0 && currentMachineState == STATE_RATE_A) {
+                Serial.printf("[S3A] Rate A confirmed: %u/10 -> Step 4 (Time Allot)\n", rateBeforeValue);
+                currentMachineState = STATE_TIME_ALLOT;
+                selectedTimeSec = TIME_SEC_MIN;
+                recomputeRequiredCoins();
+                sendTimeAllotScreen(nullptr);
+            } else if (strcmp(cmd.payloadStr, "TM") == 0 && currentMachineState == STATE_TIME_ALLOT) {
+                if (selectedTimeSec > TIME_SEC_MIN) selectedTimeSec -= TIME_STEP_SEC;
+                recomputeRequiredCoins();
+                sendTimeAllotScreen(nullptr);
+            } else if (strcmp(cmd.payloadStr, "TP") == 0 && currentMachineState == STATE_TIME_ALLOT) {
+                if (selectedTimeSec < TIME_SEC_MAX) selectedTimeSec += TIME_STEP_SEC;
+                recomputeRequiredCoins();
+                sendTimeAllotScreen(nullptr);
+            } else if (strcmp(cmd.payloadStr, "TC") == 0 && currentMachineState == STATE_TIME_ALLOT) {
+                if (requiredCoinsForSession < minCoinsRequired) {
+                    char warn[48];
+                    snprintf(warn, sizeof(warn), "Min %u Coins Required", (unsigned)minCoinsRequired);
+                    Serial.printf("[S3A] Time rejected: %lu coins < min %u\n", (unsigned long)requiredCoinsForSession, (unsigned)minCoinsRequired);
+                    sendTimeAllotScreen(warn);
+                } else if (maxCoinsAllowed > 0 && requiredCoinsForSession > maxCoinsAllowed) {
+                    char warn[48];
+                    snprintf(warn, sizeof(warn), "Max %u Coins Allowed", (unsigned)maxCoinsAllowed);
+                    Serial.printf("[S3A] Time rejected: %lu coins > max %u\n", (unsigned long)requiredCoinsForSession, (unsigned)maxCoinsAllowed);
+                    sendTimeAllotScreen(warn);
+                } else {
+                    Serial.printf("[S3A] Time confirmed: %lus (%lu coins) -> Step 5 (Insert Coin)\n",
+                                  (unsigned long)selectedTimeSec, (unsigned long)requiredCoinsForSession);
+                    currentMachineState = STATE_INSERT_COIN;
+                    sendCmd(DEVICE_A1, CMD_STEP_RENDER, 0, 0, 0, SCREEN_INSERT_COIN);
+                }
+            } else if (strcmp(cmd.payloadStr, "CC") == 0 && currentMachineState == STATE_INSERT_COIN) {
+                currentMachineState = STATE_CANCEL_CONFIRM;
+                sendCmd(DEVICE_A1, CMD_STEP_RENDER, 0, 0, 0, SCREEN_CANCEL_CONFIRM);
+            } else if (strcmp(cmd.payloadStr, "CY") == 0 && currentMachineState == STATE_CANCEL_CONFIRM) {
+                Serial.println("[S3A] Cancelled by user -> Step 1 (Taps)");
+                activeTimer = 0;
+                currentMachineState = STATE_TAPS;
+                applyRelayBitmask(0b00000000);
+                resetCoinSession();
+                sendCmd(DEVICE_A1, CMD_STEP_RENDER, 0, 0, anyTapFlagForCurrentState(), SCREEN_TAPS);
+            } else if (strcmp(cmd.payloadStr, "CN") == 0 && currentMachineState == STATE_CANCEL_CONFIRM) {
+                currentMachineState = STATE_INSERT_COIN;
+                sendCmd(DEVICE_A1, CMD_STEP_RENDER, 0, 0, 0, SCREEN_INSERT_COIN);
+            } else if (strcmp(cmd.payloadStr, "RBC") == 0 && currentMachineState == STATE_RATE_B) {
+                Serial.printf("[S3A] Rate B confirmed: %u/10 -> Step 12 (Retrieve)\n", rateAfterValue);
+                currentMachineState = STATE_RETRIEVE;
+                conditionHoldTicks = 0;
+                enclosureUnlockedForRetry = true;
+                doorOpenTicks = 0;
+                applyRelayBitmask(0b00000001);
+                sendCmd(DEVICE_A1, CMD_STEP_RENDER, 0, 0, 0, SCREEN_RETRIEVE);
+                sendCmd(DEVICE_A1, CMD_BUZZER, 0, 500, 0);
+            }
+        }
+        return;
+    }
+
+    if (len != sizeof(TelemetryPacket)) return;
+
+    TelemetryPacket packet;
+    memcpy(&packet, incomingData, sizeof(TelemetryPacket));
+
+    if (packet.deviceID == DEVICE_A1) {
+        // lastKnownPulsesA1 is NVS-persisted (see loadConfigFromNVS/below) so an S3A reboot
+        // mid-session doesn't forget which pulses it already credited and double-add time for
+        // them - same class of bug already found and fixed on Local Server's own copy of this.
+        if (packet.pulseCount > lastKnownPulsesA1) {
+            uint32_t newPulses = packet.pulseCount - lastKnownPulsesA1;
+            uint32_t addedSeconds = newPulses * secondsPerCoin;
+            activeTimer += addedSeconds;
+            lastKnownPulsesA1 = packet.pulseCount;
+            prefs.putUInt("last_a1_pulses", lastKnownPulsesA1);
+            Serial.printf("[S3A COIN] +%d seconds from A1. activeTimer = %d sec\n", addedSeconds, activeTimer);
+        } else if (packet.pulseCount < lastKnownPulsesA1) {
+            // A1 itself rebooted or its counter was reset - resync the baseline down rather
+            // than either double-crediting or freezing until A1's counter climbs back above
+            // the old (now stale) baseline.
+            Serial.printf("[S3A COIN] A1 pulse count dropped (%u -> %u) - resyncing baseline.\n", lastKnownPulsesA1, packet.pulseCount);
+            lastKnownPulsesA1 = packet.pulseCount;
+            prefs.putUInt("last_a1_pulses", lastKnownPulsesA1);
+        }
+        nodeA1_Data = packet;
+    } else if (packet.deviceID == DEVICE_A2) {
+        nodeA2_Data = packet;
+    }
+}
+
+// -------------------------------------------------------------
+// Setup / Loop
+// -------------------------------------------------------------
+void setup() {
+    Serial.begin(115200);
+    delay(300);
+    Serial.println("\n=======================================================");
+    Serial.println("   NODE S3A: BOX 1 INTERNAL SERVER MANAGEMENT (ESP32-S3)");
+    Serial.println("   Now running Box 1's full state machine directly.");
+    Serial.println("=======================================================");
+
+    loadConfigFromNVS();
+    memset(&nodeA1_Data, 0, sizeof(TelemetryPacket));
+    memset(&nodeA2_Data, 0, sizeof(TelemetryPacket));
+
+    WiFi.mode(WIFI_STA);
+    WiFi.setSleep(false); // modem sleep periodically powers down the receiver to save power,
+                           // even with no AP joined - causes several-second gaps in ESP-NOW
+                           // reception on a roughly-periodic cycle otherwise (Master already
+                           // disables this; every other node was missing it)
+    WiFi.disconnect();
+    esp_wifi_set_channel(ESPNOW_WIFI_CHANNEL, WIFI_SECOND_CHAN_NONE);
+    Serial.println("[S3A] WiFi STA mode, channel forced to 1.");
+
+    if (esp_now_init() != ESP_OK) {
+        Serial.println("[S3A] ESP-NOW: Initialization FAILED!");
+        return;
+    }
+    esp_now_register_send_cb(onDataSent);
+    esp_now_register_recv_cb(onDataRecv);
+
+    esp_now_peer_info_t peerInfo;
+    memset(&peerInfo, 0, sizeof(esp_now_peer_info_t));
+    memcpy(peerInfo.peer_addr, BROADCAST_MAC, 6);
+    peerInfo.channel = ESPNOW_WIFI_CHANNEL;
+    peerInfo.encrypt = false;
+    esp_now_add_peer(&peerInfo);
+    Serial.println("[S3A] ESP-NOW: Broadcast peer registered.");
+
+    broadcastConfig();
+    sendCmd(DEVICE_A1, CMD_STEP_RENDER, 0, 0, 1, SCREEN_TAPS); // state=1: any-tap-advances
+}
+
+void loop() {
+    unsigned long currentMillis = millis();
+
+    // Post-solenoid TFT repaint - same EMI-glitch mitigation Local Server used.
+    if (a1RedrawAtMillis != 0 && currentMillis >= a1RedrawAtMillis) {
+        a1RedrawAtMillis = 0;
+        if (a1HardRefreshPending) {
+            a1HardRefreshPending = false;
+            sendCmd(DEVICE_A1, CMD_TFT_HARD_REFRESH, 0, 0, anyTapFlagForCurrentState(), screenForCurrentState());
+        } else {
+            sendCmd(DEVICE_A1, CMD_STEP_RENDER, 0, 0, anyTapFlagForCurrentState(), screenForCurrentState());
+        }
+    }
+
+    if (currentMillis - lastOneSecTick >= 1000) {
+        lastOneSecTick = currentMillis;
+
+        bool handshakeValid = enclosureClosedFn() && helmetPresentFn();
+
+        // AUTO_CALL: request an alcohol delivery from ACS when Box 1's tank runs low.
+        // Lives here (not Local Server) so it keeps working with zero dependency on
+        // Local Server being reachable - Box 1's supply chain can't wait weeks for a repair.
+        float humidPct = alcoholPercent(nodeA2_Data.usAlcoholDistance);
+        if (humidPct <= alcLowPct && !humidifierRefillRequested) {
+            humidifierRefillRequested = true;
+            uint16_t neededML = humidifierVolumeNeededML(nodeA2_Data.usAlcoholDistance);
+            Serial.printf("[S3A AUTO_CALL] Humidifier low (%.0f%%) -> requesting %umL delivery from ACS.\n", humidPct, neededML);
+            sendCmd(DEVICE_ACS, CMD_REQUEST_DELIVERY, 0, neededML, 0);
+        } else if (humidPct > alcLowPct) {
+            humidifierRefillRequested = false;
+        }
+
+        switch (currentMachineState) {
+            // Old case (coin accumulation -> STATE_INSTRUCTIONS) removed 2026-09-13 - superseded
+            // by STATE_INSERT_COIN below, which now does that job against the customer's own
+            // chosen requiredCoinsForSession instead of a flat minCoinsRequired*secondsPerCoin
+            // threshold. See Shared_Common.h's STATE_IDLE comment - no longer reachable at all;
+            // kept as an explicit no-op case (rather than omitted) just to avoid a -Wswitch
+            // warning for a MachineState value the compiler can't otherwise know is intentional.
+            case STATE_IDLE:
+                break;
+
+            // Steps 1-2 (TAPS/WELCOME) and 3-5 (Rate A/Time Allot/Insert Coin's button presses)
+            // are entirely touch-driven - see CMD_TOUCH_ACTION above. STATE_INSERT_COIN's own
+            // coin-accumulation check (the only per-tick logic these five states need) is below,
+            // in its usual position in the flow.
+            case STATE_TAPS:
+            case STATE_WELCOME:
+            case STATE_RATE_A:
+            case STATE_TIME_ALLOT:
+            case STATE_CANCEL_CONFIRM:
+                break;
+
+            case STATE_INSTRUCTIONS:
+                if (nodeA2_Data.doorEnclosure) conditionHoldTicks++; else conditionHoldTicks = 0;
+                if (conditionHoldTicks >= 2) {
+                    Serial.println("[S3A] Door opened -> Step 9 (Sensors)");
+                    currentMachineState = STATE_SENSORS;
+                    sensorsWasClosed = false;
+                    conditionHoldTicks = 0;
+                    // Deliberately NOT re-locking here: the door's already unlocked from this
+                    // same Instructions step and Sensors wants it to stay that way while the
+                    // customer places their helmet - re-locking just to immediately unlock
+                    // again in Sensors was the exact redundant solenoid round-trip that used to
+                    // double-trigger the TFT white-screen glitch, before Checking/Refilling got
+                    // reordered ahead of Instructions.
+                    enclosureUnlockedForRetry = true; // Sensors releases it once confirmed open
+                    doorOpenTicks = 0;
+                    sendCmd(DEVICE_A1, CMD_STEP_RENDER, 0, 0, 0, SCREEN_SENSORS);
+                    sendCmd(DEVICE_A1, CMD_BUZZER, 0, 250, 0);
+                }
+                break;
+
+            case STATE_CHECKING: {
+                float pct = alcoholPercent(nodeA2_Data.usAlcoholDistance);
+                if (pct <= alcLowPct) {
+                    Serial.printf("[S3A] Alcohol low (%.0f%%) -> Step 7 (Refilling)\n", pct);
+                    currentMachineState = STATE_REFILLING;
+                    sendCmd(DEVICE_A1, CMD_STEP_RENDER, 0, 0, 0, SCREEN_REFILLING);
+                } else {
+                    Serial.printf("[S3A] Alcohol OK (%.0f%%) -> Step 8 (Instructions)\n", pct);
+                    currentMachineState = STATE_INSTRUCTIONS;
+                    conditionHoldTicks = 0;
+                    applyRelayBitmask(0b00000001);
+                    sendCmd(DEVICE_A1, CMD_STEP_RENDER, 0, 0, 0, SCREEN_INSTRUCTIONS);
+                    sendCmd(DEVICE_A1, CMD_BUZZER, 0, 250, 0);
+                }
+                break;
+            }
+
+            case STATE_REFILLING: {
+                float pct = alcoholPercent(nodeA2_Data.usAlcoholDistance);
+                if (pct >= alcHighPct) {
+                    Serial.println("[S3A] Refill complete -> Step 8 (Instructions)");
+                    currentMachineState = STATE_INSTRUCTIONS;
+                    conditionHoldTicks = 0;
+                    applyRelayBitmask(0b00000001);
+                    sendCmd(DEVICE_A1, CMD_STEP_RENDER, 0, 0, 0, SCREEN_INSTRUCTIONS);
+                    sendCmd(DEVICE_A1, CMD_BUZZER, 0, 250, 0);
+                }
+                break;
+            }
+
+            case STATE_INSERT_COIN:
+                // Same accumulation idea STATE_IDLE used to have, but against this session's
+                // own requiredCoinsForSession (set on Step 4's Confirm) instead of a flat
+                // minCoinsRequired - and once met, clamp activeTimer down to exactly the
+                // paid-for duration, discarding any excess. Same clamp-and-discard shape Box 2/
+                // S3C already uses for its own maxCoinsAllowed cap.
+                if (activeTimer >= requiredCoinsForSession * secondsPerCoin) {
+                    activeTimer = requiredCoinsForSession * secondsPerCoin;
+                    Serial.println("[S3A] Required coins met -> Step 6 (Checking Alcohol)");
+                    currentMachineState = STATE_CHECKING;
+                    sendCmd(DEVICE_A1, CMD_STEP_RENDER, 0, 0, 0, SCREEN_CHECKING);
+                    sendCmd(DEVICE_A1, CMD_BUZZER, 0, 250, 0);
+                }
+                break;
+
+            case STATE_SENSORS: {
+                bool closedNow = enclosureClosedFn();
+
+                if (closedNow) {
+                    doorOpenTicks = 0;
+                    conditionHoldTicks++;
+                } else {
+                    conditionHoldTicks = 0;
+                    if (enclosureUnlockedForRetry) {
+                        // Confirm the door's genuinely open (2 ticks, not just reed-switch
+                        // bounce) before releasing the solenoid - it was unlocked (either on
+                        // entry to this state, or by the retry branch below) so the user could
+                        // open it, and shouldn't stay energized any longer than that.
+                        doorOpenTicks++;
+                        if (doorOpenTicks >= 2) {
+                            applyRelayBitmask(0b00000000);
+                            enclosureUnlockedForRetry = false;
+                        }
+                    }
+                }
+
+                // Debounced: only evaluates once per genuine door-close (conditionHoldTicks
+                // hitting exactly 2), not on every tick a possibly-bouncing reed switch happens
+                // to read closed - avoids repeatedly re-firing the retry unlock/message.
+                if (conditionHoldTicks == 2) {
+                    if (helmetPresentFn()) {
+                        Serial.println("[S3A] Handshake verified -> Step 5 (Cleaning)");
+                        currentMachineState = STATE_CLEANING;
+                        sessionStartMillis  = millis();
+                        sessionCoinsAtStart = lastKnownPulsesA1;
+                        uvBlinkTicks  = 0;
+                        uvBlinkState  = true;
+                        applyCleaningRelays();
+                        sendCmd(DEVICE_A1, CMD_STEP_RENDER, 0, 0, 0, SCREEN_CLEANING);
+                        sendCmd(DEVICE_A1, CMD_BUZZER, 0, 250, 0);
+                    } else {
+                        Serial.println("[S3A] Door closed without helmet - unlocking enclosure so it can be reopened.");
+                        // The screen says "open the door" - without this the enclosure is still
+                        // locked from the earlier re-lock-on-entry and there's no way to comply.
+                        applyRelayBitmask(0b00000001);
+                        enclosureUnlockedForRetry = true;
+                        doorOpenTicks = 0;
+                        sensorsWasClosed = true; // so the post-relay-toggle redraw shows the retry screen
+                        sendCmd(DEVICE_A1, CMD_STEP_RENDER, 0, 0, 0, SCREEN_SENSORS_RETRY);
+                        sendCmd(DEVICE_A1, CMD_BUZZER, 0, 250, 0);
+                    }
+                }
+                break;
+            }
+
+            case STATE_CLEANING:
+                if (!handshakeValid) {
+                    // Debounced: require 2 consecutive bad ticks (matching the door-open-hold
+                    // pattern used elsewhere in this file) before actually pausing, so a
+                    // single noisy ultrasonic/door-reed reading doesn't interrupt a real cycle.
+                    safetyBreachTicks++;
+                    if (safetyBreachTicks >= 2) {
+                        Serial.println("[S3A] Safety Breach! Door opened or helmet removed.");
+                        currentMachineState = STATE_PAUSED_SAFETY;
+                        restoreHoldTicks = 0;
+                        conditionHoldTicks = 0;
+                        enclosureUnlockedForRetry = false;
+                        doorOpenTicks = 0;
+                        applyRelayBitmask(0b00000000);
+                        sendCmd(DEVICE_A1, CMD_STEP_RENDER, 0, 0, 0, SCREEN_SAFETY_PAUSE);
+                    }
+                } else {
+                    safetyBreachTicks = 0;
+                    if (activeTimer > 0) {
+                        activeTimer--;
+                        uvBlinkTicks++;
+                        if (uvBlinkTicks >= 60) {
+                            uvBlinkTicks = 0;
+                            uvBlinkState = !uvBlinkState;
+                            applyCleaningRelays();
+                        }
+                        if (activeTimer == 0) {
+                            // Session stats (coins/duration) are already fully determined here -
+                            // Rate B/Retrieve/Finish afterward don't change either, so this stays
+                            // the recording point even though Retrieve no longer follows directly.
+                            Serial.println("[S3A] Cycle Complete! -> Step 11 (Rate B)");
+                            recordCompletedSession();
+                            currentMachineState = STATE_RATE_B;
+                            rateAfterValue = 5;
+                            sendRateScreen(true);
+                        }
+                    }
+                }
+                break;
+
+            case STATE_PAUSED_SAFETY:
+                if (handshakeValid) {
+                    // Debounced: require 2 consecutive good ticks before actually resuming, so
+                    // a single noisy "helmet present" reading can't resume and then immediately
+                    // re-breach on the next bad tick, oscillating indefinitely.
+                    restoreHoldTicks++;
+                    if (restoreHoldTicks >= 2) {
+                        Serial.println("[S3A] Safety Restored. Resuming Step 5 (Cleaning).");
+                        currentMachineState = STATE_CLEANING;
+                        restoreHoldTicks = 0;
+                        enclosureUnlockedForRetry = false;
+                        doorOpenTicks = 0;
+                        applyCleaningRelays();
+                        sendCmd(DEVICE_A1, CMD_STEP_RENDER, 0, 0, 0, SCREEN_CLEANING);
+                    }
+                } else {
+                    restoreHoldTicks = 0;
+                    bool closedNow = enclosureClosedFn();
+
+                    if (closedNow) {
+                        doorOpenTicks = 0;
+                        conditionHoldTicks++;
+                    } else {
+                        conditionHoldTicks = 0;
+                        // Release the solenoid as soon as the door's confirmed genuinely open (2
+                        // ticks, not reed-switch bounce) - same "don't hold it energized once
+                        // it's already open" fix already applied to Sensors/Retrieve.
+                        if (enclosureUnlockedForRetry) {
+                            doorOpenTicks++;
+                            if (doorOpenTicks >= 2) {
+                                applyRelayBitmask(0b00000000);
+                                enclosureUnlockedForRetry = false;
+                            }
+                        }
+                    }
+
+                    // handshakeValid is false here, so a confirmed-closed door means the helmet
+                    // must be missing (if it were present, handshakeValid would already be true
+                    // and we'd be in the resume branch above instead) - unlock immediately, no
+                    // arbitrary wait, so the user can get back in and fix it right away.
+                    if (conditionHoldTicks == 2) {
+                        Serial.println("[S3A] Door closed but headgear still missing - unlocking so it can be reopened.");
+                        applyRelayBitmask(0b00000001);
+                        enclosureUnlockedForRetry = true;
+                        doorOpenTicks = 0;
+                    }
+                }
+                break;
+
+            case STATE_ABORT_CONFIRM:
+            case STATE_RATE_B: // touch-driven, same as STATE_ABORT_CONFIRM - see RBC above
+                break;
+
+            case STATE_RETRIEVE: {
+                bool closedNow = enclosureClosedFn();
+
+                if (!closedNow) {
+                    conditionHoldTicks = 0;
+                    // Release the solenoid as soon as the door's confirmed genuinely open (2
+                    // ticks, not reed-switch bounce) - it doesn't need to stay energized for
+                    // however long the user takes to actually lift the headgear out, and this
+                    // is exactly the gap that let one sit energized for 10+ minutes unattended
+                    // and overheat badly enough to be a real fire-risk incident.
+                    if (enclosureUnlockedForRetry) {
+                        doorOpenTicks++;
+                        if (doorOpenTicks >= 2) {
+                            applyRelayBitmask(0b00000000);
+                            enclosureUnlockedForRetry = false;
+                        }
+                    }
+                } else {
+                    doorOpenTicks = 0;
+                    conditionHoldTicks++;
+                }
+
+                // Only ever check for the headgear once the door is confirmed closed again -
+                // checking while it's open is meaningless (chamber's disturbed by the open
+                // door) and was the other half of why the solenoid sat energized so long.
+                if (conditionHoldTicks == 2) {
+                    if (!helmetPresentFn()) {
+                        Serial.println("[S3A] Door closed, headgear retrieved -> Step 7 (Finish)");
+                        currentMachineState = STATE_FINISH;
+                        stepRemainingSec = 4;
+                        applyRelayBitmask(0b00000000);
+                        sendCmd(DEVICE_A1, CMD_STEP_RENDER, 0, 0, 0, SCREEN_FINISH);
+                    } else {
+                        Serial.println("[S3A] Door closed but headgear still inside - unlocking for retry.");
+                        applyRelayBitmask(0b00000001);
+                        enclosureUnlockedForRetry = true;
+                        doorOpenTicks = 0;
+                        sendCmd(DEVICE_A1, CMD_STEP_RENDER, 0, 0, 0, SCREEN_RETRIEVE);
+                        sendCmd(DEVICE_A1, CMD_BUZZER, 0, 250, 0);
+                    }
+                }
+                break;
+            }
+
+            case STATE_FINISH:
+                if (stepRemainingSec > 0) {
+                    stepRemainingSec--;
+                } else {
+                    activeTimer = 0;
+                    currentMachineState = STATE_TAPS; // was STATE_IDLE
+                    resetCoinSession();
+                    sendCmd(DEVICE_A1, CMD_STEP_RENDER, 0, 0, anyTapFlagForCurrentState(), SCREEN_TAPS);
+                }
+                break;
+        }
+
+        // Small gaps between these periodic broadcasts (not the state-driven CMD_STEP_RENDER/
+        // CMD_BUZZER calls above, which need to go out immediately) - firing several back-to-
+        // back with zero gap can overflow ESP-NOW's send queue and silently drop some, which is
+        // exactly what was causing C1 to flicker in and out of OUT OF ORDER even with S3C alive
+        // (same risk here, so applied proactively).
+        // minCoinsRequired rides along on subIndex (otherwise unused for this command) so A1 can
+        // show "{MINCOINS}" without a new command or CommandPacket field - requiredCoinsForSession
+        // (added 2026-09-13) does the same on the state field (also otherwise unused here) for
+        // Step 5's "{REQUIREDCOIN}".
+        sendCmd(DEVICE_A1, CMD_SYNC_VARS, (uint8_t)min(minCoinsRequired, (uint32_t)255), (uint16_t)activeTimer, (uint8_t)min(requiredCoinsForSession, (uint32_t)255));
+        delay(2);
+
+        // Broadcast a heartbeat every second so A1/A2 (and any other listening node) can tell
+        // S3A is reachable, independent of Master's own heartbeat - see each node's OUT OF
+        // ORDER detection.
+        sendCmd(0, CMD_HEARTBEAT, DEVICE_S3A, 0, 0);
+        delay(2);
+
+        if (currentMillis - lastConfigBcastMillis >= BCAST_INTERVAL_MS) {
+            lastConfigBcastMillis = currentMillis;
+            broadcastConfig();
+            delay(2);
+        }
+
+        // Periodic relay re-assertion (no mute/redraw side effects, unlike applyRelayBitmask
+        // itself) - see desiredA2Mask's comment above for why this exists.
+        if (currentMillis - lastRelayReassertMillis >= RELAY_REASSERT_INTERVAL_MS) {
+            lastRelayReassertMillis = currentMillis;
+            sendA2RelayMask(desiredA2Mask);
+        }
+
+        broadcastStatus();
+    }
+}

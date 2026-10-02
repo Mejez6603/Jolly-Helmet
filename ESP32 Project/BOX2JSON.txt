@@ -1,0 +1,244 @@
+{
+  "box": "box2",
+  "preset": "BRUH",
+  "isDefault": false,
+  "steps": [
+    {
+      "name": "TAPS",
+      "durationSec": 0,
+      "relayBitmask": 0,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "touchPressed",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "goto": "__next__"
+        }
+      ],
+      "displayTokens": "#000000|ST,165,105,#FFFFFF,TAP anywhere to ,MC,2|TT,160,136,#FFFF00,START,500,MC,4"
+    },
+    {
+      "name": "WELCOME",
+      "durationSec": 0,
+      "relayBitmask": 0,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "touchPressed",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "goto": "__next__"
+        }
+      ],
+      "displayTokens": "#000000|ST,160,60,#FFFFFF,Welcome to,BC,2|ST,160,60,#FFFFFF,JOLLY HELMET,TC,4|ST,162,120,#FFFFFF,Make your Helmet,BC,2|ST,160,120,#FFFFFF,Happy Again!,TC,2|TT,160,180,#FFFF00,Tap to START,500,TC,2"
+    },
+    {
+      "name": "Rate Your HELMET A",
+      "durationSec": 0,
+      "relayBitmask": 0,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "touchPressed",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "goto": "__next__"
+        }
+      ],
+      "displayTokens": "#000000|ST,160,92,#FFFFFF,Helmet Moisture Status,MC,2|ST,28,20,#FFFFFF,Before,MC,1|NR,10,116,300,48,5,#FFFFFF,#1C7297,WET;;DRY|BTN,19,180,282,36,#1C1C20,CONFIRM,ACTION|ST,160,40,#FFFFFF,WET O' METER,TC,4"
+    },
+    {
+      "name": "TIME ALLOT",
+      "durationSec": 0,
+      "relayBitmask": 0,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "touchPressed",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "goto": "__next__"
+        }
+      ],
+      "displayTokens": "#000000|NP,0,0,320,240,#FFFFFF,10,ALLOCATE HEAT TIME"
+    },
+    {
+      "name": "INSERT COIN",
+      "durationSec": 0,
+      "relayBitmask": 0,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "coinThreshold",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "goto": "INSTRUCTIONS"
+        }
+      ],
+      "displayTokens": "#000000|ST,160,60,#FFFFFF,INSERT THE REQUIRED COIN,TC,2|TT,144,120,#FFFFFF,/ {REQUIREDCOIN} Coin,0,ML,2|TT,126,120,#FFFF00,{COINS},500,MR,2|BTN,20,190,90,32,#000000,CANCEL,ACTION"
+    },
+    {
+      "name": "INSTRUCTIONS",
+      "durationSec": 0,
+      "relayBitmask": 1,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "doorOpen",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "goto": "__next__"
+        }
+      ],
+      "displayTokens": "#000000|ST,160,88,#FFFFFF,Please,MC,2|ST,160,156,#FFFFFF,Door to Proceed,MC,2|TT,152,120,#FFFF00, OPEN,500,MC,2|TT,24,24,#FFFF00,COIN: {COINS},0,TL,2"
+    },
+    {
+      "name": "SENSORS",
+      "durationSec": 0,
+      "relayBitmask": 1,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "doorClosed",
+              "negate": false
+            },
+            {
+              "key": "helmetPresent",
+              "negate": false,
+              "joiner": "AND"
+            }
+          ],
+          "isElse": false,
+          "goto": "__next__"
+        }
+      ],
+      "displayTokens": "#000000|ST,160,92,#FFFFFF,Please,MC,2|ST,160,148,#FFFFFF,Headgear Inside,MC,2|TT,24,24,#FFFF00,COIN: {COINS},500,TL,2|TT,160,120,#FFFF00,PLACE,500,MC,2"
+    },
+    {
+      "name": "HEATING",
+      "durationSec": 20,
+      "relayBitmask": 40,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "timerZero",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "goto": "__next__"
+        }
+      ],
+      "displayTokens": "#000000|ST,160,120,#FFFFFF,Heating in Progress...,MC,2|TT,160,156,#FFFF00,Remaining: {TIMER}s,0,MC,2|BTN,215,8,95,32,#ef4444,ABORT,ABORT|PBAR,50,173,220,14,#333333,#CB5B10|TT,24,24,#FFFF00,COIN: {COINS},0,ML,2"
+    },
+    {
+      "name": "COOL DOWN",
+      "durationSec": 20,
+      "relayBitmask": 32,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "timerZero",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "goto": "__next__"
+        }
+      ],
+      "displayTokens": "#000000|ST,160,120,#FFFFFF,Cooling in Progress...,MC,2|TT,160,156,#FFFF00,Remaining: {TIMER}s,0,MC,2|BTN,215,8,95,32,#ef4444,ABORT,ABORT|PBAR,50,173,220,14,#333333,#406ABF|TT,24,24,#FFFF00,COIN: [DISABLED],0,ML,2"
+    },
+    {
+      "name": "RATE YOUR HELMET B",
+      "durationSec": 0,
+      "relayBitmask": 0,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "touchPressed",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "goto": "__next__"
+        }
+      ],
+      "displayTokens": "#000000|ST,160,92,#FFFFFF,Helmet Moisture Status,MC,2|ST,28,20,#FFFFFF,After,MC,1|NR,10,116,300,48,5,#FFFFFF,#1C7297,WET;;DRY|BTN,19,180,282,36,#1C1C20,CONFIRM,ACTION|ST,160,40,#FFFFFF,WET O' METER,TC,4"
+    },
+    {
+      "name": "RETRIEVE",
+      "durationSec": 0,
+      "relayBitmask": 1,
+      "branches": [
+        {
+          "conditions": [],
+          "isElse": false,
+          "goto": "__next__"
+        }
+      ],
+      "displayTokens": "#000000|ST,160,84,#FFFFFF,Please Open,MC,2|ST,160,154,#FFFFFF,to Retrieve,MC,2|TT,160,120,#FFFF00,the Enclosure Door,500,MC,2|TT,24,24,#FFFF00,COIN: [DISABLED],0,MC,2"
+    },
+    {
+      "name": "FINISH",
+      "durationSec": 4,
+      "relayBitmask": 0,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "timerZero",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "goto": "TAPS"
+        }
+      ],
+      "displayTokens": "#000000|ST,160,76,#FFFFFF,Thank you,MC,2|ST,160,102,#FFFFFF,for your patronage!,MC,2|ST,160,150,#FFFF00,We hope to see you again! :D,MC,2"
+    },
+    {
+      "name": "CONFIRM",
+      "durationSec": 0,
+      "relayBitmask": 0,
+      "branches": [],
+      "displayTokens": "#000000|ST,10,15,#FFFFFF,NONE,TL,2"
+    },
+    {
+      "name": "ABORT",
+      "durationSec": 0,
+      "relayBitmask": 0,
+      "branches": [],
+      "displayTokens": "#000000|ST,160,120,#FFFFFF,COIN(s) won't be Refunded.,MC,2|ST,160,88,#FFFFFF,Abort operation?,MC,2|BTN,12,154,140,52,#8E0101,ABORT,ACTION|BTN,168,154,140,52,#32A800,RESUME,ACTION"
+    },
+    {
+      "name": "CANCEL",
+      "durationSec": 0,
+      "relayBitmask": 0,
+      "branches": [],
+      "displayTokens": "#000000|ST,160,88,#FFFFFF,Cancel operation?,MC,2|BTN,12,154,140,52,#4A9E05,YES,ACTION|BTN,168,154,140,52,#8F0000,NO,ACTION"
+    }
+  ]
+}

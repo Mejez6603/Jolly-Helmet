@@ -56,6 +56,78 @@ function saveSecPerCoin() {
   }
 }
 
+function saveSecPerCoinC2() {
+  const val = parseInt(document.getElementById('sec-per-coin-c2').value);
+  if (ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ cmd: "save_spc_c2", val: val }));
+    showToast("Seconds per Coin Saved!");
+  }
+}
+
+// -------------------------------------------------------------
+// Dynamic Settings (thresholds, ratios, coin economy)
+// -------------------------------------------------------------
+// Set the moment any Settings field is touched, cleared only after a successful save.
+// Without this, the per-field "skip while focused" guard in renderDynamicConfig() still
+// leaves a real gap: clicking away from a field to reach the Save button un-focuses it,
+// and if a 1Hz WS update lands in that instant (before the click itself registers), it
+// silently reverts the just-typed value back to the server's stale copy - so Save ends up
+// sending the reverted value instead of what was actually typed.
+let settingsFieldsTouched = false;
+// focusin bubbles (plain focus doesn't), so one listener on the tab covers every input in it.
+const settingsTabEl = document.getElementById('tab-settings');
+if (settingsTabEl) settingsTabEl.addEventListener('focusin', () => { settingsFieldsTouched = true; });
+
+function saveDynamicConfig() {
+  if (ws.readyState !== WebSocket.OPEN) return;
+  ws.send(JSON.stringify({
+    cmd: "save_config",
+    coin_value:       parseFloat(document.getElementById('cfg-coin-value').value),
+    min_coins_required: parseInt(document.getElementById('cfg-min-coins').value),
+    max_coins_allowed: parseInt(document.getElementById('cfg-max-coins').value),
+    min_coins_required_c2: parseInt(document.getElementById('cfg-min-coins-c2').value),
+    max_coins_allowed_c2: parseInt(document.getElementById('cfg-max-coins-c2').value),
+    cool_down_ratio_c2: parseFloat(document.getElementById('cfg-cooldown-ratio-c2').value),
+    helmet_a2_cm:     parseFloat(document.getElementById('cfg-helmet-a2').value),
+    helmet_c2_cm:     parseFloat(document.getElementById('cfg-helmet-c2').value),
+    alc_low_pct:      parseFloat(document.getElementById('cfg-alc-low').value),
+    alc_high_pct:     parseFloat(document.getElementById('cfg-alc-high').value),
+    acs_low_cm:       parseFloat(document.getElementById('cfg-acs-low').value),
+    acs_full_cm:      parseFloat(document.getElementById('cfg-acs-full').value),
+    mix_alcohol_pct:  parseFloat(document.getElementById('cfg-mix-alcohol').value),
+    mix_water_pct:    parseFloat(document.getElementById('cfg-mix-water').value),
+    mix_scented_pct:  parseFloat(document.getElementById('cfg-mix-scented').value)
+  }));
+  settingsFieldsTouched = false; // safe to resume live-syncing - values now match what was just saved
+  showToast("Settings Saved & Pushed!");
+}
+
+// Populates the Settings tab's inputs from live telemetry - but not at all once the user has
+// touched any field in this tab, until the next successful save (see settingsFieldsTouched
+// above). The per-field focus check alone isn't enough to prevent the click-away race.
+function renderDynamicConfig(d) {
+  if (settingsFieldsTouched) return;
+  const setIfPresent = (id, val) => {
+    const el = document.getElementById(id);
+    if (el && val !== undefined && document.activeElement !== el) el.value = val;
+  };
+  setIfPresent('cfg-coin-value',  d.cfg_coin_value);
+  setIfPresent('cfg-min-coins', d.cfg_min_coins_required);
+  setIfPresent('cfg-max-coins', d.cfg_max_coins_allowed);
+  setIfPresent('cfg-min-coins-c2', d.cfg_min_coins_required_c2);
+  setIfPresent('cfg-max-coins-c2', d.cfg_max_coins_allowed_c2);
+  setIfPresent('cfg-cooldown-ratio-c2', d.cfg_cool_down_ratio_c2);
+  setIfPresent('cfg-helmet-a2',   d.cfg_helmet_a2_cm);
+  setIfPresent('cfg-helmet-c2',   d.cfg_helmet_c2_cm);
+  setIfPresent('cfg-alc-low',     d.cfg_alc_low_pct);
+  setIfPresent('cfg-alc-high',    d.cfg_alc_high_pct);
+  setIfPresent('cfg-acs-low',     d.cfg_acs_low_cm);
+  setIfPresent('cfg-acs-full',    d.cfg_acs_full_cm);
+  setIfPresent('cfg-mix-alcohol', Math.round(d.cfg_mix_alcohol_pct * 10) / 10);
+  setIfPresent('cfg-mix-water',   Math.round(d.cfg_mix_water_pct * 10) / 10);
+  setIfPresent('cfg-mix-scented', Math.round(d.cfg_mix_scented_pct * 10) / 10);
+}
+
 // -------------------------------------------------------------
 // Node C1 Direct Commands (Box 2 Terminal)
 // -------------------------------------------------------------
@@ -177,6 +249,11 @@ ws.onmessage = (evt) => {
   try { d = JSON.parse(evt.data); } catch(e) { return; }
 
   document.getElementById('hdr-ram').innerText = `${(d.heap / 1024).toFixed(0)} KB`;
+  const psramEl = document.getElementById('hdr-psram');
+  if (psramEl) {
+    psramEl.innerText = d.free_psram > 0 ? `${(d.free_psram / 1024 / 1024).toFixed(2)} MB` : '0 (not detected!)';
+    psramEl.style.color = d.free_psram > 0 ? 'var(--success)' : 'var(--danger)';
+  }
   setNodeBadge('sb-a1-status', d.a1_online);
   setNodeBadge('sb-a2-status', d.a2_online);
 
@@ -193,6 +270,8 @@ ws.onmessage = (evt) => {
 
   const spcInput = document.getElementById('sec-per-coin');
   if (spcInput && document.activeElement !== spcInput) spcInput.value = d.sec_per_coin;
+  const spcC2Input = document.getElementById('sec-per-coin-c2');
+  if (spcC2Input && document.activeElement !== spcC2Input) spcC2Input.value = d.sec_per_coin_c2;
 
   document.getElementById('a1-pulses').innerText = d.a1_pulses;
   document.getElementById('a1-credit').innerText = `PHP ${(d.a1_pulses * COIN_VALUE_PESO).toFixed(2)}`;
@@ -237,6 +316,8 @@ ws.onmessage = (evt) => {
   }
 
   setNodeBadge('sb-acs-status', d.acs_online);
+  setNodeBadge('sb-s3a-status', d.s3a_online);
+  setNodeBadge('sb-s3c-status', d.s3c_online);
   setLowVal('acs-water', d.acs_water, d.acs_water_low);
   setLowVal('acs-scented', d.acs_scented, d.acs_scented_low);
   setLowVal('acs-alcohol', d.acs_alcohol, d.acs_alcohol_low);
@@ -270,6 +351,7 @@ ws.onmessage = (evt) => {
 
   updateRefillBanner(d);
   renderStats(d);
+  renderDynamicConfig(d);
 };
 
 // Visible on every tab - lists anything currently needing a refill, hidden otherwise.

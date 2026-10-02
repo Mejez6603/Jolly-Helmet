@@ -82,9 +82,12 @@ body { background-color: var(--bg); color: var(--text); overflow-x: hidden; }
   animation: refillPulse 2s ease-in-out infinite;
 }
 @keyframes refillPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.72; } }
+.dual-state-banner {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-bottom: 16px;
+}
 .state-banner {
   background: var(--card); border: 2px solid var(--accent); border-radius: 12px;
-  padding: 14px 18px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;
+  padding: 14px 18px; margin-bottom: 0; display: flex; justify-content: space-between; align-items: center;
   box-shadow: 0 0 20px rgba(56, 189, 248, 0.1);
 }
 .state-title { font-size: 1.15rem; font-weight: 800; color: #fff; }
@@ -161,7 +164,8 @@ input[type="color"]::-webkit-color-swatch { border: 1px solid var(--card-border)
   .app-title { font-size: 1.3rem; }
   .health-capsule { font-size: 0.82rem; padding: 6px 14px; }
 
-  .state-banner { padding: 20px 30px; margin-bottom: 18px; }
+  .dual-state-banner { margin-bottom: 18px; }
+  .state-banner { padding: 20px 30px; }
   .state-title { font-size: 1.5rem; }
   .timer-display { font-size: 2.4rem; }
   #mach-step, #handshake-status { font-size: 1rem !important; }

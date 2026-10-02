@@ -23,6 +23,7 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
     <div class="health-capsule">
       <span id="ws-badge" class="badge">WS Offline</span>
       <span>RAM: <b id="hdr-ram">-- KB</b></span>
+      <span>PSRAM: <b id="hdr-psram">-- KB</b></span>
     </div>
   </header>
 
@@ -46,6 +47,9 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
       <div class="nav-item" onclick="switchTab('tab-acs', this)">
         <span>🧪</span> Alcohol Container System
       </div>
+      <div class="nav-item" onclick="switchTab('tab-settings', this)">
+        <span>⚙️</span> Settings
+      </div>
     </nav>
     <div class="sidebar-footer">
       <div class="node-status-row"><span>Node A1 (Terminal):</span><span id="sb-a1-status" class="badge">OFFLINE</span></div>
@@ -53,6 +57,8 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
       <div class="node-status-row"><span>Node C1 (Terminal):</span><span id="sb-c1-status" class="badge">OFFLINE</span></div>
       <div class="node-status-row"><span>Node C2 (Actuators):</span><span id="sb-c2-status" class="badge">OFFLINE</span></div>
       <div class="node-status-row"><span>Node ACS (D1):</span><span id="sb-acs-status" class="badge">OFFLINE</span></div>
+      <div class="node-status-row"><span>Node S3A (Box 1 Config):</span><span id="sb-s3a-status" class="badge">OFFLINE</span></div>
+      <div class="node-status-row"><span>Node S3C (Box 2 Config):</span><span id="sb-s3c-status" class="badge">OFFLINE</span></div>
     </div>
   </aside>
 
@@ -64,17 +70,30 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
       <span>⚠️</span> <span id="refill-banner-text"></span>
     </div>
 
-    <!-- Machine State Banner -->
-    <div class="state-banner">
-      <div>
-        <div class="label">State Machine Engine</div>
-        <div id="mach-state" class="state-title">STATE: IDLE</div>
-        <div id="mach-step" style="color:var(--accent); font-size:0.9rem; font-weight:600; margin-top:2px;">Step: None</div>
+    <!-- Machine State Banners - both boxes, visible on every tab -->
+    <div class="dual-state-banner">
+      <div class="state-banner">
+        <div>
+          <div class="label">Box 1 State Machine</div>
+          <div id="mach-state" class="state-title">STATE: IDLE</div>
+          <div id="mach-step" style="color:var(--accent); font-size:0.9rem; font-weight:600; margin-top:2px;">Step: None</div>
+        </div>
+        <div style="text-align:right;">
+          <div class="label">Accumulating Timer</div>
+          <div id="active-timer" class="timer-display">00:00</div>
+          <div id="handshake-status" style="font-size:0.75rem; color:var(--muted);">Handshake: Waiting</div>
+        </div>
       </div>
-      <div style="text-align:right;">
-        <div class="label">Accumulating Timer</div>
-        <div id="active-timer" class="timer-display">00:00</div>
-        <div id="handshake-status" style="font-size:0.75rem; color:var(--muted);">Handshake: Waiting</div>
+      <div class="state-banner">
+        <div>
+          <div class="label">Box 2 State Machine</div>
+          <div id="box2-mach-state" class="state-title">STATE: IDLE</div>
+        </div>
+        <div style="text-align:right;">
+          <div class="label">Accumulating Timer</div>
+          <div id="box2-active-timer" class="timer-display">00:00</div>
+          <div id="box2-handshake-status" style="font-size:0.75rem; color:var(--muted);">Handshake: Waiting</div>
+        </div>
       </div>
     </div>
 
@@ -170,18 +189,6 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
 
     <!-- ==================== TAB 3: BOX 2 / HEATER (NODE C1 + NODE C2 SIDE BY SIDE) ==================== -->
     <section id="tab-box2" class="tab-content">
-      <div class="state-banner" style="margin-bottom:16px;">
-        <div>
-          <div class="label">Box 2 State Machine</div>
-          <div id="box2-mach-state" class="state-title">STATE: IDLE</div>
-        </div>
-        <div style="text-align:right;">
-          <div class="label">Accumulating Timer</div>
-          <div id="box2-active-timer" class="timer-display">00:00</div>
-          <div id="box2-handshake-status" style="font-size:0.75rem; color:var(--muted);">Handshake: Waiting</div>
-        </div>
-      </div>
-
       <div class="box-split">
         <div class="box-col">
           <div class="box-col-title">📱 Node C1 — Terminal</div>
@@ -189,7 +196,11 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
             <div class="card-header"><span class="card-title">Allan Coin Slot (MED Mode)</span></div>
             <div class="row"><span class="label">Raw Pulse Count:</span><span id="c1-pulses" class="val" style="font-size:1.1rem; color:var(--warning);">0</span></div>
             <div class="row"><span class="label">Calculated Credit:</span><span id="c1-credit" class="val" style="font-size:1.1rem; color:var(--success);">PHP 0.00</span></div>
-            <div class="row" style="margin-top:12px;"><span class="label" style="font-size:0.75rem; color:var(--muted);">Shares the same Seconds-per-Coin setting as Box 1 (see Box 1 tab).</span></div>
+            <div class="row" style="margin-top:12px;">
+              <span class="label">Seconds per Coin:</span>
+              <input type="number" id="sec-per-coin-c2" value="20" min="5" max="300">
+              <button onclick="saveSecPerCoinC2()">Save</button>
+            </div>
             <div style="margin-top:12px;"><button class="btn-sec" style="width:100%;" onclick="sendCmdC1(3, 0)">Reset Coin Counter</button></div>
           </div>
 
@@ -253,6 +264,91 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
             <button id="acs-maint-btn" style="width:100%; background:var(--danger); color:#fff;" onclick="toggleACSMaintenance()">Enable Maintenance Mode (Flush / Transport Prep)</button>
           </div>
         </div>
+      </div>
+    </section>
+
+    <!-- ==================== TAB 5: DYNAMIC SETTINGS ==================== -->
+    <section id="tab-settings" class="tab-content">
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header"><span class="card-title">Coin Economy</span></div>
+          <div class="row"><span class="label">Coin Value (PHP per pulse):</span>
+            <input type="number" id="cfg-coin-value" value="1" min="0.5" step="0.5">
+          </div>
+          <div class="row"><span class="label">Box 1: Minimum Coins Required to Start:</span>
+            <input type="number" id="cfg-min-coins" value="0" min="0" max="50">
+          </div>
+          <div class="row"><span class="label">Box 1: Maximum Coins Allowed:</span>
+            <input type="number" id="cfg-max-coins" value="0" min="0" max="50">
+          </div>
+          <div class="row"><span class="label">Box 2: Minimum Coins Required to Start:</span>
+            <input type="number" id="cfg-min-coins-c2" value="0" min="0" max="50">
+          </div>
+          <div class="row"><span class="label">Box 2: Maximum Coins Allowed:</span>
+            <input type="number" id="cfg-max-coins-c2" value="0" min="0" max="50">
+          </div>
+          <div class="row"><span class="label">Box 2: Cool Down Duration:</span>
+            <select id="cfg-cooldown-ratio-c2">
+              <option value="1">Full (same as Heating time)</option>
+              <option value="0.75">Three Quarter (0.75x Heating time)</option>
+              <option value="0.5">Half (0.5x Heating time)</option>
+              <option value="0.25">Quarter (0.25x Heating time)</option>
+            </select>
+          </div>
+          <div class="row" style="margin-top:6px;"><span class="label" style="font-size:0.75rem; color:var(--muted);">Each box won't leave Welcome/Idle until its own minimum is inserted. 0 = any single coin works. Independent per box - Seconds per Coin for each is set on that box's own tab. Each box's Maximum caps how many coins add cycle time (Box 1: rejects the Time Allot selection instead of letting it through; Box 2: extra coins are discarded, not refunded or blocked - no relay yet on the Allan Coin Slot to physically stop it). 0 = no cap. Box 2's Cool Down runs the Fan for this fraction of however long Heating actually ran (e.g. Half on a 20-minute Heating session = 10 minutes of Cool Down) - lets you dial in the shortest wait that still hands back a wearable, not-too-hot helmet.</span></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><span class="card-title">Helmet Detection Distance</span></div>
+          <div class="row"><span class="label">Box 1 / Node A2 (cm):</span>
+            <input type="number" id="cfg-helmet-a2" value="15" min="1" max="200">
+          </div>
+          <div class="row"><span class="label">Box 2 / Node C2 (cm):</span>
+            <input type="number" id="cfg-helmet-c2" value="30" min="1" max="200">
+          </div>
+          <div class="row" style="margin-top:6px;"><span class="label" style="font-size:0.75rem; color:var(--muted);">Different mounting angles per box - tune independently.</span></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><span class="card-title">Box 1 Alcohol Tank</span></div>
+          <div class="row"><span class="label">Low Threshold (%):</span>
+            <input type="number" id="cfg-alc-low" value="10" min="0" max="100">
+          </div>
+          <div class="row"><span class="label">Refill-Complete Threshold (%):</span>
+            <input type="number" id="cfg-alc-high" value="90" min="0" max="100">
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><span class="card-title">ACS Tank Thresholds</span></div>
+          <div class="row"><span class="label">Low Threshold (cm):</span>
+            <input type="number" id="cfg-acs-low" value="11" min="1" max="50" step="0.1">
+          </div>
+          <div class="row"><span class="label">Full/Safe Threshold (cm):</span>
+            <input type="number" id="cfg-acs-full" value="3.3" min="0" max="50" step="0.1">
+          </div>
+          <div class="row" style="margin-top:6px;"><span class="label" style="font-size:0.75rem; color:var(--muted);">Applies to Water/Scented/Alcohol/Mixer tanks alike. Pushed live to Node ACS.</span></div>
+        </div>
+
+        <div class="card" style="grid-column: 1 / -1;">
+          <div class="card-header"><span class="card-title">ACS Mix Ratio</span></div>
+          <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:12px;">
+            <div class="row" style="flex-direction:column; align-items:flex-start; gap:4px;"><span class="label">Alcohol (%)</span>
+              <input type="number" id="cfg-mix-alcohol" value="70" min="0" max="100" style="width:100%;">
+            </div>
+            <div class="row" style="flex-direction:column; align-items:flex-start; gap:4px;"><span class="label">Water (%)</span>
+              <input type="number" id="cfg-mix-water" value="28" min="0" max="100" style="width:100%;">
+            </div>
+            <div class="row" style="flex-direction:column; align-items:flex-start; gap:4px;"><span class="label">Scented Liquid (%)</span>
+              <input type="number" id="cfg-mix-scented" value="2" min="0" max="100" style="width:100%;">
+            </div>
+          </div>
+          <div style="margin-top:10px;"><span class="label" style="font-size:0.75rem; color:var(--muted);">Automatically normalized to sum to 100% on save, regardless of what's typed - no need to make these add up exactly.</span></div>
+        </div>
+      </div>
+
+      <div style="margin-top:16px;">
+        <button style="width:100%; background:var(--success); color:#fff; padding:14px; font-size:1rem;" onclick="saveDynamicConfig()">Save All Settings</button>
       </div>
     </section>
 

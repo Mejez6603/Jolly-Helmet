@@ -1,0 +1,1376 @@
+{
+  "box": "box1",
+  "preset": "Preset 2",
+  "isDefault": false,
+  "rules": {
+    "bands": [
+      {
+        "from": 1,
+        "to": 5,
+        "minutes": 5
+      },
+      {
+        "from": 6,
+        "to": 7,
+        "minutes": 10
+      },
+      {
+        "from": 8,
+        "to": 9,
+        "minutes": 15
+      },
+      {
+        "from": 10,
+        "to": 10,
+        "minutes": 20
+      }
+    ],
+    "minMinutes": 5,
+    "coins": 15,
+    "timeValue": 5,
+    "timeUnit": "min",
+    "maxCoins": 60,
+    "freeRetry": {
+      "enabled": true,
+      "minRating": 8,
+      "minutes": 2
+    }
+  },
+  "steps": [
+    {
+      "name": "TAPS",
+      "durationSec": 0,
+      "durationMode": "fixed",
+      "relayBitmask": 0,
+      "intervalBitmask": 0,
+      "intervalOnSec": 60,
+      "intervalOffSec": 60,
+      "sensorBitmask": 0,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "touchPressed",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "__next__"
+        }
+      ],
+      "displayTokens": "#000000|ST,165,105,#FFFFFF,TAP anywhere to ,MC,2|TT,160,136,#FFFF00,START,500,MC,4"
+    },
+    {
+      "name": "CHECKING A",
+      "durationSec": 0,
+      "durationMode": "fixed",
+      "relayBitmask": 0,
+      "intervalBitmask": 0,
+      "intervalOnSec": 60,
+      "intervalOffSec": 60,
+      "sensorBitmask": 160,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "alcoholEnough",
+              "negate": true
+            },
+            {
+              "key": "var:bypass=on",
+              "negate": false,
+              "joiner": "AND"
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "OUT OF ORDER"
+        },
+        {
+          "conditions": [
+            {
+              "key": "alcoholEnough",
+              "negate": true
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "REFILLING A"
+        },
+        {
+          "conditions": [],
+          "isElse": true,
+          "remember": [],
+          "goto": "CHECKING S"
+        }
+      ],
+      "displayTokens": "#000000|ST,160,84,#FFFFFF,Please Wait...,MC,2|ST,160,120,#FFFF00,Checking Alcohol Status,MC,2"
+    },
+    {
+      "name": "CHECKING S",
+      "durationSec": 0,
+      "durationMode": "fixed",
+      "relayBitmask": 0,
+      "intervalBitmask": 0,
+      "intervalOnSec": 60,
+      "intervalOffSec": 60,
+      "sensorBitmask": 320,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "scentedEnough",
+              "negate": true
+            },
+            {
+              "key": "var:bypass=on",
+              "negate": false,
+              "joiner": "AND"
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "OUT OF ORDER"
+        },
+        {
+          "conditions": [
+            {
+              "key": "scentedEnough",
+              "negate": true
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "REFILLING S"
+        },
+        {
+          "conditions": [],
+          "isElse": true,
+          "remember": [],
+          "goto": "WELCOME"
+        }
+      ],
+      "displayTokens": "#000000|ST,160,84,#FFFFFF,Please Wait...,MC,2|ST,160,120,#FFFF00,Checking Scented Status,MC,2"
+    },
+    {
+      "name": "REFILLING A",
+      "durationSec": 0,
+      "durationMode": "fixed",
+      "relayBitmask": 0,
+      "intervalBitmask": 0,
+      "intervalOnSec": 60,
+      "intervalOffSec": 60,
+      "sensorBitmask": 160,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "alcoholOk",
+              "negate": false
+            },
+            {
+              "key": "wsAlsWet",
+              "negate": false,
+              "joiner": "OR"
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "CHECKING A"
+        },
+        {
+          "conditions": [
+            {
+              "key": "refillGaveUp",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [
+            "bypass=on"
+          ],
+          "goto": "OUT OF ORDER"
+        }
+      ],
+      "displayTokens": "#000000|ST,160,84,#FFFFFF,Please Wait...,MC,2|ST,160,120,#FFFF00,Refilling Alcohol...,MC,2|TT,160,180,#636363,Try {TRY}/{TRIES},0,MC,2"
+    },
+    {
+      "name": "REFILLING S",
+      "durationSec": 0,
+      "durationMode": "fixed",
+      "relayBitmask": 0,
+      "intervalBitmask": 0,
+      "intervalOnSec": 60,
+      "intervalOffSec": 60,
+      "sensorBitmask": 320,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "scentedOk",
+              "negate": false
+            },
+            {
+              "key": "wsSlsWet",
+              "negate": false,
+              "joiner": "OR"
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "CHECKING S"
+        },
+        {
+          "conditions": [
+            {
+              "key": "refillGaveUp",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [
+            "bypass=on"
+          ],
+          "goto": "OUT OF ORDER"
+        }
+      ],
+      "displayTokens": "#000000|ST,160,84,#FFFFFF,Please Wait...,MC,2|ST,160,120,#FFFF00,Refilling Scented...,MC,2|TT,160,180,#636363,Try {TRY}/{TRIES},0,MC,2"
+    },
+    {
+      "name": "WELCOME",
+      "durationSec": 0,
+      "durationMode": "fixed",
+      "relayBitmask": 0,
+      "intervalBitmask": 0,
+      "intervalOnSec": 60,
+      "intervalOffSec": 60,
+      "sensorBitmask": 0,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "touchPressed",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "__next__"
+        }
+      ],
+      "displayTokens": "#000000|ST,160,60,#FFFFFF,Welcome to,BC,2|ST,160,60,#FFFFFF,JOLLY HELMET,TC,4|ST,162,120,#FFFFFF,Make your Helmet,BC,2|ST,160,120,#FFFFFF,Happy Again!,TC,4|TT,160,180,#FFFF00,Tap to START,500,TC,2"
+    },
+    {
+      "name": "RATE YOUR HELMET A",
+      "durationSec": 0,
+      "durationMode": "fixed",
+      "relayBitmask": 0,
+      "intervalBitmask": 0,
+      "intervalOnSec": 60,
+      "intervalOffSec": 60,
+      "sensorBitmask": 0,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "btn:ACTION",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "METHOD"
+        }
+      ],
+      "displayTokens": "#000000|BTN,19,192,282,36,#1C1C20,CONFIRM,ACTION|ST,160,60,#FFFFFF,STINK O' METER,BC,4|ST,28,20,#FFFFFF,Before,MC,1|NR2,24,70,272,100,1,#FFFFFF,#22c55e,MINT;STINKY"
+    },
+    {
+      "name": "METHOD",
+      "durationSec": 0,
+      "durationMode": "fixed",
+      "relayBitmask": 0,
+      "intervalBitmask": 0,
+      "intervalOnSec": 60,
+      "intervalOffSec": 60,
+      "sensorBitmask": 0,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "btn:MIST_BAL",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [
+            "mist=bal"
+          ],
+          "goto": "__next__"
+        },
+        {
+          "conditions": [
+            {
+              "key": "btn:MIST_ALC",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [
+            "mist=alc"
+          ],
+          "goto": "__next__"
+        },
+        {
+          "conditions": [
+            {
+              "key": "btn:MIST_SCN",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [
+            "mist=sct"
+          ],
+          "goto": "__next__"
+        }
+      ],
+      "displayTokens": "#000000|ST,160,60,#FFFFFF,CLEANING MODE,MC,4|BTN,90,98,140,44,#1C1C20,BALANCED,MIST_BAL|BTN,10,158,140,44,#1C1C20,MORE ALCOHOL,MIST_ALC|BTN,170,158,140,44,#1C1C20,MORE SCENTED,MIST_SCN"
+    },
+    {
+      "name": "TIME ALLOT",
+      "durationSec": 0,
+      "durationMode": "fixed",
+      "relayBitmask": 0,
+      "intervalBitmask": 0,
+      "intervalOnSec": 60,
+      "intervalOffSec": 60,
+      "sensorBitmask": 0,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "touchPressed",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "__next__"
+        }
+      ],
+      "displayTokens": "#000000|NP,0,0,320,240,#FFFFFF,20,ALLOCATE CLEAN TIME"
+    },
+    {
+      "name": "INSERT COIN",
+      "durationSec": 0,
+      "durationMode": "fixed",
+      "relayBitmask": 2048,
+      "intervalBitmask": 0,
+      "intervalOnSec": 60,
+      "intervalOffSec": 60,
+      "sensorBitmask": 0,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "coinThreshold",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "__next__"
+        },
+        {
+          "conditions": [
+            {
+              "key": "btn:INSERT_CANCEL",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "CANCEL"
+        }
+      ],
+      "displayTokens": "#000000|ST,160,60,#FFFFFF,INSERT THE REQUIRED COIN,TC,2|TT,144,120,#FFFFFF,/ {REQUIREDCOIN} Coin,0,ML,2|TT,126,120,#FFFF00,{COINS},500,MR,2|BTN,20,190,90,32,#1C1C20,CANCEL,INSERT_CANCEL"
+    },
+    {
+      "name": "OPEN A",
+      "durationSec": 0,
+      "durationMode": "fixed",
+      "relayBitmask": 1,
+      "intervalBitmask": 0,
+      "intervalOnSec": 60,
+      "intervalOffSec": 60,
+      "sensorBitmask": 2,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "doorOpen",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "SENSORS A"
+        }
+      ],
+      "displayTokens": "#000000|ST,160,88,#FFFFFF,Please,MC,2|ST,160,156,#FFFFFF,Door to Proceed,MC,2|TT,152,120,#FFFF00, OPEN,500,MC,4"
+    },
+    {
+      "name": "SENSORS A",
+      "durationSec": 0,
+      "durationMode": "fixed",
+      "relayBitmask": 0,
+      "intervalBitmask": 0,
+      "intervalOnSec": 60,
+      "intervalOffSec": 60,
+      "sensorBitmask": 3,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "doorClosed",
+              "negate": true
+            },
+            {
+              "key": "helmetPresent",
+              "negate": false,
+              "joiner": "AND"
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "CLOSE DOOR A"
+        },
+        {
+          "conditions": [
+            {
+              "key": "doorClosed",
+              "negate": false
+            },
+            {
+              "key": "helmetAbsent",
+              "negate": false,
+              "joiner": "AND"
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "HELMET NOTICE A"
+        }
+      ],
+      "displayTokens": "#000000|ST,160,92,#FFFFFF,Please,MC,2|ST,160,148,#FFFFFF, Headgear Inside,MC,2|TT,160,120,#FFFF00,PLACE,500,MC,4"
+    },
+    {
+      "name": "CLOSE DOOR A",
+      "durationSec": 0,
+      "durationMode": "fixed",
+      "relayBitmask": 0,
+      "intervalBitmask": 0,
+      "intervalOnSec": 60,
+      "intervalOffSec": 60,
+      "sensorBitmask": 3,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "doorClosed",
+              "negate": false
+            },
+            {
+              "key": "helmetPresent",
+              "negate": false,
+              "joiner": "AND"
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "__next__"
+        },
+        {
+          "conditions": [
+            {
+              "key": "doorClosed",
+              "negate": false
+            },
+            {
+              "key": "helmetPresent",
+              "negate": true,
+              "joiner": "AND"
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "HELMET NOTICE A"
+        }
+      ],
+      "displayTokens": "#000000|ST,160,92,#FFFFFF,Please,MC,2|ST,160,148,#FFFFFF,Door to Proceed,MC,2|TT,160,120,#FFFF00,CLOSE,500,MC,4"
+    },
+    {
+      "name": "START CLEANING",
+      "durationSec": 0,
+      "durationMode": "fixed",
+      "relayBitmask": 0,
+      "intervalBitmask": 0,
+      "intervalOnSec": 60,
+      "intervalOffSec": 60,
+      "sensorBitmask": 3,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "doorClosed",
+              "negate": false
+            },
+            {
+              "key": "helmetAbsent",
+              "negate": false,
+              "joiner": "AND"
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "OPEN A"
+        },
+        {
+          "conditions": [
+            {
+              "key": "doorClosed",
+              "negate": false
+            },
+            {
+              "key": "helmetPresent",
+              "negate": false,
+              "joiner": "AND"
+            },
+            {
+              "key": "var:mist=alc",
+              "negate": false,
+              "joiner": "AND"
+            },
+            {
+              "key": "var:retry=used",
+              "negate": true,
+              "joiner": "AND"
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "CLEANING ALC"
+        },
+        {
+          "conditions": [
+            {
+              "key": "doorClosed",
+              "negate": false
+            },
+            {
+              "key": "helmetPresent",
+              "negate": false,
+              "joiner": "AND"
+            },
+            {
+              "key": "var:mist=sct",
+              "negate": false,
+              "joiner": "AND"
+            },
+            {
+              "key": "var:retry=used",
+              "negate": true,
+              "joiner": "AND"
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "CLEANING SCN"
+        },
+        {
+          "conditions": [
+            {
+              "key": "doorClosed",
+              "negate": false
+            },
+            {
+              "key": "helmetPresent",
+              "negate": false,
+              "joiner": "AND"
+            },
+            {
+              "key": "var:mist=bal",
+              "negate": false,
+              "joiner": "AND"
+            },
+            {
+              "key": "var:retry=used",
+              "negate": true,
+              "joiner": "AND"
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "CLEANING BAL"
+        },
+        {
+          "conditions": [
+            {
+              "key": "doorClosed",
+              "negate": false
+            },
+            {
+              "key": "helmetPresent",
+              "negate": false,
+              "joiner": "AND"
+            },
+            {
+              "key": "var:mist=alc",
+              "negate": false,
+              "joiner": "AND"
+            },
+            {
+              "key": "var:retry=used",
+              "negate": false,
+              "joiner": "AND"
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "CLEANING ALC FREE"
+        },
+        {
+          "conditions": [
+            {
+              "key": "doorClosed",
+              "negate": false
+            },
+            {
+              "key": "helmetPresent",
+              "negate": false,
+              "joiner": "AND"
+            },
+            {
+              "key": "var:mist=sct",
+              "negate": false,
+              "joiner": "AND"
+            },
+            {
+              "key": "var:retry=used",
+              "negate": false,
+              "joiner": "AND"
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "CLEANING SCN FREE"
+        },
+        {
+          "conditions": [
+            {
+              "key": "doorClosed",
+              "negate": false
+            },
+            {
+              "key": "helmetPresent",
+              "negate": false,
+              "joiner": "AND"
+            },
+            {
+              "key": "var:mist=bal",
+              "negate": false,
+              "joiner": "AND"
+            },
+            {
+              "key": "var:retry=used",
+              "negate": false,
+              "joiner": "AND"
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "CLEANING BAL FREE"
+        }
+      ],
+      "displayTokens": "#000000|TT,160,120,#FFFF00,Please Wait...,500,MC,4"
+    },
+    {
+      "name": "CLEANING ALC",
+      "durationSec": 20,
+      "durationMode": "bought",
+      "relayBitmask": 2264,
+      "intervalBitmask": 0,
+      "intervalOnSec": 60,
+      "intervalOffSec": 60,
+      "sensorBitmask": 3,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "timerZero",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "OPEN B"
+        },
+        {
+          "conditions": [
+            {
+              "key": "btn:ABORT",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "ABORT"
+        }
+      ],
+      "displayTokens": "#000000|ST,160,92,#FFFFFF,Cleaning...,MC,2|TT,160,120,#00FF00,{MINUTE}:{SECOND},0,MC,2|BTN,215,8,95,32,#000000,CANCEL,ABORT|PBAR,50,137,220,14,#505050,#FFFFFF|TT,160,180,#949494,{STATUS},0,TC,2"
+    },
+    {
+      "name": "CLEANING ALC FREE",
+      "durationSec": 20,
+      "durationMode": "free",
+      "relayBitmask": 216,
+      "intervalBitmask": 0,
+      "intervalOnSec": 60,
+      "intervalOffSec": 60,
+      "sensorBitmask": 3,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "timerZero",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "OPEN B"
+        },
+        {
+          "conditions": [
+            {
+              "key": "btn:ABORT",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "ABORT"
+        }
+      ],
+      "displayTokens": "#000000|ST,160,92,#FFFFFF,Cleaning ...,MC,2|TT,160,120,#00FF00,{MINUTE}:{SECOND},0,MC,2|BTN,215,8,95,32,#000000,CANCEL,ABORT|PBAR,50,137,220,14,#505050,#FFFFFF|TT,160,180,#949494,{STATUS},0,TC,2"
+    },
+    {
+      "name": "CLEANING SCN",
+      "durationSec": 20,
+      "durationMode": "bought",
+      "relayBitmask": 2288,
+      "intervalBitmask": 0,
+      "intervalOnSec": 60,
+      "intervalOffSec": 60,
+      "sensorBitmask": 3,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "timerZero",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "OPEN B"
+        },
+        {
+          "conditions": [
+            {
+              "key": "btn:ABORT",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "ABORT"
+        }
+      ],
+      "displayTokens": "#000000|ST,160,92,#FFFFFF,Cleaning ...,MC,2|TT,160,120,#00FF00,{MINUTE}:{SECOND},0,MC,2|BTN,215,8,95,32,#000000,CANCEL,ABORT|PBAR,50,137,220,14,#505050,#FFFFFF|TT,160,180,#949494,{STATUS},0,TC,2"
+    },
+    {
+      "name": "CLEANING SCN FREE",
+      "durationSec": 20,
+      "durationMode": "free",
+      "relayBitmask": 240,
+      "intervalBitmask": 0,
+      "intervalOnSec": 60,
+      "intervalOffSec": 60,
+      "sensorBitmask": 3,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "timerZero",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "OPEN B"
+        },
+        {
+          "conditions": [
+            {
+              "key": "btn:ABORT",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "ABORT"
+        }
+      ],
+      "displayTokens": "#000000|ST,160,92,#FFFFFF,Cleaning ...,MC,2|TT,160,120,#00FF00,{MINUTE}:{SECOND},0,MC,2|BTN,215,8,95,32,#000000,CANCEL,ABORT|PBAR,50,137,220,14,#505050,#FFFFFF|TT,160,180,#949494,{STATUS},0,TC,2"
+    },
+    {
+      "name": "CLEANING BAL",
+      "durationSec": 20,
+      "durationMode": "bought",
+      "relayBitmask": 2296,
+      "intervalBitmask": 0,
+      "intervalOnSec": 60,
+      "intervalOffSec": 60,
+      "sensorBitmask": 3,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "timerZero",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "OPEN B"
+        },
+        {
+          "conditions": [
+            {
+              "key": "btn:ABORT",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "ABORT"
+        }
+      ],
+      "displayTokens": "#000000|ST,160,92,#FFFFFF,Cleaning ...,MC,2|TT,160,120,#00FF00,{MINUTE}:{SECOND},0,MC,2|BTN,215,8,95,32,#000000,CANCEL,ABORT|PBAR,50,137,220,14,#505050,#FFFFFF|TT,160,180,#949494,{STATUS},0,TC,2"
+    },
+    {
+      "name": "CLEANING BAL FREE",
+      "durationSec": 20,
+      "durationMode": "free",
+      "relayBitmask": 248,
+      "intervalBitmask": 0,
+      "intervalOnSec": 60,
+      "intervalOffSec": 60,
+      "sensorBitmask": 3,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "timerZero",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "OPEN B"
+        },
+        {
+          "conditions": [
+            {
+              "key": "btn:ABORT",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "ABORT"
+        }
+      ],
+      "displayTokens": "#000000|ST,160,92,#FFFFFF,Cleaning ...,MC,2|TT,160,120,#00FF00,{MINUTE}:{SECOND},0,MC,2|BTN,215,8,95,32,#000000,CANCEL,ABORT|PBAR,50,137,220,14,#505050,#FFFFFF|TT,160,180,#949494,{STATUS},0,TC,2"
+    },
+    {
+      "name": "OPEN B",
+      "durationSec": 0,
+      "durationMode": "fixed",
+      "relayBitmask": 1,
+      "intervalBitmask": 0,
+      "intervalOnSec": 60,
+      "intervalOffSec": 60,
+      "sensorBitmask": 3,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "doorOpen",
+              "negate": false
+            },
+            {
+              "key": "helmetPresent",
+              "negate": false,
+              "joiner": "AND"
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "SENSORS B"
+        }
+      ],
+      "displayTokens": "#000000|ST,160,88,#FFFFFF,Please,MC,2|ST,160,156,#FFFFFF,Door to Proceed,MC,2|TT,152,120,#FFFF00, OPEN,500,MC,4"
+    },
+    {
+      "name": "SENSORS B",
+      "durationSec": 0,
+      "durationMode": "fixed",
+      "relayBitmask": 0,
+      "intervalBitmask": 0,
+      "intervalOnSec": 60,
+      "intervalOffSec": 60,
+      "sensorBitmask": 3,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "helmetAbsent",
+              "negate": false,
+              "joiner": "AND"
+            },
+            {
+              "key": "doorClosed",
+              "negate": false,
+              "joiner": "AND"
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "CLOSE DOOR B"
+        },
+        {
+          "conditions": [
+            {
+              "key": "helmetPresent",
+              "negate": false
+            },
+            {
+              "key": "doorClosed",
+              "negate": false,
+              "joiner": "AND"
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "HELMET NOTICE B"
+        }
+      ],
+      "displayTokens": "#000000|ST,160,92,#FFFFFF,Please,MC,2|ST,160,148,#FFFFFF, Headgear Outside,MC,2|TT,160,120,#FFFF00,TAKE,500,MC,4"
+    },
+    {
+      "name": "CLOSE DOOR B",
+      "durationSec": 0,
+      "durationMode": "fixed",
+      "relayBitmask": 0,
+      "intervalBitmask": 0,
+      "intervalOnSec": 60,
+      "intervalOffSec": 60,
+      "sensorBitmask": 3,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "doorClosed",
+              "negate": false
+            },
+            {
+              "key": "helmetAbsent",
+              "negate": false,
+              "joiner": "AND"
+            },
+            {
+              "key": "var:retry=used",
+              "negate": true,
+              "joiner": "AND"
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "RATE YOUR HELMET B"
+        },
+        {
+          "conditions": [
+            {
+              "key": "doorClosed",
+              "negate": false
+            },
+            {
+              "key": "helmetPresent",
+              "negate": false,
+              "joiner": "AND"
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "HELMET NOTICE B"
+        },
+        {
+          "conditions": [
+            {
+              "key": "doorClosed",
+              "negate": false
+            },
+            {
+              "key": "helmetAbsent",
+              "negate": false,
+              "joiner": "AND"
+            },
+            {
+              "key": "var:retry=used",
+              "negate": false,
+              "joiner": "AND"
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "FINISH"
+        }
+      ],
+      "displayTokens": "#000000|ST,160,92,#FFFFFF,Please,MC,2|ST,160,148,#FFFFFF,Door to Proceed,MC,2|TT,160,120,#FFFF00,CLOSE,500,MC,4"
+    },
+    {
+      "name": "RATE YOUR HELMET B",
+      "durationSec": 0,
+      "durationMode": "fixed",
+      "relayBitmask": 0,
+      "intervalBitmask": 0,
+      "intervalOnSec": 60,
+      "intervalOffSec": 60,
+      "sensorBitmask": 0,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "var:retry=used",
+              "negate": false
+            },
+            {
+              "key": "ratingFree",
+              "negate": true,
+              "joiner": "AND"
+            },
+            {
+              "key": "btn:ACTION",
+              "negate": false,
+              "joiner": "AND"
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "FINISH"
+        },
+        {
+          "conditions": [
+            {
+              "key": "var:retry=used",
+              "negate": true
+            },
+            {
+              "key": "ratingFree",
+              "negate": false,
+              "joiner": "AND"
+            },
+            {
+              "key": "btn:ACTION",
+              "negate": false,
+              "joiner": "AND"
+            }
+          ],
+          "isElse": false,
+          "remember": [
+            "retry=used"
+          ],
+          "goto": "FREE RETRY"
+        },
+        {
+          "conditions": [
+            {
+              "key": "var:retry=used",
+              "negate": false
+            },
+            {
+              "key": "ratingFree",
+              "negate": false,
+              "joiner": "AND"
+            },
+            {
+              "key": "btn:ACTION",
+              "negate": false,
+              "joiner": "AND"
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "FINISH"
+        },
+        {
+          "conditions": [
+            {
+              "key": "var:retry=used",
+              "negate": true
+            },
+            {
+              "key": "ratingFree",
+              "negate": true,
+              "joiner": "AND"
+            },
+            {
+              "key": "btn:ACTION",
+              "negate": false,
+              "joiner": "AND"
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "FINISH"
+        }
+      ],
+      "displayTokens": "#000000|BTN,19,192,282,36,#1C1C20,CONFIRM,ACTION|ST,160,60,#FFFFFF,STINK O' METER,BC,4|ST,28,20,#FFFFFF,After,MC,1|NR2,24,70,272,100,9,#FFFFFF,#22c55e,MINT;STINKY"
+    },
+    {
+      "name": "FREE RETRY",
+      "durationSec": 0,
+      "durationMode": "fixed",
+      "relayBitmask": 0,
+      "intervalBitmask": 0,
+      "intervalOnSec": 60,
+      "intervalOffSec": 60,
+      "sensorBitmask": 0,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "btn:FREE_YES",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [
+            "retry=used"
+          ],
+          "goto": "OPEN A"
+        },
+        {
+          "conditions": [
+            {
+              "key": "btn:FREE_NO",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "FINISH"
+        }
+      ],
+      "displayTokens": "#000000|ST,160,120,#FFFFFF,2 MINUTES,MC,2|ST,160,88,#FFFFFF,FREE TIME,MC,4|BTN,12,154,140,52,#069322,YES,FREE_YES|BTN,168,154,140,52,#A91414,NO,FREE_NO"
+    },
+    {
+      "name": "FINISH",
+      "durationSec": 5,
+      "durationMode": "fixed",
+      "relayBitmask": 0,
+      "intervalBitmask": 0,
+      "intervalOnSec": 60,
+      "intervalOffSec": 60,
+      "sensorBitmask": 0,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "timerZero",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "TAPS"
+        }
+      ],
+      "displayTokens": "#000000|ST,160,76,#FFFFFF,Thank you,MC,2|ST,160,102,#FFFFFF,for your patronage!,MC,2|TT,160,144,#FFFF00,We hope to see you again! :D,500,MC,2"
+    },
+    {
+      "name": "ABORT",
+      "durationSec": 0,
+      "durationMode": "fixed",
+      "relayBitmask": 0,
+      "intervalBitmask": 0,
+      "intervalOnSec": 60,
+      "intervalOffSec": 60,
+      "sensorBitmask": 0,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "btn:ABORT_YES",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "OPEN B"
+        },
+        {
+          "conditions": [
+            {
+              "key": "btn:ABORT_NO",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "__return__"
+        }
+      ],
+      "displayTokens": "#000000|ST,160,120,#FFFFFF,COIN(s) won't be Refunded.,MC,2|ST,160,88,#FFFFFF,Cancel operation?,MC,2|BTN,12,154,140,52,#A91414,CONFIRM,ABORT_YES|BTN,168,154,140,52,#069322,RESUME,ABORT_NO"
+    },
+    {
+      "name": "CANCEL",
+      "durationSec": 0,
+      "durationMode": "fixed",
+      "relayBitmask": 0,
+      "intervalBitmask": 0,
+      "intervalOnSec": 60,
+      "intervalOffSec": 60,
+      "sensorBitmask": 0,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "btn:CANCEL_YES",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "TAPS"
+        },
+        {
+          "conditions": [
+            {
+              "key": "btn:CANCEL_NO",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "__return__"
+        }
+      ],
+      "displayTokens": "#000000|ST,160,88,#FFFFFF,Cancel operation?,MC,2|ST,160,120,#FFFFFF,COIN(s) won't be Refunded.,MC,2|BTN,12,154,140,52,#3B891A,YES,CANCEL_YES|BTN,168,154,140,52,#991414,NO,CANCEL_NO"
+    },
+    {
+      "name": "MAINTENANCE",
+      "durationSec": 0,
+      "durationMode": "fixed",
+      "relayBitmask": 0,
+      "intervalBitmask": 0,
+      "intervalOnSec": 60,
+      "intervalOffSec": 60,
+      "sensorBitmask": 0,
+      "branches": [],
+      "displayTokens": "#000000|ST,160,80,#FFFFFF,IT'S ON,TC,2|TT,160,120,#FFD84E,MAINTENANCE,1000,MC,4"
+    },
+    {
+      "name": "OUT OF ORDER",
+      "durationSec": 0,
+      "durationMode": "fixed",
+      "relayBitmask": 0,
+      "intervalBitmask": 0,
+      "intervalOnSec": 60,
+      "intervalOffSec": 60,
+      "sensorBitmask": 480,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "alcoholEnough",
+              "negate": false
+            },
+            {
+              "key": "scentedEnough",
+              "negate": false,
+              "joiner": "AND"
+            }
+          ],
+          "isElse": false,
+          "remember": [
+            "bypass=off"
+          ],
+          "goto": "TAPS"
+        }
+      ],
+      "displayTokens": "#000000|TT,160,120,#FF0000,OUT OF ORDER,1000,MC,4"
+    },
+    {
+      "name": "HELMET NOTICE A",
+      "durationSec": 2,
+      "durationMode": "fixed",
+      "relayBitmask": 0,
+      "intervalBitmask": 0,
+      "intervalOnSec": 60,
+      "intervalOffSec": 60,
+      "sensorBitmask": 0,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "timerZero",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "OPEN A"
+        }
+      ],
+      "displayTokens": "#000000|TT,160,120,#FFFF00,HELMET,500,MC,4|ST,160,92,#FFFFFF,NO,MC,2|ST,160,152,#FFFFFF,DETECTED,MC,2"
+    },
+    {
+      "name": "HELMET NOTICE B",
+      "durationSec": 2,
+      "durationMode": "fixed",
+      "relayBitmask": 0,
+      "intervalBitmask": 0,
+      "intervalOnSec": 60,
+      "intervalOffSec": 60,
+      "sensorBitmask": 0,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "timerZero",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "OPEN B"
+        }
+      ],
+      "displayTokens": "#000000|TT,160,120,#FFFF00,HELMET,500,MC,4|ST,160,92,#FFFFFF,,MC,2|ST,160,152,#FFFFFF,DETECTED,MC,2"
+    }
+  ]
+}
