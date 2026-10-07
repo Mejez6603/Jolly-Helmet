@@ -3,183 +3,55 @@
 
 #include <Arduino.h>
 
+// Home page script of the Control Center (rewritten 2026-10-03). The previous script is archived in legacy_dashboard/.
 const char SCRIPT_JS[] PROGMEM = R"rawliteral(
 let ws = new WebSocket(`ws://${location.host}/ws`);
-let relayStates = [false, false, false, false, false];
-let acsRelayStates = [false, false, false, false, false, false];
-let relayStatesC2 = [false, false, false, false, false, false];
-const COIN_VALUE_PESO = 1.0; // 1 pulse = PHP 1
 
-// -------------------------------------------------------------
-// Navigation & SPA Handling
-// -------------------------------------------------------------
+// Names, in the order the nodes number their states / steps (same lists as the settings pages)
+const ST13 = ["IDLE","OPEN A","CHECKING A","REFILLING A","SENSORS (old)","CLEANING","ABORT","OPEN B","FINISH","SAFETY PAUSE","TAPS","WELCOME","RATE A","TIME ALLOT","INSERT COIN","RATE B","CANCEL","METHOD","CHECKING S","REFILLING S","SENSORS A","CLOSE DOOR A","SENSORS B","CLOSE DOOR B","FREE RETRY","MAINTENANCE","OUT OF ORDER","HELMET NOTICE A","HELMET NOTICE B","SELECT MODE","SELECT DRY ONLY","DRYING","COOL DOWN","RATE B1"];
+const ST2 = ["IDLE","OPEN A","SENSORS (old)","HEATING","ABORT","OPEN B","FINISH","SAFETY PAUSE","TAPS","WELCOME","RATE A","TIME ALLOT","INSERT COIN","COOL DOWN","RATE B","CANCEL","SENSORS A","CLOSE DOOR A","SENSORS B","CLOSE DOOR B","FREE RETRY","MAINTENANCE","HELMET NOTICE A","HELMET NOTICE B","OUT OF ORDER"];
+const ACSSTEP = ["IDLE","ALC WATER IN","ALC ALCOHOL IN","SCT WATER IN","SCT SCENTED IN","DELIVER ALCOHOL","DELIVER SCENTED","WATER EMPTY","ALCOHOL EMPTY","SCENTED EMPTY","MAINTENANCE"];
+const NODES = ["A1 Terminal (Box 1)","A2 Sensors (Box 1)","A3 Relays (Box 1)","S3A Brain (Box 1)","C1 Terminal (Box 2)","C2 Hub (Box 2)","S3C Brain (Box 2)","B1 Terminal (Box 3)","B2 Sensors (Box 3)","B3 Relays (Box 3)","S3B Brain (Box 3)","ACS 1 (Box 1)","ACS 2 (Box 3)"];
+const WARN = [[1,'no echo from the alcohol mixer ultrasonic'],[2,'no echo from the scented mixer ultrasonic'],[4,'alcohol mixer: WL wet but the ultrasonic reads far from full'],[8,'scented mixer: WL wet but the ultrasonic reads far from full'],[16,'alcohol mixer holds a half-made mix'],[32,'scented mixer holds a half-made mix'],[64,'a pump hit its time limit']];
+const PUMPS = ["alcohol pump","water pump (alc)","water pump (scn)","scented pump","mixer alc pump","mixer scn pump"];
+
+// node status rows in the sidebar footer
+const nodeList = document.getElementById('node-list');
+nodeList.innerHTML = NODES.map((n, i) => `<div class="node-status-row"><span>${n}:</span><span id="nd-${i}" class="badge">OFFLINE</span></div>`).join('');
+
 function toggleSidebar() {
   document.getElementById('sidebar').classList.toggle('active');
   document.getElementById('sidebar-overlay').classList.toggle('active');
 }
 
-function switchTab(tabId, el) {
-  document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
-  document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
-  document.getElementById(tabId).classList.add('active');
-  el.classList.add('active');
-  toggleSidebar();
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.innerText = msg;
+  t.style.display = 'block';
+  setTimeout(() => { t.style.display = 'none'; }, 2200);
 }
+
+function setNodeBadge(id, isOnline) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.innerText = isOnline ? 'ONLINE' : 'OFFLINE';
+  el.className = isOnline ? 'badge online' : 'badge';
+}
+
+function mmss(sec) {
+  return String(Math.floor(sec / 60)).padStart(2, '0') + ':' + String(sec % 60).padStart(2, '0');
+}
+
+function chip(t, c) { return `<span class="chip ${c || ''}">${t}</span>`; }
 
 // -------------------------------------------------------------
-// Node A1 Direct Commands
-// -------------------------------------------------------------
-function sendTFTColor(hex) {
-  document.getElementById('color-hex').innerText = hex.toUpperCase();
-  let r = parseInt(hex.substr(1, 2), 16);
-  let g = parseInt(hex.substr(3, 2), 16);
-  let b = parseInt(hex.substr(5, 2), 16);
-  let rgb565 = ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3);
-  if (ws.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify({ target: 1, cmd: 1, color: rgb565 }));
-  }
-}
-
-function sendCmdA1(cmd, param) {
-  if (ws.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify({ target: 1, cmd: cmd, param: param }));
-    if (cmd === 2) showToast("Buzzer Triggered (250ms)");
-    if (cmd === 3) showToast("Coin Pulses Reset");
-  }
-}
-
-function saveSecPerCoin() {
-  const val = parseInt(document.getElementById('sec-per-coin').value);
-  if (ws.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify({ cmd: "save_spc", val: val }));
-    showToast("Seconds per Coin Saved!");
-  }
-}
-
-function saveSecPerCoinC2() {
-  const val = parseInt(document.getElementById('sec-per-coin-c2').value);
-  if (ws.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify({ cmd: "save_spc_c2", val: val }));
-    showToast("Seconds per Coin Saved!");
-  }
-}
-
-// -------------------------------------------------------------
-// Dynamic Settings (thresholds, ratios, coin economy)
-// -------------------------------------------------------------
-// Set the moment any Settings field is touched, cleared only after a successful save.
-// Without this, the per-field "skip while focused" guard in renderDynamicConfig() still
-// leaves a real gap: clicking away from a field to reach the Save button un-focuses it,
-// and if a 1Hz WS update lands in that instant (before the click itself registers), it
-// silently reverts the just-typed value back to the server's stale copy - so Save ends up
-// sending the reverted value instead of what was actually typed.
-let settingsFieldsTouched = false;
-// focusin bubbles (plain focus doesn't), so one listener on the tab covers every input in it.
-const settingsTabEl = document.getElementById('tab-settings');
-if (settingsTabEl) settingsTabEl.addEventListener('focusin', () => { settingsFieldsTouched = true; });
-
-function saveDynamicConfig() {
-  if (ws.readyState !== WebSocket.OPEN) return;
-  ws.send(JSON.stringify({
-    cmd: "save_config",
-    coin_value:       parseFloat(document.getElementById('cfg-coin-value').value),
-    min_coins_required: parseInt(document.getElementById('cfg-min-coins').value),
-    max_coins_allowed: parseInt(document.getElementById('cfg-max-coins').value),
-    min_coins_required_c2: parseInt(document.getElementById('cfg-min-coins-c2').value),
-    max_coins_allowed_c2: parseInt(document.getElementById('cfg-max-coins-c2').value),
-    cool_down_ratio_c2: parseFloat(document.getElementById('cfg-cooldown-ratio-c2').value),
-    helmet_a2_cm:     parseFloat(document.getElementById('cfg-helmet-a2').value),
-    helmet_c2_cm:     parseFloat(document.getElementById('cfg-helmet-c2').value),
-    alc_low_pct:      parseFloat(document.getElementById('cfg-alc-low').value),
-    alc_high_pct:     parseFloat(document.getElementById('cfg-alc-high').value),
-    acs_low_cm:       parseFloat(document.getElementById('cfg-acs-low').value),
-    acs_full_cm:      parseFloat(document.getElementById('cfg-acs-full').value),
-    mix_alcohol_pct:  parseFloat(document.getElementById('cfg-mix-alcohol').value),
-    mix_water_pct:    parseFloat(document.getElementById('cfg-mix-water').value),
-    mix_scented_pct:  parseFloat(document.getElementById('cfg-mix-scented').value)
-  }));
-  settingsFieldsTouched = false; // safe to resume live-syncing - values now match what was just saved
-  showToast("Settings Saved & Pushed!");
-}
-
-// Populates the Settings tab's inputs from live telemetry - but not at all once the user has
-// touched any field in this tab, until the next successful save (see settingsFieldsTouched
-// above). The per-field focus check alone isn't enough to prevent the click-away race.
-function renderDynamicConfig(d) {
-  if (settingsFieldsTouched) return;
-  const setIfPresent = (id, val) => {
-    const el = document.getElementById(id);
-    if (el && val !== undefined && document.activeElement !== el) el.value = val;
-  };
-  setIfPresent('cfg-coin-value',  d.cfg_coin_value);
-  setIfPresent('cfg-min-coins', d.cfg_min_coins_required);
-  setIfPresent('cfg-max-coins', d.cfg_max_coins_allowed);
-  setIfPresent('cfg-min-coins-c2', d.cfg_min_coins_required_c2);
-  setIfPresent('cfg-max-coins-c2', d.cfg_max_coins_allowed_c2);
-  setIfPresent('cfg-cooldown-ratio-c2', d.cfg_cool_down_ratio_c2);
-  setIfPresent('cfg-helmet-a2',   d.cfg_helmet_a2_cm);
-  setIfPresent('cfg-helmet-c2',   d.cfg_helmet_c2_cm);
-  setIfPresent('cfg-alc-low',     d.cfg_alc_low_pct);
-  setIfPresent('cfg-alc-high',    d.cfg_alc_high_pct);
-  setIfPresent('cfg-acs-low',     d.cfg_acs_low_cm);
-  setIfPresent('cfg-acs-full',    d.cfg_acs_full_cm);
-  setIfPresent('cfg-mix-alcohol', Math.round(d.cfg_mix_alcohol_pct * 10) / 10);
-  setIfPresent('cfg-mix-water',   Math.round(d.cfg_mix_water_pct * 10) / 10);
-  setIfPresent('cfg-mix-scented', Math.round(d.cfg_mix_scented_pct * 10) / 10);
-}
-
-// -------------------------------------------------------------
-// Node C1 Direct Commands (Box 2 Terminal)
-// -------------------------------------------------------------
-function sendCmdC1(cmd, param) {
-  if (ws.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify({ target: 4, cmd: cmd, param: param }));
-    if (cmd === 2) showToast("Buzzer Triggered (250ms)");
-    if (cmd === 3) showToast("Coin Pulses Reset");
-  }
-}
-
-// -------------------------------------------------------------
-// Node A2 Relay / Solenoid Control
-// -------------------------------------------------------------
-function toggleRelay(idx) {
-  if (ws.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify({ target: 2, cmd: 4, relayIdx: idx, state: relayStates[idx] ? 0 : 1 }));
-  }
-}
-
-function toggleC2Relay(idx) {
-  if (ws.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify({ target: 5, cmd: 4, relayIdx: idx, state: relayStatesC2[idx] ? 0 : 1 }));
-  }
-}
-
-function toggleACSRelay(idx) {
-  if (ws.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify({ target: 3, cmd: 4, relayIdx: idx, state: acsRelayStates[idx] ? 0 : 1 }));
-  }
-}
-
-let acsMaintenanceMode = false;
-
-function toggleACSMaintenance() {
-  if (ws.readyState !== WebSocket.OPEN) return;
-  const turningOn = !acsMaintenanceMode;
-  if (turningOn && !confirm('Enable Maintenance Mode? This pauses the automatic Mixer refill until turned off again.')) return;
-  ws.send(JSON.stringify({ cmd: "acs_maintenance", state: turningOn ? 1 : 0 }));
-}
-
-// -------------------------------------------------------------
-// Statistics & Financial Analytics Dashboard
+// Revenue
 // -------------------------------------------------------------
 function renderStats(d) {
   document.getElementById('stat-sessions').innerText = d.stat_sessions;
   document.getElementById('stat-revenue').innerText = `PHP ${Number(d.stat_revenue).toFixed(2)}`;
   document.getElementById('stat-coins').innerText = d.stat_coins;
-
-  const avgMin = String(Math.floor(d.stat_avg_dur / 60)).padStart(2, '0');
-  const avgSec = String(d.stat_avg_dur % 60).padStart(2, '0');
-  document.getElementById('stat-duration').innerText = `${avgMin}:${avgSec}`;
+  document.getElementById('stat-duration').innerText = mmss(d.stat_avg_dur);
 
   const chart = document.getElementById('stat-chart');
   const hist = d.stat_history || [];
@@ -192,6 +64,9 @@ function renderStats(d) {
     const pct = Math.max(6, Math.round((h.r / maxRev) * 100));
     return `<div class="chart-col"><div class="chart-bar" style="height:${pct}%;"></div><div class="chart-val">P${h.r.toFixed(0)}</div></div>`;
   }).join('');
+
+  const cv = document.getElementById('coin-value');
+  if (cv && document.activeElement !== cv && d.coin_value !== undefined) cv.value = d.coin_value;
 }
 
 function resetStats() {
@@ -201,35 +76,59 @@ function resetStats() {
   showToast("Statistics Reset!");
 }
 
-// -------------------------------------------------------------
-// Utility Helpers
-// -------------------------------------------------------------
-function showToast(msg) {
-  const t = document.getElementById('toast');
-  t.innerText = msg;
-  t.style.display = 'block';
-  setTimeout(() => { t.style.display = 'none'; }, 2200);
+function refreshScreen(n) {
+  fetch(`/api/b${n}/refresh`, { cache: "no-store" }).then(() => showToast(`Screen refresh sent to Box ${n}`)).catch(() => showToast("No link"));
 }
 
-function escapeHtml(str) {
-  if (!str) return '';
-  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
-
-function setNodeBadge(id, isOnline) {
-  const el = document.getElementById(id);
-  el.innerText = isOnline ? 'ONLINE' : 'OFFLINE';
-  el.className = isOnline ? 'badge online' : 'badge';
-}
-
-function setDoorBadge(id, isOpen) {
-  const el = document.getElementById(id);
-  el.innerText = isOpen ? 'OPEN' : 'CLOSED';
-  el.className = isOpen ? 'val door-open' : 'val door-closed';
+function saveCoinValue() {
+  const v = parseFloat(document.getElementById('coin-value').value);
+  if (ws.readyState !== WebSocket.OPEN || !(v >= 0.1)) return;
+  ws.send(JSON.stringify({ cmd: "save_coin_value", val: v }));
+  showToast("Coin value saved");
 }
 
 // -------------------------------------------------------------
-// WebSocket Telemetry Handlers
+// Boxes and ACS
+// -------------------------------------------------------------
+function renderBox(prefix, names, state, timer, coins, alerts, label) {
+  const name = names[state] || ('state ' + state);
+  document.getElementById(prefix + '-state').innerText = name;
+  document.getElementById(prefix + '-coins').innerText = `Coins counted: ${coins}`;
+  document.getElementById(prefix + '-timer').innerText = mmss(timer);
+  if (name === 'OUT OF ORDER') alerts.push(label + ' is OUT OF ORDER');
+  if (name === 'SELECT DRY ONLY') alerts.push(label + ': CLEANING is greyed out (a container is low and the refill gave up) - drying still works');
+}
+
+function renderAcs(i, a, alerts) {
+  const label = 'ACS ' + (i + 1);
+  const [ok, step, flags, empty, warn, pa, ps, pumps, sec] = a;
+  const stepEl = document.getElementById(`acs${i}-step`);
+  stepEl.innerText = ok ? (ACSSTEP[step] || step) : 'NOT HEARD';
+  stepEl.className = ok && step < 7 ? 'badge online' : 'badge';
+  document.getElementById(`acs${i}-pa`).style.width = (ok ? pa : 0) + '%';
+  document.getElementById(`acs${i}-ps`).style.width = (ok ? ps : 0) + '%';
+  let c = '';
+  if (ok) {
+    c += (flags & 1) ? chip('ALCOHOL MIXER LOW', 'bad') : '';
+    c += (flags & 4) ? chip('SCENTED MIXER LOW', 'bad') : '';
+    c += (empty & 1) ? chip('WATER EMPTY', 'bad') : '';
+    c += (empty & 2) ? chip('ALCOHOL EMPTY', 'bad') : '';
+    c += (empty & 4) ? chip('SCENTED EMPTY', 'bad') : '';
+    c += (flags & 128) ? chip('box is asking', 'run') : '';
+    PUMPS.forEach((n, k) => { if ((pumps >> k) & 1) c += chip('running: ' + n, 'run'); });
+    WARN.forEach(w => { if (warn & w[0]) c += `<div class="acs-note">⚠ ${w[1]}</div>`; });
+    if (step >= 7 && step <= 9) c += `<div class="acs-note">retrying in ${sec} s</div>`;
+    if (empty & 1) alerts.push(label + ': WATER supply is empty');
+    if (empty & 2) alerts.push(label + ': ALCOHOL supply is empty');
+    if (empty & 4) alerts.push(label + ': SCENTED supply is empty');
+    if (flags & 1) alerts.push(label + ': alcohol mixer container is low');
+    if (flags & 4) alerts.push(label + ': scented mixer container is low');
+  }
+  document.getElementById(`acs${i}-chips`).innerHTML = c || '<span class="label" style="font-size:0.75rem;">No empty supply, no pump running.</span>';
+}
+
+// -------------------------------------------------------------
+// WebSocket
 // -------------------------------------------------------------
 ws.onopen = () => {
   const b = document.getElementById('ws-badge');
@@ -246,138 +145,39 @@ ws.onclose = () => {
 
 ws.onmessage = (evt) => {
   let d;
-  try { d = JSON.parse(evt.data); } catch(e) { return; }
+  try { d = JSON.parse(evt.data); } catch (e) { return; }
 
   document.getElementById('hdr-ram').innerText = `${(d.heap / 1024).toFixed(0)} KB`;
   const psramEl = document.getElementById('hdr-psram');
-  if (psramEl) {
-    psramEl.innerText = d.free_psram > 0 ? `${(d.free_psram / 1024 / 1024).toFixed(2)} MB` : '0 (not detected!)';
-    psramEl.style.color = d.free_psram > 0 ? 'var(--success)' : 'var(--danger)';
-  }
-  setNodeBadge('sb-a1-status', d.a1_online);
-  setNodeBadge('sb-a2-status', d.a2_online);
+  psramEl.innerText = d.free_psram > 0 ? `${(d.free_psram / 1024 / 1024).toFixed(2)} MB` : '0 (not detected!)';
+  psramEl.style.color = d.free_psram > 0 ? 'var(--success)' : 'var(--danger)';
 
-  document.getElementById('mach-state').innerText = `STATE: ${d.step_name}`;
-  document.getElementById('mach-step').innerText = `Alcohol Tank: ${d.a2_alc_pct.toFixed(0)}%`;
+  (d.n || []).forEach((on, i) => setNodeBadge('nd-' + i, !!on));
 
-  const mins = String(Math.floor(d.active_timer / 60)).padStart(2, '0');
-  const secs = String(d.active_timer % 60).padStart(2, '0');
-  document.getElementById('active-timer').innerText = `${mins}:${secs}`;
-
-  const hs = document.getElementById('handshake-status');
-  hs.innerText = d.handshake_ok ? 'Handshake: READY' : 'Handshake: WAITING (Door/Dist)';
-  hs.style.color = d.handshake_ok ? 'var(--success)' : 'var(--warning)';
-
-  const spcInput = document.getElementById('sec-per-coin');
-  if (spcInput && document.activeElement !== spcInput) spcInput.value = d.sec_per_coin;
-  const spcC2Input = document.getElementById('sec-per-coin-c2');
-  if (spcC2Input && document.activeElement !== spcC2Input) spcC2Input.value = d.sec_per_coin_c2;
-
-  document.getElementById('a1-pulses').innerText = d.a1_pulses;
-  document.getElementById('a1-credit').innerText = `PHP ${(d.a1_pulses * COIN_VALUE_PESO).toFixed(2)}`;
-  document.getElementById('a1-touch').innerText = d.a1_tp ? `X:${d.a1_tx} Y:${d.a1_ty} (TOUCH)` : `X:${d.a1_tx} Y:${d.a1_ty} (IDLE)`;
-
-  document.getElementById('a2-helmet').innerText = `${d.a2_us_helm.toFixed(1)} cm`;
-  document.getElementById('a2-alcohol').innerText = `${d.a2_us_alc.toFixed(1)} cm (~${d.a2_alc_pct.toFixed(0)}%)`;
-  setDoorBadge('a2-door-enc', d.a2_m_enc);
-  setDoorBadge('a2-door-pan', d.a2_m_pan);
-  setDoorBadge('a2-door-bak', d.a2_m_bak);
-
-  relayStates = [d.a2_r_enc, d.a2_r_pan, d.a2_r_bak, d.a2_r_hum, d.a2_r_uv];
-  for (let i = 0; i < 5; i++) {
-    const btn = document.getElementById(`r-${i}`);
-    if (btn) btn.className = relayStates[i] ? 'relay-on' : 'btn-sec';
-  }
-
-  setNodeBadge('sb-c1-status', d.c1_online);
-  setNodeBadge('sb-c2-status', d.c2_online);
-
-  document.getElementById('box2-mach-state').innerText = `STATE: ${d.box2_step_name}`;
-  const b2mins = String(Math.floor(d.box2_active_timer / 60)).padStart(2, '0');
-  const b2secs = String(d.box2_active_timer % 60).padStart(2, '0');
-  document.getElementById('box2-active-timer').innerText = `${b2mins}:${b2secs}`;
-  const b2hs = document.getElementById('box2-handshake-status');
-  b2hs.innerText = d.box2_handshake_ok ? 'Handshake: READY' : 'Handshake: WAITING (Door/Dist)';
-  b2hs.style.color = d.box2_handshake_ok ? 'var(--success)' : 'var(--warning)';
-
-  document.getElementById('c1-pulses').innerText = d.c1_pulses;
-  document.getElementById('c1-credit').innerText = `PHP ${(d.c1_pulses * COIN_VALUE_PESO).toFixed(2)}`;
-  document.getElementById('c1-touch').innerText = d.c1_tp ? `X:${d.c1_tx} Y:${d.c1_ty} (TOUCH)` : `X:${d.c1_tx} Y:${d.c1_ty} (IDLE)`;
-
-  document.getElementById('c2-helmet').innerText = `${d.c2_us_helm.toFixed(1)} cm`;
-  setDoorBadge('c2-door-enc', d.c2_m_enc);
-  setDoorBadge('c2-door-pan', d.c2_m_pan);
-  setDoorBadge('c2-door-bak', d.c2_m_bak);
-
-  relayStatesC2 = [d.c2_r_enc, d.c2_r_pan, d.c2_r_bak, d.c2_r_heat, d.c2_r_uv, d.c2_r_fan];
-  for (let i = 0; i < 6; i++) {
-    const btn = document.getElementById(`c2-r-${i}`);
-    if (btn) btn.className = relayStatesC2[i] ? 'relay-on' : 'btn-sec';
-  }
-
-  setNodeBadge('sb-acs-status', d.acs_online);
-  setNodeBadge('sb-s3a-status', d.s3a_online);
-  setNodeBadge('sb-s3c-status', d.s3c_online);
-  setLowVal('acs-water', d.acs_water, d.acs_water_low);
-  setLowVal('acs-scented', d.acs_scented, d.acs_scented_low);
-  setLowVal('acs-alcohol', d.acs_alcohol, d.acs_alcohol_low);
-  setLowVal('acs-mixer', d.acs_mixer, d.acs_mixer_low);
-
-  acsMaintenanceMode = !!d.acs_maint;
-  const maintBtn = document.getElementById('acs-maint-btn');
-  if (maintBtn) {
-    maintBtn.innerText = acsMaintenanceMode ? 'Disable Maintenance Mode (Resume Automatic Refill)' : 'Enable Maintenance Mode (Flush / Transport Prep)';
-    maintBtn.style.background = acsMaintenanceMode ? 'var(--success)' : 'var(--danger)';
-  }
-
-  const busyBadge = document.getElementById('acs-busy');
-  let acsStatusText = d.acs_auto || (d.acs_busy ? 'BUSY' : 'IDLE');
-  if (d.acs_auto === 'Waiting for Ingredients') {
-    const low = [];
-    if (d.acs_water_low) low.push('Water');
-    if (d.acs_scented_low) low.push('Scented');
-    if (d.acs_alcohol_low) low.push('Alcohol');
-    if (low.length) acsStatusText = `Needs Refill: ${low.join(', ')}`;
-  }
-  if (acsMaintenanceMode) acsStatusText = 'MAINTENANCE MODE';
-  busyBadge.innerText = acsStatusText;
-  busyBadge.className = acsMaintenanceMode || (d.acs_auto && d.acs_auto !== 'Idle') || d.acs_busy ? 'badge' : 'badge online';
-
-  acsRelayStates = d.acs_relays || [false, false, false, false, false, false];
-  for (let i = 1; i < 6; i++) {
-    const btn = document.getElementById(`acs-r-${i}`);
-    if (btn) btn.className = acsRelayStates[i] ? 'relay-on' : 'btn-sec';
-  }
-
-  updateRefillBanner(d);
-  renderStats(d);
-  renderDynamicConfig(d);
-};
-
-// Visible on every tab - lists anything currently needing a refill, hidden otherwise.
-function updateRefillBanner(d) {
-  const items = [];
-  if (d.acs_water_low) items.push('ACS Water');
-  if (d.acs_scented_low) items.push('ACS Scented Liquid');
-  if (d.acs_alcohol_low) items.push('ACS Alcohol');
-  if (d.acs_mixer_low) items.push('ACS Mixer');
-  if (d.a2_alc_pct <= 10) items.push('Humidifier Tank (A2)');
+  const alerts = [];
+  renderBox('b1', ST13, d.b1s, d.b1t, d.b1c, alerts, 'Box 1');
+  renderBox('b2', ST2,  d.b2s, d.b2t, d.b2c, alerts, 'Box 2');
+  renderBox('b3', ST13, d.b3s, d.b3t, d.b3c, alerts, 'Box 3');
+  (d.acs || []).forEach((a, i) => renderAcs(i, a, alerts));
 
   const banner = document.getElementById('refill-banner');
-  if (items.length > 0) {
-    document.getElementById('refill-banner-text').innerText = `Refill Needed: ${items.join(', ')}`;
+  if (alerts.length > 0) {
+    document.getElementById('refill-banner-text').innerText = alerts.join('  ·  ');
     banner.style.display = 'flex';
   } else {
     banner.style.display = 'none';
   }
-}
 
-function setLowVal(id, distCm, isLow) {
-  const el = document.getElementById(id);
-  if (!el || distCm === undefined) return;
-  el.innerText = `${distCm.toFixed(1)} cm${isLow ? ' (LOW)' : ''}`;
-  el.style.color = isLow ? 'var(--danger)' : 'var(--text)';
-}
+  renderStats(d);
+
+  // board health: tells a power dip (BROWNOUT) apart from a crash or a watchdog
+  const diag = document.getElementById('diag');
+  if (diag && d.rst !== undefined) {
+    const bad = (d.rst.indexOf('BROWNOUT') >= 0);
+    diag.innerHTML = `This board: up ${d.up} s · last restart: <b style="color:${bad || d.crashes > 0 ? 'var(--warning)' : 'var(--success)'}">${d.rst}</b> · unexpected restarts ${d.crashes} of ${d.boots} starts · lowest free memory ${(d.minheap / 1024).toFixed(0)} KB · radio packets dropped ${d.rxdrop} · phones connected ${d.clients}` +
+      (bad ? '<br><b style="color:var(--danger)">BROWNOUT = the supply dipped: use a stronger USB supply / shorter cable for this board, or a separate supply from the pumps and relays.</b>' : '');
+  }
+};
 )rawliteral";
 
 #endif // SCRIPT_JS_H

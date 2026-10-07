@@ -46,7 +46,7 @@ float    rateValue      = 5.0f;
 bool     rateUnitMin    = true;    // true = minutes, false = seconds
 uint16_t maxCoins       = 90;      // most coins one session can take (90 coins = 30 min at 15 coins = 5 min)
 bool     freeEnabled    = true;    // one free retry after Rate B ...
-uint8_t  freeMinRating  = 8;       // ... when the final rating is at least this
+uint8_t  freeMinRating  = 1;       // ... when the final rating is at least this (1 = everyone, for the deployment demo)
 uint8_t  freeMinutes    = 2;       // ... lasting this long
 
 // ---------------------------------------------------------------------
@@ -111,6 +111,7 @@ bool     lastUvOn = false, lastMistOn = false;   // what the cleaning status fee
 uint32_t npInitSeconds   = 0;       // the numpad's suggested time
 char     timeWarnL1[32]  = "", timeWarnL2[32] = "";   // numpad rejection message (empty = none)
 uint8_t  refillTry       = 0, refillElapsed = 0;
+uint8_t  bypassAskTicks  = 0;       // seconds since the last quiet "please top up" while out of order (see STATE_OUT_OF_ORDER)
 uint16_t stepRemainingSec = 0;
 char     scrBuf[200];               // scratch for screens with live numbers baked in
 
@@ -155,6 +156,14 @@ unsigned long lastOneSecTick = 0, lastMaskSentMs = 0, lastCfgCsvMs = 0, lastToke
 const unsigned long MASK_REASSERT_MS = 2000;
 unsigned long a1RedrawAtMillis = 0;
 bool a1HardRefreshPending = false;
+// Which relay changes force a FULL re-init of the touch screen (the white-screen cure). Bit = relay index. 'On' = the relay turns ON, 'Off' = it turns OFF
+// (for the locks ON = unlocked, so locking = the lock bit going OFF). Set per relay from the dashboard (CMD_SET_CONFIG subIndex 5), kept in NVS.
+uint16_t refreshOnMask  = 0;
+uint16_t refreshOffMask = A3_BIT(A3_RELAY_ENCLOSURE_LOCK);
+// Auto hard refresh: every N seconds S3A re-sends A1's current page as a full controller re-init (the white-screen cure). 0 = never, max 60.
+// Set from the dashboard (CMD_SET_CONFIG subIndex 6), kept in NVS. Screens where the customer types or picks a rating are skipped (a refresh would wipe what was typed).
+uint16_t autoRefreshSec = 2;
+unsigned long lastAutoRefreshMs = 0;
 bool needScreenRedraw = false;      // a coin changed the cleaning total: repaint so the bar follows
 bool coinFlag = false;              // a coin landed during cleaning: status line
 char statusLines[3][32] = {"", "", ""};
@@ -278,6 +287,9 @@ void saveConfigToNVS() {
     prefs.putUChar("ph_su", phaseStartUnit);
     prefs.putUChar("ph_eu", phaseEndUnit);
     prefs.putBytes("ph_pat", phasePat, sizeof(phasePat));
+    prefs.putUShort("rf_on", refreshOnMask);
+    prefs.putUShort("rf_off", refreshOffMask);
+    prefs.putUShort("arf_sec", autoRefreshSec);
 }
 
 void loadConfigFromNVS() {
@@ -316,6 +328,9 @@ void loadConfigFromNVS() {
     phaseEndUnit   = prefs.getUChar("ph_eu", phaseEndUnit);
     uint8_t pat[5];
     if (prefs.getBytes("ph_pat", pat, sizeof(pat)) == sizeof(pat)) { for (uint8_t i = 0; i < 5; i++) phasePat[i] = pat[i] & 7; }
+    refreshOnMask  = prefs.getUShort("rf_on", refreshOnMask);
+    refreshOffMask = prefs.getUShort("rf_off", refreshOffMask);
+    autoRefreshSec = prefs.getUShort("arf_sec", autoRefreshSec);
     refillBypass   = prefs.getBool("bypass", false);          // survives a reboot: stay out of order until the levels recover
     lastKnownPulsesA1 = prefs.getUInt("last_a1_pulses", 0);   // survives an S3A reboot mid-session
     recomputeDerived();
@@ -416,6 +431,28 @@ void broadcastConfig() {
     esp_now_send(BROADCAST_MAC, (uint8_t*)&packet, sizeof(Box1ConfigPacket));
 }
 
+// Per-relay screen refresh (subIndex 5): two numbers = bit mask of relays whose switching ON triggers a refresh, then the mask for switching OFF.
+void refreshToCsv(char* out, size_t n) { snprintf(out, n, "%u,%u", (unsigned)refreshOnMask, (unsigned)refreshOffMask); }
+bool applyRefreshCsv(const char* s) {
+    float v[2];
+    if (parseFloats(s, v, 2) != 2) return false;
+    if (v[0] < 0 || v[1] < 0 || v[0] > A3_MASK_ALL || v[1] > A3_MASK_ALL) return false;
+    refreshOnMask = (uint16_t)(v[0] + 0.5f);
+    refreshOffMask = (uint16_t)(v[1] + 0.5f);
+    return true;
+}
+
+// Auto hard refresh (subIndex 6): one number, seconds between refreshes (0 = never, 60 = max).
+void autoRefreshToCsv(char* out, size_t n) { snprintf(out, n, "%u", (unsigned)autoRefreshSec); }
+bool applyAutoRefreshCsv(const char* s) {
+    float v[1];
+    if (parseFloats(s, v, 1) != 1) return false;
+    if (v[0] < 0 || v[0] > 60) return false;
+    autoRefreshSec = (uint16_t)(v[0] + 0.5f);
+    lastAutoRefreshMs = millis();
+    return true;
+}
+
 void broadcastSettingsCsv() {
     char buf[200];
     rulesToCsv(buf, sizeof(buf));
@@ -426,6 +463,10 @@ void broadcastSettingsCsv() {
     delay(2);
     phasesToCsv(buf, sizeof(buf));
     sendCmd(0, CMD_SET_CONFIG, 3, 0, 0, buf);
+    delay(2);
+    refreshToCsv(buf, sizeof(buf));  sendCmd(0, CMD_SET_CONFIG, 5, 0, 0, buf);
+    delay(2);
+    autoRefreshToCsv(buf, sizeof(buf));  sendCmd(0, CMD_SET_CONFIG, 6, 0, 0, buf);
 }
 
 // ---------------------------------------------------------------------
@@ -487,13 +528,17 @@ void resetCoinSession() {
     prefs.putUInt("last_a1_pulses", 0);
 }
 
-// The refill system (ACS) is asked to top a container up. OFF by default (acsRequests): Box 1's ACS is still
-// being fixed and its old firmware answers any delivery request by pumping. The tries are counted either way.
+// The refill system is asked to top a container up. Box 1's refill system is ACS 1 (DEVICE_ACS; Box 3's ACS 2 is DEVICE_ACS2).
+// OFF by default (acsRequests) until ACS 1 runs the NEW refill firmware (ESP32_ACS1) - the old 4-tank firmware answers any
+// delivery request by pumping. "set acs 1" / the settings page switches it on. The tries are counted either way.
+// state 0 = "top it up" (the ACS pumps one bounded shot per request), state 1 = "stop, it is full".
+void sendRefillAsk(uint8_t container, uint8_t state) { sendCmd(DEVICE_ACS, CMD_REQUEST_DELIVERY, container, 0, state); }
 void requestRefill(uint8_t container) {
     if (!acsRequests) { Serial.printf("[S3A] Refill try %u for container %u (ACS requests are OFF - waiting only)\n", refillTry, container); return; }
-    Serial.printf("[S3A] Refill try %u: asking the ACS to top up container %u\n", refillTry, container);
-    sendCmd(DEVICE_ACS, CMD_REQUEST_DELIVERY, container, 0, 0);
+    Serial.printf("[S3A] Refill try %u: asking ACS 1 to top up container %u\n", refillTry, container);
+    sendRefillAsk(container, 0);
 }
+void cancelRefill(uint8_t container) { if (acsRequests) sendRefillAsk(container, 1); }
 
 // ---------------------------------------------------------------------
 // Screens
@@ -633,11 +678,12 @@ void muteA1AndScheduleRedraw(bool hardRefresh) {
 void applyDesiredMask() {
     uint16_t m = desiredMaskForState();
     if (m == desiredMask) return;
-    // The TFT white-screen glitch comes from the lock solenoid re-engaging (unlocked -> locked), so only that
-    // transition asks A1 for a full controller re-init; every other relay change just gets a plain repaint.
-    bool lockJustEngaged = (desiredMask & A3_BIT(A3_RELAY_ENCLOSURE_LOCK)) && !(m & A3_BIT(A3_RELAY_ENCLOSURE_LOCK));
+    // A relay change that is ticked in the dashboard's 'refresh screen' list (default: the enclosure lock engaging) asks A1 for a full
+    // controller re-init after the change - the supply dips and the TFT can come back blank white. Every other relay change just gets a plain repaint.
+    uint16_t changedBits = (uint16_t)(desiredMask ^ m);
+    bool refreshNow = ((m & changedBits & refreshOnMask) != 0) || ((desiredMask & changedBits & refreshOffMask) != 0);
     desiredMask = m;
-    muteA1AndScheduleRedraw(lockJustEngaged);
+    muteA1AndScheduleRedraw(refreshNow);
     sendMask();
     Serial.printf("[S3A] relay mask -> 0x%03X\n", (unsigned)desiredMask);
 }
@@ -888,7 +934,7 @@ void tickState() {
         case STATE_REFILLING_SCN: {
             bool alc = (currentMachineState == STATE_REFILLING);
             bool ok = alc ? (alcoholRefilled() || wsWet[0]) : (scentedRefilled() || wsWet[1]);
-            if (ok) { Serial.println("[S3A] Container refilled"); enterState(alc ? STATE_CHECKING : STATE_CHECKING_SCN); break; }
+            if (ok) { Serial.println("[S3A] Container refilled"); cancelRefill(alc ? 0 : 1); enterState(alc ? STATE_CHECKING : STATE_CHECKING_SCN); break; }
             if (++refillElapsed >= refillIntervalSec) {
                 if (refillTry >= refillTriesMax) {
                     refillBypass = true; saveBypass();
@@ -995,7 +1041,18 @@ void tickState() {
             if (systemReady() && alcoholEnough() && scentedEnough()) {
                 Serial.println("[S3A] Back in order");
                 refillBypass = false; saveBypass();
+                cancelRefill(0); cancelRefill(1);
+                bypassAskTicks = 0;
                 enterState(STATE_TAPS);
+            } else if (refillBypass && levelChecksOn && acsRequests && systemReady() && ++bypassAskTicks >= 30) {
+                // the refill gave up, so nothing asks ACS 1 any more - ask quietly every 30 s so a supply that was refilled by hand is used
+                bypassAskTicks = 0;
+                bool needA = !alcoholRefilled() && !wsWet[0];
+                bool needS = !scentedRefilled() && !wsWet[1];
+                if (needA || needS) {
+                    Serial.printf("[S3A] still out of order - asking ACS 1 again for container %u\n", needA ? 0 : 1);
+                    sendRefillAsk(needA ? 0 : 1, 0);
+                }
             }
             break;
 
@@ -1053,7 +1110,8 @@ void onDataRecv(const esp_now_recv_info_t *info, const uint8_t *incomingData, in
         memcpy(&cmd, incomingData, sizeof(CommandPacket));
         if (cmd.targetDeviceID != DEVICE_S3A) return;
         if (cmd.commandID != CMD_TOUCH_ACTION && cmd.commandID != CMD_SET_CONFIG &&
-            cmd.commandID != CMD_SET_MAINTENANCE && cmd.commandID != CMD_SET_RELAY_MASK) return;
+            cmd.commandID != CMD_SET_MAINTENANCE && cmd.commandID != CMD_SET_RELAY_MASK &&
+            cmd.commandID != CMD_TFT_HARD_REFRESH) return;
         cmd.payloadStr[sizeof(cmd.payloadStr) - 1] = '\0';
         portENTER_CRITICAL(&rxMux);
         uint8_t next = (uint8_t)((qHead + 1) % CMD_QUEUE_LEN);
@@ -1097,11 +1155,18 @@ void handleQueuedCommand(const CommandPacket& cmd) {
         handleMaintenance(cmd.state ? 1 : 0);
     } else if (cmd.commandID == CMD_SET_RELAY_MASK) {
         if (currentMachineState == STATE_MAINTENANCE) { maintMask = cmd.param16 & A3_MASK_ALL; applyDesiredMask(); }
+    } else if (cmd.commandID == CMD_TFT_HARD_REFRESH) {
+        // "Force refresh" from the dashboard: restart A1's touch screen and redraw the current page (cures a white or garbled screen)
+        a1HardRefreshPending = true;
+        a1RedrawAtMillis = millis() + 50;
+        Serial.println("[S3A] screen refresh requested from the dashboard");
     } else if (cmd.commandID == CMD_SET_CONFIG) {
         bool ok = false;
         if (cmd.subIndex == 1) ok = applyRulesCsv(cmd.payloadStr);
         else if (cmd.subIndex == 2) ok = applyLevelsCsv(cmd.payloadStr);
         else if (cmd.subIndex == 3) ok = applyPhasesCsv(cmd.payloadStr);
+        else if (cmd.subIndex == 5) ok = applyRefreshCsv(cmd.payloadStr);
+        else if (cmd.subIndex == 6) ok = applyAutoRefreshCsv(cmd.payloadStr);
         else {   // the old "helmCm,lowPct,highPct,secPerCoin,minCoins[,maxCoins]" line: only the helmet distance and max coins still mean anything
             float v[6];
             int n = parseFloats(cmd.payloadStr, v, 6);
@@ -1331,6 +1396,11 @@ void setup() {
     sendToken(TOKEN_TRIES, refillTriesMax);
 }
 
+// The periodic refresh skips the screens where the customer is typing the time or picking a rating: the terminal keeps what was typed / picked, and a refresh would wipe it.
+bool autoRefreshAllowedNow() {
+    return !(currentMachineState == STATE_RATE_A || currentMachineState == STATE_TIME_ALLOT || currentMachineState == STATE_RATE_B);
+}
+
 void loop() {
     unsigned long now = millis();
 
@@ -1347,6 +1417,12 @@ void loop() {
 
     processPulses();
     serialConsole();
+
+    // periodic hard refresh of A1 (setting "Auto hard refresh"): 0 = never; also not while another repaint is already pending
+    if (autoRefreshSec > 0 && now - lastAutoRefreshMs >= (unsigned long)autoRefreshSec * 1000UL) {
+        lastAutoRefreshMs = now;
+        if (a1RedrawAtMillis == 0 && autoRefreshAllowedNow()) { a1HardRefreshPending = true; a1RedrawAtMillis = now + 1; }
+    }
 
     // post-solenoid / post-relay repaint of A1 (same EMI-glitch mitigation as before), or a requested one
     if (a1RedrawAtMillis != 0 && now >= a1RedrawAtMillis) {

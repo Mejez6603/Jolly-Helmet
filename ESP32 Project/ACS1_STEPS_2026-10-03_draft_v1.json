@@ -1,0 +1,489 @@
+{
+    "box":  "acs",
+    "preset":  "Default / Fallback",
+    "isDefault":  true,
+    "steps":  [
+                  {
+                      "name":  "IDLE",
+                      "durationSec":  0,
+                      "durationMode":  "fixed",
+                      "relayBitmask":  0,
+                      "intervalBitmask":  0,
+                      "intervalOnSec":  60,
+                      "intervalOffSec":  60,
+                      "sensorBitmask":  15,
+                      "phaseBitmask":  0,
+                      "branches":  [
+                                       {
+                                           "conditions":  [
+                                                              {
+                                                                  "key":  "acsMaint",
+                                                                  "negate":  false
+                                                              }
+                                                          ],
+                                           "isElse":  false,
+                                           "remember":  [
+
+                                                        ],
+                                           "goto":  "__self__"
+                                       },
+                                       {
+                                           "conditions":  [
+                                                              {
+                                                                  "key":  "acsReqAlc",
+                                                                  "negate":  false
+                                                              },
+                                                              {
+                                                                  "key":  "acsMixAlcLow",
+                                                                  "negate":  true,
+                                                                  "joiner":  "AND"
+                                                              }
+                                                          ],
+                                           "isElse":  false,
+                                           "remember":  [
+
+                                                        ],
+                                           "goto":  "DELIVER ALCOHOL"
+                                       },
+                                       {
+                                           "conditions":  [
+                                                              {
+                                                                  "key":  "acsReqSct",
+                                                                  "negate":  false
+                                                              },
+                                                              {
+                                                                  "key":  "acsMixSctLow",
+                                                                  "negate":  true,
+                                                                  "joiner":  "AND"
+                                                              }
+                                                          ],
+                                           "isElse":  false,
+                                           "remember":  [
+
+                                                        ],
+                                           "goto":  "DELIVER SCENTED"
+                                       },
+                                       {
+                                           "conditions":  [
+                                                              {
+                                                                  "key":  "acsMixAlcLow",
+                                                                  "negate":  false
+                                                              }
+                                                          ],
+                                           "isElse":  false,
+                                           "remember":  [
+
+                                                        ],
+                                           "goto":  "ALC WATER IN"
+                                       },
+                                       {
+                                           "conditions":  [
+                                                              {
+                                                                  "key":  "acsMixSctLow",
+                                                                  "negate":  false
+                                                              }
+                                                          ],
+                                           "isElse":  false,
+                                           "remember":  [
+
+                                                        ],
+                                           "goto":  "SCT WATER IN"
+                                       },
+                                       {
+                                           "conditions":  [
+
+                                                          ],
+                                           "isElse":  true,
+                                           "remember":  [
+
+                                                        ],
+                                           "goto":  "__self__"
+                                       }
+                                   ],
+                      "displayTokens":  "#000000"
+                  },
+                  {
+                      "name":  "ALC WATER IN",
+                      "durationSec":  0,
+                      "durationMode":  "fixed",
+                      "relayBitmask":  2,
+                      "intervalBitmask":  0,
+                      "intervalOnSec":  60,
+                      "intervalOffSec":  60,
+                      "sensorBitmask":  5,
+                      "phaseBitmask":  0,
+                      "branches":  [
+                                       {
+                                           "conditions":  [
+                                                              {
+                                                                  "key":  "acsNoRiseWater",
+                                                                  "negate":  false
+                                                              }
+                                                          ],
+                                           "isElse":  false,
+                                           "remember":  [
+
+                                                        ],
+                                           "goto":  "WATER EMPTY"
+                                       },
+                                       {
+                                           "conditions":  [
+                                                              {
+                                                                  "key":  "acsVolumeReached",
+                                                                  "negate":  false
+                                                              }
+                                                          ],
+                                           "isElse":  false,
+                                           "remember":  [
+
+                                                        ],
+                                           "goto":  "ALC ALCOHOL IN"
+                                       },
+                                       {
+                                           "conditions":  [
+                                                              {
+                                                                  "key":  "acsPhaseTimeout",
+                                                                  "negate":  false
+                                                              }
+                                                          ],
+                                           "isElse":  false,
+                                           "remember":  [
+
+                                                        ],
+                                           "goto":  "IDLE"
+                                       }
+                                   ],
+                      "displayTokens":  "#000000"
+                  },
+                  {
+                      "name":  "ALC ALCOHOL IN",
+                      "durationSec":  0,
+                      "durationMode":  "fixed",
+                      "relayBitmask":  1,
+                      "intervalBitmask":  0,
+                      "intervalOnSec":  60,
+                      "intervalOffSec":  60,
+                      "sensorBitmask":  5,
+                      "phaseBitmask":  0,
+                      "branches":  [
+                                       {
+                                           "conditions":  [
+                                                              {
+                                                                  "key":  "acsNoRiseAlcohol",
+                                                                  "negate":  false
+                                                              }
+                                                          ],
+                                           "isElse":  false,
+                                           "remember":  [
+
+                                                        ],
+                                           "goto":  "ALCOHOL EMPTY"
+                                       },
+                                       {
+                                           "conditions":  [
+                                                              {
+                                                                  "key":  "acsMixAlcFull",
+                                                                  "negate":  false
+                                                              }
+                                                          ],
+                                           "isElse":  false,
+                                           "remember":  [
+
+                                                        ],
+                                           "goto":  "IDLE"
+                                       },
+                                       {
+                                           "conditions":  [
+                                                              {
+                                                                  "key":  "acsPhaseTimeout",
+                                                                  "negate":  false
+                                                              }
+                                                          ],
+                                           "isElse":  false,
+                                           "remember":  [
+
+                                                        ],
+                                           "goto":  "IDLE"
+                                       }
+                                   ],
+                      "displayTokens":  "#000000"
+                  },
+                  {
+                      "name":  "SCT WATER IN",
+                      "durationSec":  0,
+                      "durationMode":  "fixed",
+                      "relayBitmask":  4,
+                      "intervalBitmask":  0,
+                      "intervalOnSec":  60,
+                      "intervalOffSec":  60,
+                      "sensorBitmask":  10,
+                      "phaseBitmask":  0,
+                      "branches":  [
+                                       {
+                                           "conditions":  [
+                                                              {
+                                                                  "key":  "acsNoRiseWater",
+                                                                  "negate":  false
+                                                              }
+                                                          ],
+                                           "isElse":  false,
+                                           "remember":  [
+
+                                                        ],
+                                           "goto":  "WATER EMPTY"
+                                       },
+                                       {
+                                           "conditions":  [
+                                                              {
+                                                                  "key":  "acsVolumeReached",
+                                                                  "negate":  false
+                                                              }
+                                                          ],
+                                           "isElse":  false,
+                                           "remember":  [
+
+                                                        ],
+                                           "goto":  "SCT SCENTED IN"
+                                       },
+                                       {
+                                           "conditions":  [
+                                                              {
+                                                                  "key":  "acsPhaseTimeout",
+                                                                  "negate":  false
+                                                              }
+                                                          ],
+                                           "isElse":  false,
+                                           "remember":  [
+
+                                                        ],
+                                           "goto":  "IDLE"
+                                       }
+                                   ],
+                      "displayTokens":  "#000000"
+                  },
+                  {
+                      "name":  "SCT SCENTED IN",
+                      "durationSec":  0,
+                      "durationMode":  "fixed",
+                      "relayBitmask":  8,
+                      "intervalBitmask":  0,
+                      "intervalOnSec":  60,
+                      "intervalOffSec":  60,
+                      "sensorBitmask":  10,
+                      "phaseBitmask":  0,
+                      "branches":  [
+                                       {
+                                           "conditions":  [
+                                                              {
+                                                                  "key":  "acsNoRiseScented",
+                                                                  "negate":  false
+                                                              }
+                                                          ],
+                                           "isElse":  false,
+                                           "remember":  [
+
+                                                        ],
+                                           "goto":  "SCENTED EMPTY"
+                                       },
+                                       {
+                                           "conditions":  [
+                                                              {
+                                                                  "key":  "acsMixSctFull",
+                                                                  "negate":  false
+                                                              }
+                                                          ],
+                                           "isElse":  false,
+                                           "remember":  [
+
+                                                        ],
+                                           "goto":  "IDLE"
+                                       },
+                                       {
+                                           "conditions":  [
+                                                              {
+                                                                  "key":  "acsPhaseTimeout",
+                                                                  "negate":  false
+                                                              }
+                                                          ],
+                                           "isElse":  false,
+                                           "remember":  [
+
+                                                        ],
+                                           "goto":  "IDLE"
+                                       }
+                                   ],
+                      "displayTokens":  "#000000"
+                  },
+                  {
+                      "name":  "DELIVER ALCOHOL",
+                      "durationSec":  0,
+                      "durationMode":  "fixed",
+                      "relayBitmask":  16,
+                      "intervalBitmask":  0,
+                      "intervalOnSec":  60,
+                      "intervalOffSec":  60,
+                      "sensorBitmask":  5,
+                      "phaseBitmask":  0,
+                      "branches":  [
+                                       {
+                                           "conditions":  [
+                                                              {
+                                                                  "key":  "acsPhaseTimeout",
+                                                                  "negate":  false
+                                                              }
+                                                          ],
+                                           "isElse":  false,
+                                           "remember":  [
+
+                                                        ],
+                                           "goto":  "IDLE"
+                                       },
+                                       {
+                                           "conditions":  [
+                                                              {
+                                                                  "key":  "acsVolumeReached",
+                                                                  "negate":  false
+                                                              },
+                                                              {
+                                                                  "key":  "acsMixAlcLow",
+                                                                  "negate":  false,
+                                                                  "joiner":  "OR"
+                                                              }
+                                                          ],
+                                           "isElse":  false,
+                                           "remember":  [
+
+                                                        ],
+                                           "goto":  "IDLE"
+                                       }
+                                   ],
+                      "displayTokens":  "#000000"
+                  },
+                  {
+                      "name":  "DELIVER SCENTED",
+                      "durationSec":  0,
+                      "durationMode":  "fixed",
+                      "relayBitmask":  32,
+                      "intervalBitmask":  0,
+                      "intervalOnSec":  60,
+                      "intervalOffSec":  60,
+                      "sensorBitmask":  10,
+                      "phaseBitmask":  0,
+                      "branches":  [
+                                       {
+                                           "conditions":  [
+                                                              {
+                                                                  "key":  "acsPhaseTimeout",
+                                                                  "negate":  false
+                                                              }
+                                                          ],
+                                           "isElse":  false,
+                                           "remember":  [
+
+                                                        ],
+                                           "goto":  "IDLE"
+                                       },
+                                       {
+                                           "conditions":  [
+                                                              {
+                                                                  "key":  "acsVolumeReached",
+                                                                  "negate":  false
+                                                              },
+                                                              {
+                                                                  "key":  "acsMixSctLow",
+                                                                  "negate":  false,
+                                                                  "joiner":  "OR"
+                                                              }
+                                                          ],
+                                           "isElse":  false,
+                                           "remember":  [
+
+                                                        ],
+                                           "goto":  "IDLE"
+                                       }
+                                   ],
+                      "displayTokens":  "#000000"
+                  },
+                  {
+                      "name":  "WATER EMPTY",
+                      "durationSec":  300,
+                      "durationMode":  "fixed",
+                      "relayBitmask":  0,
+                      "intervalBitmask":  0,
+                      "intervalOnSec":  60,
+                      "intervalOffSec":  60,
+                      "sensorBitmask":  0,
+                      "phaseBitmask":  0,
+                      "branches":  [
+                                       {
+                                           "conditions":  [
+                                                              {
+                                                                  "key":  "timerZero",
+                                                                  "negate":  false
+                                                              }
+                                                          ],
+                                           "isElse":  false,
+                                           "remember":  [
+
+                                                        ],
+                                           "goto":  "IDLE"
+                                       }
+                                   ],
+                      "displayTokens":  "#000000"
+                  },
+                  {
+                      "name":  "ALCOHOL EMPTY",
+                      "durationSec":  300,
+                      "durationMode":  "fixed",
+                      "relayBitmask":  0,
+                      "intervalBitmask":  0,
+                      "intervalOnSec":  60,
+                      "intervalOffSec":  60,
+                      "sensorBitmask":  0,
+                      "phaseBitmask":  0,
+                      "branches":  [
+                                       {
+                                           "conditions":  [
+                                                              {
+                                                                  "key":  "timerZero",
+                                                                  "negate":  false
+                                                              }
+                                                          ],
+                                           "isElse":  false,
+                                           "remember":  [
+
+                                                        ],
+                                           "goto":  "IDLE"
+                                       }
+                                   ],
+                      "displayTokens":  "#000000"
+                  },
+                  {
+                      "name":  "SCENTED EMPTY",
+                      "durationSec":  300,
+                      "durationMode":  "fixed",
+                      "relayBitmask":  0,
+                      "intervalBitmask":  0,
+                      "intervalOnSec":  60,
+                      "intervalOffSec":  60,
+                      "sensorBitmask":  0,
+                      "phaseBitmask":  0,
+                      "branches":  [
+                                       {
+                                           "conditions":  [
+                                                              {
+                                                                  "key":  "timerZero",
+                                                                  "negate":  false
+                                                              }
+                                                          ],
+                                           "isElse":  false,
+                                           "remember":  [
+
+                                                        ],
+                                           "goto":  "IDLE"
+                                       }
+                                   ],
+                      "displayTokens":  "#000000"
+                  }
+              ]
+}

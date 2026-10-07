@@ -1,0 +1,413 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Make DOCX</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+</head><body style="font:12px Consolas,monospace">
+<!--
+  Builds MANUAL/JollyHelmet_UserManual.docx from JollyHelmet_UserManual.html (the same content, as a flowing, editable Word layout).
+  Raw OOXML + JSZip, no Word needed. Needs the manual served on http://localhost:8766/m/ with a POST /save/<path> endpoint (see README).
+-->
+<pre id="log">working...</pre>
+<script>
+const LOG = m => { document.getElementById('log').textContent += '\n' + m; };
+const TW = 9648;                                   // text width in twips: Letter, 0.9 in side margins
+const NAVY = '14325C', DEEP = '0C2340', AMBER = 'F59E0B', INK = '1D2433', GRAY = '56607A';
+const NS = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"';
+const REL_IMG = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/image';
+const EMU = 914400;
+const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+// ------------------------------------------------------------------ images
+const media = {};            // 'media/imageN.ext' -> bytes
+const imgCache = {};         // url -> {name,w,h,ext}
+let imgN = 0, docPrId = 0;
+function pngSize(b) { const dv = new DataView(b.buffer, b.byteOffset); return { w: dv.getUint32(16), h: dv.getUint32(20) }; }
+function jpegSize(b) { let i = 2; while (i < b.length) { if (b[i] !== 0xFF) { i++; continue; } const m = b[i + 1]; if (m >= 0xC0 && m <= 0xCF && m !== 0xC4 && m !== 0xC8 && m !== 0xCC) return { h: (b[i + 5] << 8) | b[i + 6], w: (b[i + 7] << 8) | b[i + 8] }; i += 2 + ((b[i + 2] << 8) | b[i + 3]); } throw new Error('jpeg size'); }
+async function loadImg(url, optional) {
+  if (imgCache[url]) return imgCache[url];
+  const r = await fetch('/m/' + url + '?x=' + Date.now());
+  if (!r.ok) { if (optional) return null; throw new Error('missing image ' + url); }
+  const b = new Uint8Array(await r.arrayBuffer());
+  const isPng = b[0] === 0x89 && b[1] === 0x50;
+  const sz = isPng ? pngSize(b) : jpegSize(b), ext = isPng ? 'png' : 'jpeg';
+  const name = 'image' + (++imgN) + '.' + ext;
+  media[name] = b;
+  return (imgCache[url] = { name, w: sz.w, h: sz.h, ext });
+}
+// relationship registry per part
+function mkRels() { const list = []; let n = 0; return { list, add(type, target) { const id = 'rId' + (++n); list.push({ id, type, target }); return id; } }; }
+const docRels = mkRels(), hdrRels = mkRels();
+function relXml(rels) { return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' + rels.list.map(r => `<Relationship Id="${r.id}" Type="${r.type}" Target="${r.target}"/>`).join('') + '</Relationships>'; }
+function pic(img, rels, wIn, alt, o = {}) {
+  let w = wIn, h = wIn * img.h / img.w;
+  if (o.maxH && h > o.maxH) { h = o.maxH; w = h * img.w / img.h; }
+  const rid = rels.add(REL_IMG, 'media/' + img.name), id = ++docPrId;
+  const cx = Math.round(w * EMU), cy = Math.round(h * EMU);
+  const ln = o.border ? `<a:ln w="9525"><a:solidFill><a:srgbClr val="${o.border}"/></a:solidFill></a:ln>` : '';
+  return `<w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="${cx}" cy="${cy}"/><wp:effectExtent l="0" t="0" r="0" b="0"/><wp:docPr id="${id}" name="Picture ${id}" descr="${esc(alt || '')}"/><wp:cNvGraphicFramePr><a:graphicFrameLocks noChangeAspect="1"/></wp:cNvGraphicFramePr><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic><pic:nvPicPr><pic:cNvPr id="${id}" name="${esc(img.name)}" descr="${esc(alt || '')}"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="${rid}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom>${ln}</pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r>`;
+}
+
+// ------------------------------------------------------------------ xml helpers
+function rPr(o) {
+  let x = '';
+  if (o.font) x += `<w:rFonts w:ascii="${o.font}" w:hAnsi="${o.font}" w:cs="${o.font}"/>`;
+  if (o.b) x += '<w:b/><w:bCs/>';
+  if (o.i) x += '<w:i/><w:iCs/>';
+  if (o.color) x += `<w:color w:val="${o.color}"/>`;
+  if (o.sp) x += `<w:spacing w:val="${o.sp}"/>`;
+  if (o.sz) x += `<w:sz w:val="${o.sz}"/><w:szCs w:val="${o.sz}"/>`;
+  if (o.shd) x += `<w:shd w:val="clear" w:color="auto" w:fill="${o.shd}"/>`;
+  return x ? `<w:rPr>${x}</w:rPr>` : '';
+}
+const T = (text, o = {}) => `<w:r>${rPr(o)}<w:t xml:space="preserve">${esc(text)}</w:t></w:r>`;
+function runsXml(runs, base = {}) {
+  return runs.map(r => {
+    if (r.br) return '<w:r><w:br/></w:r>';
+    const o = { ...base };
+    if (r.b) o.b = true;
+    if (r.i) o.i = true;
+    if (r.code) { o.font = 'Courier New'; o.b = true; o.shd = 'EEF1F6'; o.color = NAVY; }
+    if (r.pill) { o.b = true; o.color = 'FFFFFF'; o.shd = r.pill === 'red' ? 'B3261E' : NAVY; return T(' ' + r.t + ' ', o); }
+    return T(r.t, o);
+  }).join('');
+}
+function P(content, o = {}) {
+  let pp = '';
+  if (o.style) pp += `<w:pStyle w:val="${o.style}"/>`;
+  if (o.keepNext) pp += '<w:keepNext/>';
+  if (o.keepLines) pp += '<w:keepLines/>';
+  if (o.pb) pp += '<w:pageBreakBefore/>';
+  if (o.num) pp += `<w:numPr><w:ilvl w:val="0"/><w:numId w:val="${o.num}"/></w:numPr>`;
+  if (o.shd) pp += `<w:shd w:val="clear" w:color="auto" w:fill="${o.shd}"/>`;
+  if (o.before !== undefined || o.after !== undefined || o.line)
+    pp += `<w:spacing${o.before !== undefined ? ` w:before="${o.before}"` : ''}${o.after !== undefined ? ` w:after="${o.after}"` : ''}${o.line ? ` w:line="${o.line}" w:lineRule="${o.rule || 'auto'}"` : ''}/>`;
+  if (o.jc) pp += `<w:jc w:val="${o.jc}"/>`;
+  if (o.sect) pp += o.sect;
+  return `<w:p>${pp ? `<w:pPr>${pp}</w:pPr>` : ''}${content}</w:p>`;
+}
+const gap = (h = 100) => P('', { before: 0, after: 0, line: h, rule: 'exact' });
+const NOB = '<w:top w:val="nil"/><w:left w:val="nil"/><w:bottom w:val="nil"/><w:right w:val="nil"/>';
+function TC(w, content, o = {}) {
+  let pr = `<w:tcW w:w="${w}" w:type="dxa"/>`;
+  if (o.span) pr += `<w:gridSpan w:val="${o.span}"/>`;
+  if (o.borders) pr += `<w:tcBorders>${o.borders}</w:tcBorders>`;
+  if (o.fill) pr += `<w:shd w:val="clear" w:color="auto" w:fill="${o.fill}"/>`;
+  if (o.mar) pr += `<w:tcMar>${o.mar}</w:tcMar>`;
+  if (o.va) pr += `<w:vAlign w:val="${o.va}"/>`;
+  return `<w:tc><w:tcPr>${pr}</w:tcPr>${content}</w:tc>`;
+}
+const MAR = (t, l, b, r) => `<w:top w:w="${t}" w:type="dxa"/><w:left w:w="${l}" w:type="dxa"/><w:bottom w:w="${b}" w:type="dxa"/><w:right w:w="${r}" w:type="dxa"/>`;
+function TR(cells, o = {}) {
+  let pr = '';
+  if (o.cant !== false) pr += '<w:cantSplit/>';
+  if (o.h) pr += `<w:trHeight w:val="${o.h}"${o.rule ? ` w:hRule="${o.rule}"` : ''}/>`;
+  if (o.header) pr += '<w:tblHeader/>';
+  return `<w:tr>${pr ? `<w:trPr>${pr}</w:trPr>` : ''}${cells}</w:tr>`;
+}
+function TBL(widths, rows, o = {}) {
+  const tw = widths.reduce((a, b) => a + b, 0);
+  const cm = o.cellMar || MAR(0, 108, 0, 108);
+  return `<w:tbl><w:tblPr><w:tblW w:w="${tw}" w:type="dxa"/>${o.jc ? `<w:jc w:val="${o.jc}"/>` : ''}<w:tblInd w:w="0" w:type="dxa"/><w:tblBorders><w:top w:val="nil"/><w:left w:val="nil"/><w:bottom w:val="nil"/><w:right w:val="nil"/><w:insideH w:val="nil"/><w:insideV w:val="nil"/></w:tblBorders><w:tblLayout w:type="fixed"/><w:tblCellMar>${cm}</w:tblCellMar><w:tblLook w:val="0000" w:firstRow="0" w:lastRow="0" w:firstColumn="0" w:lastColumn="0" w:noHBand="1" w:noVBand="1"/></w:tblPr><w:tblGrid>${widths.map(w => `<w:gridCol w:w="${w}"/>`).join('')}</w:tblGrid>${rows}</w:tbl>`;
+}
+
+// ------------------------------------------------------------------ DOM -> blocks
+function inline(node, st, out) {
+  for (const n of node.childNodes) {
+    if (n.nodeType === 3) { out.push({ t: n.nodeValue.replace(/\s+/g, ' '), ...st }); continue; }
+    if (n.nodeType !== 1) continue;
+    const tag = n.tagName;
+    if (tag === 'BR') out.push({ br: true });
+    else if (tag === 'B' || tag === 'STRONG') inline(n, { ...st, b: true }, out);
+    else if (tag === 'I' || tag === 'EM') inline(n, { ...st, i: true }, out);
+    else if (tag === 'CODE') inline(n, { ...st, code: true }, out);
+    else if (tag === 'SPAN' && n.classList.contains('pill')) inline(n, { ...st, pill: /b3261e/i.test(n.getAttribute('style') || '') ? 'red' : 'navy' }, out);
+    else inline(n, st, out);
+  }
+}
+function runsOf(el) {
+  const out = []; inline(el, {}, out);
+  for (let i = 0; i < out.length; i++) {
+    const r = out[i]; if (r.t === undefined) continue;
+    const prevBr = i === 0 || out[i - 1].br, nextBr = i === out.length - 1 || out[i + 1].br;
+    if (prevBr) r.t = r.t.replace(/^\s+/, '');
+    if (nextBr) r.t = r.t.replace(/\s+$/, '');
+  }
+  return out.filter(r => r.br || r.t !== '');
+}
+const plain = runs => runs.map(r => r.br ? ' ' : r.t).join('').trim();
+function olStart(el) {
+  const m = /counter-reset:\s*n\s+(\d+)/.exec(el.getAttribute('style') || '');
+  if (m) return +m[1] + 1;
+  const s = el.getAttribute('start'); return s ? +s : 1;
+}
+function parseRow(el) {
+  const cols = [];
+  for (const c of el.querySelectorAll(':scope > .col')) {
+    const cv = c.querySelector('canvas[data-screen]'), ph = c.querySelector('.ph');
+    const cap = c.querySelector('.cap'), dev = c.querySelector('.dev');
+    if (cv) cols.push({ screen: cv.getAttribute('data-screen'), cap: cap ? plain(runsOf(cap)) : '', size: dev && ['xs', 'sm', 'lg'].find(k => dev.classList.contains(k)) || '' });
+    else if (ph) { const im = ph.querySelector('img'); const src = im ? im.getAttribute('src') : ''; const nm = (/box(\d)/.exec(src) || [])[1]; cols.push({ photo: src, label: 'Photo: Box ' + (nm || '?') }); }
+  }
+  return cols;
+}
+function parseTable(el) {
+  const rows = [...el.querySelectorAll('tr')]; const head = [], body = [];
+  rows.forEach(tr => { const cells = [...tr.children].map(runsOf); if (tr.querySelector('th')) head.push(...[cells]); else body.push(cells); });
+  return { head: head[0] || null, rows: body };
+}
+
+// heading plan: level of each page title, optional parent heading (level 2, new page), optional page break before
+const PLAN = {
+  'Meet the machines': { l: 2 }, 'Before you start': { l: 2 },
+  'Box 1 - Cleaner': { l: 2, pb: 1 }, 'Rate it and choose the mist': { l: 3 }, 'Pick the time and pay': { l: 3 }, 'Load your helmet': { l: 3 }, 'While it cleans': { l: 3 }, 'All done': { l: 3 },
+  'Box 2 - Dryer': { l: 2, pb: 1 }, 'Heating and cooling': { l: 3 },
+  'Box 3 - Cleaner + Dryer': { l: 2, pb: 1 }, 'DRYING mode': { l: 3 },
+  'Prices and time': { l: 2, pb: 1 },
+  'Special screens': { l: 3, parent: 'Special screens and safety' }, 'Safety first': { l: 3 }, 'Questions': { l: 3 },
+  'Connecting': { l: 2, pb: 1 }, 'Home page': { l: 2 },
+  'Rules and prices': { l: 3, parent: 'Box settings (rules, levels, phases)' }, 'Containers and sensors': { l: 3 }, 'Cleaning phases': { l: 3 }, 'Heating and drying': { l: 3 },
+  'Screen (touch display)': { l: 3, parent: 'Screen refresh and maintenance' }, 'Maintenance mode': { l: 3 },
+  'Refill station (ACS)': { l: 2, pb: 1 }, 'Setting up the ACS': { l: 3 }, 'Reading the ACS': { l: 3 }, 'Try it and fix it': { l: 3 },
+  'Troubleshooting': { l: 3, parent: 'Troubleshooting and care' }, 'Care and spare parts': { l: 3 },
+};
+
+// ------------------------------------------------------------------ block renderers
+const tocEntries = [];
+function heading(text, lvl, pb) {
+  if (lvl <= 2) tocEntries.push({ lvl, text });
+  return P(T(text), { style: 'Heading' + lvl, pb });
+}
+function callout(kind, runs) {
+  const tip = kind === 'tip', col = tip ? AMBER : 'B3261E', fill = tip ? 'FFF4D1' : 'FDE8E6';
+  const b = `<w:top w:val="nil"/><w:left w:val="single" w:sz="36" w:space="0" w:color="${col}"/><w:bottom w:val="nil"/><w:right w:val="nil"/>`;
+  return gap(60) + TBL([TW], TR(TC(TW, P(runsXml(runs), { style: 'Callout' }), { fill, borders: b, mar: MAR(100, 170, 100, 170), va: 'center' }))) + gap(120);
+}
+function dataTable(t) {
+  const n = (t.head || t.rows[0]).length; let widths;
+  if (n === 2) { const mx = Math.max(...t.rows.map(r => plain(r[0]).length)); const share = Math.min(0.42, Math.max(0.28, 0.2 + mx * 0.008)); const a = Math.round(TW * share); widths = [a, TW - a]; }
+  else { const a = Math.round(TW / n); widths = Array.from({ length: n }, (_, i) => i === n - 1 ? TW - a * (n - 1) : a); }
+  const cm = MAR(60, 120, 60, 120);
+  let rows = '';
+  if (t.head) rows += TR(t.head.map((c, i) => TC(widths[i], P(runsXml(c), { style: 'TableHead' }), { fill: NAVY, va: 'center' })).join(''), { header: true });
+  t.rows.forEach((r, ri) => {
+    const fill = ri % 2 ? 'FFF8E1' : 'FFFFFF';
+    const bd = `<w:top w:val="nil"/><w:left w:val="nil"/><w:bottom w:val="single" w:sz="4" w:space="0" w:color="C9D1E0"/><w:right w:val="nil"/>`;
+    rows += TR(r.map((c, i) => TC(widths[i], P(runsXml(c), { style: 'TableText' }), { fill, borders: bd })).join(''));
+  });
+  return gap(40) + TBL(widths, rows, { cellMar: cm }) + gap(120);
+}
+let nextNum = 2; const numOverrides = [];   // numId 1 = bullets, 2.. = numbered lists (each with its own start)
+function listXml(kind, items, start) {
+  let numId = 1;
+  if (kind === 'ol') { numId = nextNum++; numOverrides.push({ numId, start }); }
+  return items.map((it, i) => P(runsXml(it), { style: 'ListPara', num: numId, after: i === items.length - 1 ? 120 : 50 })).join('');
+}
+async function screenRow(cols) {
+  const n = cols.length, cw = Math.floor(TW / n), widths = cols.map((_, i) => i === n - 1 ? TW - cw * (n - 1) : cw);
+  const cells = [];
+  for (let i = 0; i < n; i++) {
+    const c = cols[i]; let content;
+    if (c.screen) {
+      const img = await loadImg('images/screens/' + c.screen + '.png');
+      const wIn = n >= 3 ? 1.85 : (c.size === 'sm' ? 2.45 : c.size === 'lg' ? 3.0 : 2.7);
+      content = P(pic(img, docRels, wIn, c.cap || c.screen), { jc: 'center', before: 40, after: 0, keepNext: true }) + P(T(c.cap), { style: 'Caption' });
+      cells.push(TC(widths[i], content, { va: 'top' }));
+    } else {
+      const img = await loadImg('photos/' + c.photo.split('/').pop(), true);   // real photo if you saved one
+      const inner = img ? P(pic(img, docRels, 1.95, c.label, { maxH: 1.55 }), { jc: 'center', before: 0, after: 0 }) : P(T(c.label, { b: true, color: '6B7280', sz: 17 }), { jc: 'center', before: 0, after: 0 });
+      const dash = '<w:top w:val="dashed" w:sz="8" w:space="0" w:color="9AA3B5"/><w:left w:val="dashed" w:sz="8" w:space="0" w:color="9AA3B5"/><w:bottom w:val="dashed" w:sz="8" w:space="0" w:color="9AA3B5"/><w:right w:val="dashed" w:sz="8" w:space="0" w:color="9AA3B5"/>';
+      cells.push(TC(widths[i], inner, { va: 'center', borders: img ? NOB : dash, fill: img ? undefined : 'F7F8FB', mar: MAR(60, 60, 60, 60) }));
+    }
+  }
+  const photoRow = cols.some(c => c.photo);
+  if (photoRow) {   // photo boxes get white gutters between them
+    const sp = 120; const w2 = widths.map(w => w), cellsG = [];
+    return gap(40) + TBL(w2, TR(cells.join(''), { h: 1500, rule: 'atLeast' }), { cellMar: MAR(0, sp / 2, 0, sp / 2) }) + gap(140);
+  }
+  return TBL(widths, TR(cells.join(''))) + gap(100);
+}
+async function shot(src, m, alt) {
+  const img = await loadImg(src);
+  return P(pic(img, docRels, m ? 5.0 : 6.4, alt, { border: 'C8CCD4', maxH: 5.2 }), { jc: 'center', before: 40, after: 140 });
+}
+
+// ------------------------------------------------------------------ main
+(async () => {
+  try {
+    const html = await (await fetch('/m/JollyHelmet_UserManual.html?x=' + Date.now())).text();
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    let body = '';
+
+    // ---- cover (full bleed, own section, no header/footer)
+    const glow = await loadImg('images/logo_glow.png'), logo = await loadImg('images/logo.png');
+    const cov = '<w:top w:val="nil"/><w:left w:val="nil"/><w:bottom w:val="nil"/><w:right w:val="nil"/>';
+    const ctr = { jc: 'center' };
+    const coverRows =
+      TR(TC(12240, P(pic(glow, docRels, 3.4, 'Jolly Helmet mascot'), { ...ctr, before: 0, after: 200 }) +
+        P(T('Jolly ', { b: 1, color: 'FFFFFF', sz: 104 }) + T('Helmet', { b: 1, color: AMBER, sz: 104 }), { ...ctr, before: 0, after: 40, line: 240 }) +
+        P(T('Make your Helmet Happy Again!', { b: 1, color: 'FFD98A', sz: 32 }), { ...ctr, before: 0, after: 520 }) +
+        P(T('Clean it. Dry it.', { b: 1, color: 'FFFFFF', sz: 46 }), { ...ctr, before: 0, after: 0 }) +
+        P(T('Wear it happy.', { b: 1, color: AMBER, sz: 46 }), { ...ctr, before: 0, after: 200 }) +
+        P(T('Coin-operated helmet cleaning and drying stations', { color: 'CFD8EA', sz: 24 }), { ...ctr, before: 0, after: 0 }),
+        { fill: DEEP, va: 'center', mar: MAR(0, 600, 0, 600) }), { h: 11000, rule: 'atLeast', cant: false }) +
+      TR(TC(12240, P(T('MEJEZ STUDIO', { b: 1, color: INK, sz: 30 }), { ...ctr, before: 0, after: 60 }) +
+        P(T('[Member Name 1], [Member Name 2],', { b: 1, color: INK, sz: 22 }), { ...ctr, before: 0, after: 0 }) +
+        P(T('[Member Name 3], [Member Name 4]', { b: 1, color: INK, sz: 22 }), { ...ctr, before: 0, after: 80 }) +
+        P(T('DEVELOPERS AND DESIGNERS', { b: 1, color: '6B7280', sz: 16, sp: 40 }), { ...ctr, before: 0, after: 0 }),
+        { fill: 'FFFFFF', va: 'center', mar: MAR(0, 600, 0, 600) }), { h: 2900, rule: 'atLeast', cant: false }) +
+      TR(TC(12240, P(T('USER MANUAL', { b: 1, color: DEEP, sz: 44, sp: 120 }), { ...ctr, before: 0, after: 0 }),
+        { fill: AMBER, va: 'center' }), { h: 1700, rule: 'atLeast', cant: false });
+    const covSect = '<w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="0" w:right="0" w:bottom="0" w:left="0" w:header="0" w:footer="0" w:gutter="0"/><w:cols w:space="720"/></w:sectPr>';
+    body += TBL([12240], coverRows, { cellMar: MAR(0, 0, 0, 0) }) + P('', { before: 0, after: 0, line: 20, rule: 'exact', sect: covSect });
+
+    // ---- contents (filled in after the headings are known)
+    const TOC_AT = body.length; body += '@@TOC@@';
+
+    // ---- content pages
+    const pages = [...doc.querySelectorAll('.page')].filter(p => p.querySelector('.body:not(.toc)'));
+    let level = 2;
+    for (const page of pages) {
+      const bodyEl = page.querySelector('.body');
+      for (const el of bodyEl.children) {
+        const tag = el.tagName, cls = el.classList;
+        if (tag === 'H1') {
+          const text = plain(runsOf(el)), pl = PLAN[text];
+          if (!pl) LOG('WARN: no heading plan for "' + text + '"');
+          const plan = pl || { l: 3 }; level = plan.l;
+          if (text === 'Meet the machines') {   // customer part opener
+            body += heading('Customer guide', 1, true);
+            body += P(pic(logo, docRels, 1.45, 'Jolly Helmet mascot'), { jc: 'center', before: 120, after: 80 });
+            body += P(T('Welcome to ') + T('Jolly Helmet!', { color: AMBER }), { style: 'Lead' });
+            body += P(T('A self-service station that cleans and dries your motorcycle helmet while you wait.'), { jc: 'center', after: 200 });
+          }
+          if (text === 'Connecting') {          // admin part opener
+            body += heading('Admin guide (Control Center)', 1, true);
+            body += P(T('The Control Center: settings, calibration and maintenance', { b: 1, color: NAVY, sz: 24 }), { jc: 'center', before: 40, after: 160 });
+            body += await shot('images/home.png', true, 'Control Center home page');
+            body += P(T('WEB PANEL FOR ADMINS AND TECHNICIANS', { b: 1, color: NAVY, sz: 16, sp: 30 }), { jc: 'center', after: 120 });
+          }
+          if (plan.parent) body += heading(plan.parent, 2, true);
+          body += heading(text, plan.l, plan.pb && !plan.parent);
+        } else if (tag === 'H2') body += P(T(plain(runsOf(el))), { style: 'Heading' + Math.min(4, level + 1) });
+        else if (tag === 'P') body += P(runsXml(runsOf(el)));
+        else if (tag === 'UL') body += listXml('ul', [...el.children].map(runsOf));
+        else if (tag === 'OL') body += listXml('ol', [...el.children].map(runsOf), olStart(el));
+        else if (cls.contains('tip')) body += callout('tip', runsOf(el));
+        else if (cls.contains('warn')) body += callout('warn', runsOf(el));
+        else if (cls.contains('row')) body += await screenRow(parseRow(el));
+        else if (tag === 'TABLE') body += dataTable(parseTable(el));
+        else if (cls.contains('laptop')) { const im = el.querySelector('img'); body += await shot(im.getAttribute('src'), cls.contains('m'), 'Control Center screenshot'); }
+        else if (cls.contains('base')) { /* laptop stand: not needed */ }
+        else LOG('WARN: unhandled <' + tag + ' class="' + el.className + '">');
+      }
+    }
+
+    // ---- table of contents (real TOC field, pre-filled so it reads fine before Word updates the page numbers)
+    let toc = P(T('Contents'), { style: 'ContentsTitle' });
+    tocEntries.forEach((e, i) => {
+      const start = i === 0 ? '<w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText xml:space="preserve"> TOC \\o "1-2" \\h \\z \\u </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r>' : '';
+      const end = i === tocEntries.length - 1 ? '<w:r><w:fldChar w:fldCharType="end"/></w:r>' : '';
+      toc += P(start + T(e.text) + end, { style: 'TOC' + e.lvl });
+    });
+    body = body.replace('@@TOC@@', toc);
+
+    // ---- close the main section (header + footer + page numbers), then the back cover
+    const mainSect = '<w:sectPr><w:headerReference w:type="default" r:id="rIdHdr"/><w:footerReference w:type="default" r:id="rIdFtr"/><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="1440" w:right="1296" w:bottom="1296" w:left="1296" w:header="567" w:footer="567" w:gutter="0"/><w:pgNumType w:start="1"/><w:cols w:space="720"/></w:sectPr>';
+    body += P('', { before: 0, after: 0, sect: mainSect });
+    const backRows =
+      TR(TC(12240, P(pic(glow, docRels, 2.6, 'Jolly Helmet mascot'), { ...ctr, before: 0, after: 200 }) +
+        P(T('Thank you for using', { b: 1, color: 'FFFFFF', sz: 56 }), { ...ctr, before: 0, after: 0, line: 240 }) +
+        P(T('Jolly Helmet', { b: 1, color: AMBER, sz: 72 }), { ...ctr, before: 0, after: 240 }) +
+        P(T('We hope to see you again!', { color: 'CFD8EA', sz: 24 }), { ...ctr, before: 0, after: 0 }) +
+        P(T('Make your Helmet Happy Again.', { color: 'CFD8EA', sz: 24 }), { ...ctr, before: 0, after: 900 }) +
+        P(T('MEJEZ STUDIO', { b: 1, color: 'FFFFFF', sz: 28 }), { ...ctr, before: 0, after: 80 }) +
+        P(T('[School / contact details here]', { color: 'CFD8EA', sz: 20 }), { ...ctr, before: 0, after: 0 }) +
+        P(T('[Email or phone number here]', { color: 'CFD8EA', sz: 20 }), { ...ctr, before: 0, after: 0 }),
+        { fill: DEEP, va: 'center', mar: MAR(0, 600, 0, 600) }), { h: 14100, rule: 'atLeast', cant: false }) +
+      TR(TC(12240, P(T('USER MANUAL', { b: 1, color: DEEP, sz: 44, sp: 120 }), { ...ctr, before: 0, after: 0 }), { fill: AMBER, va: 'center' }), { h: 1500, rule: 'atLeast', cant: false });
+    body += TBL([12240], backRows, { cellMar: MAR(0, 0, 0, 0) }) + P('', { before: 0, after: 0, line: 20, rule: 'exact' });
+    const backSect = '<w:sectPr><w:headerReference w:type="default" r:id="rIdHdrE"/><w:footerReference w:type="default" r:id="rIdFtrE"/><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="0" w:right="0" w:bottom="0" w:left="0" w:header="0" w:footer="0" w:gutter="0"/><w:cols w:space="720"/></w:sectPr>';
+
+    const documentXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document ${NS}><w:body>${body}${backSect}</w:body></w:document>`;
+
+    // ---- header / footer
+    const hlogo = pic(logo, hdrRels, 0.36, 'Jolly Helmet logo');
+    const headerXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:hdr ${NS}><w:p><w:pPr><w:pBdr><w:bottom w:val="single" w:sz="12" w:space="4" w:color="${AMBER}"/></w:pBdr><w:tabs><w:tab w:val="right" w:pos="${TW}"/></w:tabs><w:spacing w:after="0"/></w:pPr>${hlogo}${T('  Jolly Helmet', { b: 1, color: NAVY, sz: 26 })}<w:r><w:tab/></w:r>${T('User Manual', { b: 1, color: GRAY, sz: 18 })}</w:p></w:hdr>`;
+    const footerXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:ftr ${NS}><w:p><w:pPr><w:pBdr><w:top w:val="single" w:sz="6" w:space="6" w:color="${NAVY}"/></w:pBdr><w:tabs><w:tab w:val="right" w:pos="${TW}"/></w:tabs><w:spacing w:after="0"/></w:pPr>${T('MEJEZ STUDIO  |  Make your Helmet Happy Again!', { color: GRAY, sz: 16 })}<w:r><w:tab/></w:r>${T('Page ', { b: 1, color: NAVY, sz: 18 })}<w:r>${rPr({ b: 1, color: NAVY, sz: 18 })}<w:fldChar w:fldCharType="begin"/></w:r><w:r>${rPr({ b: 1, color: NAVY, sz: 18 })}<w:instrText xml:space="preserve"> PAGE </w:instrText></w:r><w:r>${rPr({ b: 1, color: NAVY, sz: 18 })}<w:fldChar w:fldCharType="separate"/></w:r><w:r>${rPr({ b: 1, color: NAVY, sz: 18 })}<w:t>1</w:t></w:r><w:r>${rPr({ b: 1, color: NAVY, sz: 18 })}<w:fldChar w:fldCharType="end"/></w:r></w:p></w:ftr>`;
+    const tiny = '<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="20" w:lineRule="exact"/><w:rPr><w:sz w:val="2"/><w:szCs w:val="2"/></w:rPr></w:pPr></w:p>';
+    const emptyHdr = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:hdr ${NS}>${tiny}</w:hdr>`;
+    const emptyFtr = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:ftr ${NS}>${tiny}</w:ftr>`;
+
+    // ---- styles
+    const W = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"';
+    const heading_ = (id, name, sz, before, after, ol, extraP = '', color = NAVY) => `<w:style w:type="paragraph" w:styleId="${id}"><w:name w:val="${name}"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:uiPriority w:val="9"/><w:qFormat/><w:pPr><w:keepNext/><w:keepLines/>${extraP}<w:spacing w:before="${before}" w:after="${after}" w:line="240" w:lineRule="auto"/><w:outlineLvl w:val="${ol}"/></w:pPr><w:rPr><w:b/><w:bCs/><w:color w:val="${color}"/><w:sz w:val="${sz}"/><w:szCs w:val="${sz}"/></w:rPr></w:style>`;
+    const stylesXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:styles ${W}>
+<w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:eastAsia="Arial" w:cs="Arial"/><w:sz w:val="21"/><w:szCs w:val="21"/><w:lang w:val="en-US" w:eastAsia="en-US" w:bidi="ar-SA"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:spacing w:after="100" w:line="276" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults>
+<w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/><w:qFormat/><w:rPr><w:color w:val="${INK}"/></w:rPr></w:style>
+<w:style w:type="character" w:default="1" w:styleId="DefaultParagraphFont"><w:name w:val="Default Paragraph Font"/><w:uiPriority w:val="1"/><w:semiHidden/><w:unhideWhenUsed/></w:style>
+<w:style w:type="table" w:default="1" w:styleId="TableNormal"><w:name w:val="Normal Table"/><w:uiPriority w:val="99"/><w:semiHidden/><w:unhideWhenUsed/><w:tblPr><w:tblInd w:w="0" w:type="dxa"/><w:tblCellMar><w:top w:w="0" w:type="dxa"/><w:left w:w="108" w:type="dxa"/><w:bottom w:w="0" w:type="dxa"/><w:right w:w="108" w:type="dxa"/></w:tblCellMar></w:tblPr></w:style>
+<w:style w:type="numbering" w:default="1" w:styleId="NoList"><w:name w:val="No List"/><w:uiPriority w:val="99"/><w:semiHidden/><w:unhideWhenUsed/></w:style>
+${heading_('Heading1', 'heading 1', 56, 0, 200, 0, `<w:pBdr><w:bottom w:val="single" w:sz="24" w:space="4" w:color="${AMBER}"/></w:pBdr>`)}
+${heading_('Heading2', 'heading 2', 34, 320, 120, 1, `<w:pBdr><w:bottom w:val="single" w:sz="8" w:space="2" w:color="${AMBER}"/></w:pBdr>`)}
+${heading_('Heading3', 'heading 3', 26, 240, 80, 2)}
+${heading_('Heading4', 'heading 4', 22, 180, 60, 3, '', 'B26A00')}
+<w:style w:type="paragraph" w:customStyle="1" w:styleId="Lead"><w:name w:val="Lead"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:qFormat/><w:pPr><w:spacing w:before="60" w:after="120" w:line="240" w:lineRule="auto"/><w:jc w:val="center"/></w:pPr><w:rPr><w:b/><w:bCs/><w:color w:val="${NAVY}"/><w:sz w:val="48"/><w:szCs w:val="48"/></w:rPr></w:style>
+<w:style w:type="paragraph" w:customStyle="1" w:styleId="ContentsTitle"><w:name w:val="Contents Title"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:qFormat/><w:pPr><w:keepNext/><w:pBdr><w:bottom w:val="single" w:sz="24" w:space="4" w:color="${AMBER}"/></w:pBdr><w:spacing w:before="0" w:after="240" w:line="240" w:lineRule="auto"/></w:pPr><w:rPr><w:b/><w:bCs/><w:color w:val="${NAVY}"/><w:sz w:val="56"/><w:szCs w:val="56"/></w:rPr></w:style>
+<w:style w:type="paragraph" w:styleId="TOC1"><w:name w:val="toc 1"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:autoRedefine/><w:uiPriority w:val="39"/><w:unhideWhenUsed/><w:pPr><w:tabs><w:tab w:val="right" w:leader="dot" w:pos="${TW}"/></w:tabs><w:spacing w:before="200" w:after="60"/></w:pPr><w:rPr><w:b/><w:bCs/><w:color w:val="${NAVY}"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr></w:style>
+<w:style w:type="paragraph" w:styleId="TOC2"><w:name w:val="toc 2"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:autoRedefine/><w:uiPriority w:val="39"/><w:unhideWhenUsed/><w:pPr><w:tabs><w:tab w:val="right" w:leader="dot" w:pos="${TW}"/></w:tabs><w:spacing w:before="0" w:after="40"/><w:ind w:left="320"/></w:pPr><w:rPr><w:sz w:val="21"/><w:szCs w:val="21"/></w:rPr></w:style>
+<w:style w:type="paragraph" w:styleId="ListParagraph"><w:name w:val="List Paragraph"/><w:basedOn w:val="Normal"/><w:uiPriority w:val="34"/><w:qFormat/><w:pPr><w:spacing w:after="50"/></w:pPr></w:style>
+<w:style w:type="paragraph" w:customStyle="1" w:styleId="ListPara"><w:name w:val="Manual List"/><w:basedOn w:val="ListParagraph"/><w:qFormat/></w:style>
+<w:style w:type="paragraph" w:customStyle="1" w:styleId="Callout"><w:name w:val="Callout"/><w:basedOn w:val="Normal"/><w:qFormat/><w:pPr><w:spacing w:before="0" w:after="0" w:line="264" w:lineRule="auto"/></w:pPr><w:rPr><w:sz w:val="20"/><w:szCs w:val="20"/></w:rPr></w:style>
+<w:style w:type="paragraph" w:customStyle="1" w:styleId="TableText"><w:name w:val="Table Text"/><w:basedOn w:val="Normal"/><w:qFormat/><w:pPr><w:spacing w:before="0" w:after="20" w:line="252" w:lineRule="auto"/></w:pPr><w:rPr><w:sz w:val="19"/><w:szCs w:val="19"/></w:rPr></w:style>
+<w:style w:type="paragraph" w:customStyle="1" w:styleId="TableHead"><w:name w:val="Table Head"/><w:basedOn w:val="Normal"/><w:qFormat/><w:pPr><w:keepNext/><w:spacing w:before="0" w:after="0" w:line="252" w:lineRule="auto"/></w:pPr><w:rPr><w:b/><w:bCs/><w:color w:val="FFFFFF"/><w:sz w:val="19"/><w:szCs w:val="19"/></w:rPr></w:style>
+<w:style w:type="paragraph" w:styleId="Caption"><w:name w:val="caption"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:uiPriority w:val="35"/><w:qFormat/><w:pPr><w:spacing w:before="40" w:after="120" w:line="240" w:lineRule="auto"/><w:jc w:val="center"/></w:pPr><w:rPr><w:b/><w:bCs/><w:color w:val="${GRAY}"/><w:sz w:val="17"/><w:szCs w:val="17"/></w:rPr></w:style>
+<w:style w:type="paragraph" w:styleId="Header"><w:name w:val="header"/><w:basedOn w:val="Normal"/><w:uiPriority w:val="99"/><w:unhideWhenUsed/><w:pPr><w:spacing w:after="0" w:line="240" w:lineRule="auto"/></w:pPr></w:style>
+<w:style w:type="paragraph" w:styleId="Footer"><w:name w:val="footer"/><w:basedOn w:val="Normal"/><w:uiPriority w:val="99"/><w:unhideWhenUsed/><w:pPr><w:spacing w:after="0" w:line="240" w:lineRule="auto"/></w:pPr></w:style>
+</w:styles>`;
+
+    // ---- numbering: 1 = bullets, 2.. = numbered lists with their own start value
+    const lvlPr = '<w:ind w:left="420" w:hanging="300"/>';
+    const numberingXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:numbering ${W}>
+<w:abstractNum w:abstractNumId="0"><w:nsid w:val="5A1B0000"/><w:multiLevelType w:val="singleLevel"/><w:lvl w:ilvl="0"><w:start w:val="1"/><w:numFmt w:val="bullet"/><w:lvlText w:val="&#8226;"/><w:lvlJc w:val="left"/><w:pPr>${lvlPr}</w:pPr><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial" w:hint="default"/><w:b/><w:color w:val="${AMBER}"/></w:rPr></w:lvl></w:abstractNum>
+${numOverrides.map(n => `<w:abstractNum w:abstractNumId="${n.numId}"><w:nsid w:val="5A1B${n.numId.toString(16).toUpperCase().padStart(4, '0')}"/><w:multiLevelType w:val="singleLevel"/><w:lvl w:ilvl="0"><w:start w:val="${n.start}"/><w:numFmt w:val="decimal"/><w:lvlText w:val="%1."/><w:lvlJc w:val="left"/><w:pPr><w:ind w:left="420" w:hanging="340"/></w:pPr><w:rPr><w:b/><w:color w:val="${AMBER}"/></w:rPr></w:lvl></w:abstractNum>`).join('\n')}
+<w:num w:numId="1"><w:abstractNumId w:val="0"/></w:num>
+${numOverrides.map(n => `<w:num w:numId="${n.numId}"><w:abstractNumId w:val="${n.numId}"/></w:num>`).join('\n')}
+</w:numbering>`;
+
+    const settingsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:settings ${W}><w:defaultTabStop w:val="720"/><w:characterSpacingControl w:val="doNotCompress"/><w:updateFields w:val="true"/><w:compat><w:compatSetting w:name="compatibilityMode" w:uri="http://schemas.microsoft.com/office/word" w:val="15"/></w:compat></w:settings>`;
+    const core = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:dcmitype="http://purl.org/dc/dcmitype/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><dc:title>Jolly Helmet - User Manual</dc:title><dc:creator>MEJEZ STUDIO</dc:creator><cp:lastModifiedBy>MEJEZ STUDIO</cp:lastModifiedBy><dcterms:created xsi:type="dcterms:W3CDTF">2026-10-07T00:00:00Z</dcterms:created><dcterms:modified xsi:type="dcterms:W3CDTF">2026-10-07T00:00:00Z</dcterms:modified></cp:coreProperties>`;
+    const app = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties"><Application>Microsoft Office Word</Application></Properties>`;
+
+    // ---- package
+    const CT = 'application/vnd.openxmlformats-officedocument.wordprocessingml.';
+    const types = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Default Extension="png" ContentType="image/png"/><Default Extension="jpeg" ContentType="image/jpeg"/><Override PartName="/word/document.xml" ContentType="${CT}document.main+xml"/><Override PartName="/word/styles.xml" ContentType="${CT}styles+xml"/><Override PartName="/word/numbering.xml" ContentType="${CT}numbering+xml"/><Override PartName="/word/settings.xml" ContentType="${CT}settings+xml"/><Override PartName="/word/header1.xml" ContentType="${CT}header+xml"/><Override PartName="/word/header2.xml" ContentType="${CT}header+xml"/><Override PartName="/word/footer1.xml" ContentType="${CT}footer+xml"/><Override PartName="/word/footer2.xml" ContentType="${CT}footer+xml"/><Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/><Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/></Types>`;
+    const rootRels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties" Target="docProps/app.xml"/></Relationships>`;
+    const RT = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/';
+    const docRelsXml = relXml(docRels).replace('</Relationships>',
+      `<Relationship Id="rIdSty" Type="${RT}styles" Target="styles.xml"/><Relationship Id="rIdNum" Type="${RT}numbering" Target="numbering.xml"/><Relationship Id="rIdSet" Type="${RT}settings" Target="settings.xml"/><Relationship Id="rIdHdr" Type="${RT}header" Target="header1.xml"/><Relationship Id="rIdFtr" Type="${RT}footer" Target="footer1.xml"/><Relationship Id="rIdHdrE" Type="${RT}header" Target="header2.xml"/><Relationship Id="rIdFtrE" Type="${RT}footer" Target="footer2.xml"/></Relationships>`);
+
+    const parts = {
+      '[Content_Types].xml': types, '_rels/.rels': rootRels, 'docProps/core.xml': core, 'docProps/app.xml': app,
+      'word/document.xml': documentXml, 'word/_rels/document.xml.rels': docRelsXml, 'word/styles.xml': stylesXml, 'word/numbering.xml': numberingXml, 'word/settings.xml': settingsXml,
+      'word/header1.xml': headerXml, 'word/_rels/header1.xml.rels': relXml(hdrRels), 'word/footer1.xml': footerXml, 'word/header2.xml': emptyHdr, 'word/footer2.xml': emptyFtr,
+    };
+    // every XML part must parse
+    let bad = 0;
+    for (const [k, v] of Object.entries(parts)) {
+      const d = new DOMParser().parseFromString(v, 'application/xml');
+      const err = d.querySelector('parsererror');
+      if (err) { bad++; LOG('XML ERROR in ' + k + ': ' + err.textContent.slice(0, 300)); }
+    }
+    LOG('xml parts checked: ' + Object.keys(parts).length + ', errors: ' + bad);
+    if (bad) return;
+
+    const zip = new JSZip();
+    for (const [k, v] of Object.entries(parts)) zip.file(k, v, { createFolders: false });
+    for (const [k, v] of Object.entries(media)) zip.file('word/media/' + k, v, { createFolders: false });
+    const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } });
+    const res = await fetch('/save/JollyHelmet_UserManual.docx', { method: 'POST', body: blob });
+    LOG('headings in contents: ' + tocEntries.length + ', numbered lists: ' + numOverrides.length + ', images: ' + Object.keys(media).length);
+    LOG('docx: ' + blob.size + ' bytes -> ' + (await res.text()));
+    LOG('DONE');
+  } catch (e) { LOG('FAILED: ' + e.message + '\n' + e.stack); }
+})();
+</script></body></html>

@@ -1,0 +1,2421 @@
+{
+  "box": "box3",
+  "preset": "Preset 2",
+  "isDefault": false,
+  "rules": {
+    "bands": [
+      {
+        "from": 1,
+        "to": 5,
+        "minutes": 5
+      },
+      {
+        "from": 6,
+        "to": 7,
+        "minutes": 10
+      },
+      {
+        "from": 8,
+        "to": 9,
+        "minutes": 15
+      },
+      {
+        "from": 10,
+        "to": 10,
+        "minutes": 20
+      }
+    ],
+    "minMinutes": 5,
+    "coins": 15,
+    "timeValue": 5,
+    "timeUnit": "min",
+    "maxCoins": 90,
+    "freeRetry": {
+      "enabled": true,
+      "minRating": 1,
+      "minutes": 2
+    },
+    "maxMinutes": 30
+  },
+  "steps": [
+    {
+      "name": "TAPS",
+      "durationSec": 0,
+      "durationMode": "fixed",
+      "relayBitmask": 0,
+      "intervalBitmask": 0,
+      "intervalOnSec": 60,
+      "intervalOffSec": 60,
+      "sensorBitmask": 0,
+      "phaseBitmask": 0,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "touchPressed",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "WELCOME"
+        }
+      ],
+      "displayTokens": "#000000|ST,165,105,#FFFFFF,TAP anywhere to ,MC,2|TT,160,136,#FFFF00,START,500,MC,4"
+    },
+    {
+      "name": "WELCOME",
+      "durationSec": 0,
+      "durationMode": "fixed",
+      "relayBitmask": 0,
+      "intervalBitmask": 0,
+      "intervalOnSec": 60,
+      "intervalOffSec": 60,
+      "sensorBitmask": 0,
+      "phaseBitmask": 0,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "touchPressed",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "SELECT MODE"
+        }
+      ],
+      "displayTokens": "#000000|ST,160,60,#FFFFFF,Welcome to,BC,2|ST,160,60,#FFFFFF,JOLLY HELMET,TC,4|ST,162,120,#FFFFFF,Make your Helmet,BC,2|ST,160,120,#FFFFFF,Happy Again!,TC,4|TT,160,180,#FFFF00,Tap to START,500,TC,2"
+    },
+    {
+      "name": "SELECT MODE",
+      "durationSec": 0,
+      "durationMode": "fixed",
+      "relayBitmask": 0,
+      "intervalBitmask": 0,
+      "intervalOnSec": 60,
+      "intervalOffSec": 60,
+      "sensorBitmask": 0,
+      "phaseBitmask": 0,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "btn:MODE_CLEAN",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [
+            "mode=clean"
+          ],
+          "goto": "CHECKING A"
+        },
+        {
+          "conditions": [
+            {
+              "key": "btn:MODE_DRY",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [
+            "mode=dry"
+          ],
+          "goto": "DR RATE A"
+        }
+      ],
+      "displayTokens": "#000000|ST,160,44,#FFFFFF,SELECT MODE,MC,4|BTN,90,80,140,56,#1C1C20,CLEANING,MODE_CLEAN|BTN,90,152,140,56,#1C1C20,DRYING,MODE_DRY"
+    },
+    {
+      "name": "CHECKING A",
+      "durationSec": 0,
+      "durationMode": "fixed",
+      "relayBitmask": 0,
+      "intervalBitmask": 0,
+      "intervalOnSec": 60,
+      "intervalOffSec": 60,
+      "sensorBitmask": 160,
+      "phaseBitmask": 0,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "alcoholEnough",
+              "negate": true
+            },
+            {
+              "key": "var:bypass=on",
+              "negate": false,
+              "joiner": "AND"
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "OUT OF ORDER"
+        },
+        {
+          "conditions": [
+            {
+              "key": "alcoholEnough",
+              "negate": true
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "REFILLING A"
+        },
+        {
+          "conditions": [],
+          "isElse": true,
+          "remember": [],
+          "goto": "CHECKING S"
+        }
+      ],
+      "displayTokens": "#000000|ST,160,84,#FFFFFF,Please Wait...,MC,2|ST,160,120,#FFFF00,Checking Alcohol Status,MC,2"
+    },
+    {
+      "name": "CHECKING S",
+      "durationSec": 0,
+      "durationMode": "fixed",
+      "relayBitmask": 0,
+      "intervalBitmask": 0,
+      "intervalOnSec": 60,
+      "intervalOffSec": 60,
+      "sensorBitmask": 320,
+      "phaseBitmask": 0,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "scentedEnough",
+              "negate": true
+            },
+            {
+              "key": "var:bypass=on",
+              "negate": false,
+              "joiner": "AND"
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "OUT OF ORDER"
+        },
+        {
+          "conditions": [
+            {
+              "key": "scentedEnough",
+              "negate": true
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "REFILLING S"
+        },
+        {
+          "conditions": [],
+          "isElse": true,
+          "remember": [],
+          "goto": "CL RATE A"
+        }
+      ],
+      "displayTokens": "#000000|ST,160,84,#FFFFFF,Please Wait...,MC,2|ST,160,120,#FFFF00,Checking Scented Status,MC,2"
+    },
+    {
+      "name": "REFILLING A",
+      "durationSec": 0,
+      "durationMode": "fixed",
+      "relayBitmask": 0,
+      "intervalBitmask": 0,
+      "intervalOnSec": 60,
+      "intervalOffSec": 60,
+      "sensorBitmask": 160,
+      "phaseBitmask": 0,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "alcoholOk",
+              "negate": false
+            },
+            {
+              "key": "wsAlsWet",
+              "negate": false,
+              "joiner": "OR"
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "CHECKING A"
+        },
+        {
+          "conditions": [
+            {
+              "key": "refillGaveUp",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [
+            "bypass=on"
+          ],
+          "goto": "OUT OF ORDER"
+        }
+      ],
+      "displayTokens": "#000000|ST,160,84,#FFFFFF,Please Wait...,MC,2|ST,160,120,#FFFF00,Refilling Alcohol...,MC,2|TT,160,180,#636363,Try {TRY}/{TRIES},0,MC,2"
+    },
+    {
+      "name": "REFILLING S",
+      "durationSec": 0,
+      "durationMode": "fixed",
+      "relayBitmask": 0,
+      "intervalBitmask": 0,
+      "intervalOnSec": 60,
+      "intervalOffSec": 60,
+      "sensorBitmask": 320,
+      "phaseBitmask": 0,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "scentedOk",
+              "negate": false
+            },
+            {
+              "key": "wsSlsWet",
+              "negate": false,
+              "joiner": "OR"
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "CHECKING S"
+        },
+        {
+          "conditions": [
+            {
+              "key": "refillGaveUp",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [
+            "bypass=on"
+          ],
+          "goto": "OUT OF ORDER"
+        }
+      ],
+      "displayTokens": "#000000|ST,160,84,#FFFFFF,Please Wait...,MC,2|ST,160,120,#FFFF00,Refilling Scented...,MC,2|TT,160,180,#636363,Try {TRY}/{TRIES},0,MC,2"
+    },
+    {
+      "name": "CL RATE A",
+      "durationSec": 0,
+      "durationMode": "fixed",
+      "relayBitmask": 0,
+      "intervalBitmask": 0,
+      "intervalOnSec": 60,
+      "intervalOffSec": 60,
+      "sensorBitmask": 0,
+      "phaseBitmask": 0,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "btn:ACTION",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "METHOD"
+        }
+      ],
+      "displayTokens": "#000000|BTN,19,192,282,36,#1C1C20,CONFIRM,ACTION|ST,160,60,#FFFFFF,ODOR O' METER,BC,4|ST,28,20,#FFFFFF,Before,MC,1|NR2,24,70,272,100,1,#FFFFFF,#22c55e,MINT;STINKY"
+    },
+    {
+      "name": "METHOD",
+      "durationSec": 0,
+      "durationMode": "fixed",
+      "relayBitmask": 0,
+      "intervalBitmask": 0,
+      "intervalOnSec": 60,
+      "intervalOffSec": 60,
+      "sensorBitmask": 0,
+      "phaseBitmask": 0,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "btn:MIST_BAL",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [
+            "mist=bal"
+          ],
+          "goto": "CL TIME ALLOT"
+        },
+        {
+          "conditions": [
+            {
+              "key": "btn:MIST_ALC",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [
+            "mist=alc"
+          ],
+          "goto": "CL TIME ALLOT"
+        },
+        {
+          "conditions": [
+            {
+              "key": "btn:MIST_SCN",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [
+            "mist=sct"
+          ],
+          "goto": "CL TIME ALLOT"
+        }
+      ],
+      "displayTokens": "#000000|ST,160,60,#FFFFFF,CLEANING MODE,MC,4|BTN,90,98,140,44,#1C1C20,BALANCED,MIST_BAL|BTN,10,158,140,44,#1C1C20,MORE ALCOHOL,MIST_ALC|BTN,170,158,140,44,#1C1C20,MORE SCENTED,MIST_SCN"
+    },
+    {
+      "name": "CL TIME ALLOT",
+      "durationSec": 0,
+      "durationMode": "fixed",
+      "relayBitmask": 0,
+      "intervalBitmask": 0,
+      "intervalOnSec": 60,
+      "intervalOffSec": 60,
+      "sensorBitmask": 0,
+      "phaseBitmask": 0,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "touchPressed",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "CL INSERT COIN"
+        }
+      ],
+      "displayTokens": "#000000|NP,0,0,320,240,#FFFFFF,20,ALLOCATE CLEAN TIME"
+    },
+    {
+      "name": "CL INSERT COIN",
+      "durationSec": 0,
+      "durationMode": "fixed",
+      "relayBitmask": 2048,
+      "intervalBitmask": 0,
+      "intervalOnSec": 60,
+      "intervalOffSec": 60,
+      "sensorBitmask": 0,
+      "phaseBitmask": 0,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "coinThreshold",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "CL OPEN A"
+        },
+        {
+          "conditions": [
+            {
+              "key": "btn:INSERT_CANCEL",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "CL CANCEL"
+        }
+      ],
+      "displayTokens": "#000000|ST,160,60,#FFFFFF,INSERT THE REQUIRED COIN,TC,2|TT,144,120,#FFFFFF,/ {REQUIREDCOIN} Coin,0,ML,2|TT,126,120,#FFFF00,{COINS},500,MR,2|BTN,20,190,90,32,#1C1C20,CANCEL,INSERT_CANCEL"
+    },
+    {
+      "name": "CL OPEN A",
+      "durationSec": 0,
+      "durationMode": "fixed",
+      "relayBitmask": 1,
+      "intervalBitmask": 0,
+      "intervalOnSec": 60,
+      "intervalOffSec": 60,
+      "sensorBitmask": 2,
+      "phaseBitmask": 0,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "doorOpen",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "CL SENSORS A"
+        }
+      ],
+      "displayTokens": "#000000|ST,160,88,#FFFFFF,Please,MC,2|ST,160,156,#FFFFFF,Door to Proceed,MC,2|TT,152,120,#FFFF00, OPEN,500,MC,4"
+    },
+    {
+      "name": "CL SENSORS A",
+      "durationSec": 0,
+      "durationMode": "fixed",
+      "relayBitmask": 0,
+      "intervalBitmask": 0,
+      "intervalOnSec": 60,
+      "intervalOffSec": 60,
+      "sensorBitmask": 3,
+      "phaseBitmask": 0,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "helmetPresent",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "CL CLOSE DOOR A"
+        },
+        {
+          "conditions": [
+            {
+              "key": "doorClosed",
+              "negate": false
+            },
+            {
+              "key": "helmetAbsent",
+              "negate": false,
+              "joiner": "AND"
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "CL HELMET NOTICE A"
+        }
+      ],
+      "displayTokens": "#000000|ST,160,92,#FFFFFF,Please,MC,2|ST,160,148,#FFFFFF, Headgear Inside,MC,2|TT,160,120,#FFFF00,PLACE,500,MC,4"
+    },
+    {
+      "name": "CL CLOSE DOOR A",
+      "durationSec": 0,
+      "durationMode": "fixed",
+      "relayBitmask": 0,
+      "intervalBitmask": 0,
+      "intervalOnSec": 60,
+      "intervalOffSec": 60,
+      "sensorBitmask": 3,
+      "phaseBitmask": 0,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "doorClosed",
+              "negate": false
+            },
+            {
+              "key": "helmetPresent",
+              "negate": false,
+              "joiner": "AND"
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "START CLEANING"
+        },
+        {
+          "conditions": [
+            {
+              "key": "doorClosed",
+              "negate": false
+            },
+            {
+              "key": "helmetPresent",
+              "negate": true,
+              "joiner": "AND"
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "CL HELMET NOTICE A"
+        }
+      ],
+      "displayTokens": "#000000|ST,160,92,#FFFFFF,Please,MC,2|ST,160,148,#FFFFFF,Door to Proceed,MC,2|TT,160,120,#FFFF00,CLOSE,500,MC,4"
+    },
+    {
+      "name": "START CLEANING",
+      "durationSec": 0,
+      "durationMode": "fixed",
+      "relayBitmask": 0,
+      "intervalBitmask": 0,
+      "intervalOnSec": 60,
+      "intervalOffSec": 60,
+      "sensorBitmask": 3,
+      "phaseBitmask": 0,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "doorClosed",
+              "negate": false
+            },
+            {
+              "key": "helmetAbsent",
+              "negate": false,
+              "joiner": "AND"
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "CL OPEN A"
+        },
+        {
+          "conditions": [
+            {
+              "key": "doorClosed",
+              "negate": false
+            },
+            {
+              "key": "helmetPresent",
+              "negate": false,
+              "joiner": "AND"
+            },
+            {
+              "key": "var:mist=alc",
+              "negate": false,
+              "joiner": "AND"
+            },
+            {
+              "key": "var:retry=used",
+              "negate": true,
+              "joiner": "AND"
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "CLEANING ALC"
+        },
+        {
+          "conditions": [
+            {
+              "key": "doorClosed",
+              "negate": false
+            },
+            {
+              "key": "helmetPresent",
+              "negate": false,
+              "joiner": "AND"
+            },
+            {
+              "key": "var:mist=sct",
+              "negate": false,
+              "joiner": "AND"
+            },
+            {
+              "key": "var:retry=used",
+              "negate": true,
+              "joiner": "AND"
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "CLEANING SCN"
+        },
+        {
+          "conditions": [
+            {
+              "key": "doorClosed",
+              "negate": false
+            },
+            {
+              "key": "helmetPresent",
+              "negate": false,
+              "joiner": "AND"
+            },
+            {
+              "key": "var:mist=bal",
+              "negate": false,
+              "joiner": "AND"
+            },
+            {
+              "key": "var:retry=used",
+              "negate": true,
+              "joiner": "AND"
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "CLEANING BAL"
+        },
+        {
+          "conditions": [
+            {
+              "key": "doorClosed",
+              "negate": false
+            },
+            {
+              "key": "helmetPresent",
+              "negate": false,
+              "joiner": "AND"
+            },
+            {
+              "key": "var:mist=alc",
+              "negate": false,
+              "joiner": "AND"
+            },
+            {
+              "key": "var:retry=used",
+              "negate": false,
+              "joiner": "AND"
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "CLEANING ALC FREE"
+        },
+        {
+          "conditions": [
+            {
+              "key": "doorClosed",
+              "negate": false
+            },
+            {
+              "key": "helmetPresent",
+              "negate": false,
+              "joiner": "AND"
+            },
+            {
+              "key": "var:mist=sct",
+              "negate": false,
+              "joiner": "AND"
+            },
+            {
+              "key": "var:retry=used",
+              "negate": false,
+              "joiner": "AND"
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "CLEANING SCN FREE"
+        },
+        {
+          "conditions": [
+            {
+              "key": "doorClosed",
+              "negate": false
+            },
+            {
+              "key": "helmetPresent",
+              "negate": false,
+              "joiner": "AND"
+            },
+            {
+              "key": "var:mist=bal",
+              "negate": false,
+              "joiner": "AND"
+            },
+            {
+              "key": "var:retry=used",
+              "negate": false,
+              "joiner": "AND"
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "CLEANING BAL FREE"
+        }
+      ],
+      "displayTokens": "#000000|TT,160,120,#FFFF00,Please Wait...,500,MC,4"
+    },
+    {
+      "name": "CLEANING ALC",
+      "durationSec": 20,
+      "durationMode": "bought",
+      "relayBitmask": 6360,
+      "intervalBitmask": 0,
+      "intervalOnSec": 60,
+      "intervalOffSec": 60,
+      "sensorBitmask": 3,
+      "phaseBitmask": 4312,
+      "phase": {
+        "start": {
+          "value": 1,
+          "unit": "min"
+        },
+        "end": {
+          "value": 1,
+          "unit": "min"
+        },
+        "relays": {
+          "hum1": 2,
+          "uv": 5,
+          "hum3": 2,
+          "uv2": 5,
+          "heat": 4
+        }
+      },
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "timerZero",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "CL OPEN B"
+        },
+        {
+          "conditions": [
+            {
+              "key": "btn:ABORT",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "CL ABORT"
+        }
+      ],
+      "displayTokens": "#000000|ST,160,92,#FFFFFF,Cleaning...,MC,2|TT,160,120,#00FF00,{MINUTE}:{SECOND},0,MC,2|BTN,215,8,95,32,#000000,CANCEL,ABORT|PBAR,50,137,220,14,#505050,#FFFFFF|TT,160,180,#949494,{STATUS},0,TC,2"
+    },
+    {
+      "name": "CLEANING ALC FREE",
+      "durationSec": 20,
+      "durationMode": "free",
+      "relayBitmask": 4312,
+      "intervalBitmask": 0,
+      "intervalOnSec": 60,
+      "intervalOffSec": 60,
+      "sensorBitmask": 3,
+      "phaseBitmask": 4168,
+      "phase": {
+        "start": {
+          "value": 1,
+          "unit": "min"
+        },
+        "end": {
+          "value": 1,
+          "unit": "min"
+        },
+        "relays": {
+          "hum1": 1,
+          "hum3": 1,
+          "heat": 4
+        }
+      },
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "timerZero",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "CL OPEN B"
+        },
+        {
+          "conditions": [
+            {
+              "key": "btn:ABORT",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "CL ABORT"
+        }
+      ],
+      "displayTokens": "#000000|ST,160,92,#FFFFFF,Cleaning ...,MC,2|TT,160,120,#00FF00,{MINUTE}:{SECOND},0,MC,2|BTN,215,8,95,32,#000000,CANCEL,ABORT|PBAR,50,137,220,14,#505050,#FFFFFF|TT,160,180,#949494,{STATUS},0,TC,2"
+    },
+    {
+      "name": "CLEANING SCN",
+      "durationSec": 20,
+      "durationMode": "bought",
+      "relayBitmask": 6384,
+      "intervalBitmask": 0,
+      "intervalOnSec": 60,
+      "intervalOffSec": 60,
+      "sensorBitmask": 3,
+      "phaseBitmask": 4336,
+      "phase": {
+        "start": {
+          "value": 1,
+          "unit": "min"
+        },
+        "end": {
+          "value": 1,
+          "unit": "min"
+        },
+        "relays": {
+          "uv": 5,
+          "hum2": 2,
+          "hum3": 2,
+          "uv2": 5,
+          "heat": 4
+        }
+      },
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "timerZero",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "CL OPEN B"
+        },
+        {
+          "conditions": [
+            {
+              "key": "btn:ABORT",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "CL ABORT"
+        }
+      ],
+      "displayTokens": "#000000|ST,160,92,#FFFFFF,Cleaning ...,MC,2|TT,160,120,#00FF00,{MINUTE}:{SECOND},0,MC,2|BTN,215,8,95,32,#000000,CANCEL,ABORT|PBAR,50,137,220,14,#505050,#FFFFFF|TT,160,180,#949494,{STATUS},0,TC,2"
+    },
+    {
+      "name": "CLEANING SCN FREE",
+      "durationSec": 20,
+      "durationMode": "free",
+      "relayBitmask": 4336,
+      "intervalBitmask": 0,
+      "intervalOnSec": 60,
+      "intervalOffSec": 60,
+      "sensorBitmask": 3,
+      "phaseBitmask": 4192,
+      "phase": {
+        "start": {
+          "value": 1,
+          "unit": "min"
+        },
+        "end": {
+          "value": 1,
+          "unit": "min"
+        },
+        "relays": {
+          "hum2": 1,
+          "hum3": 1,
+          "heat": 4
+        }
+      },
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "timerZero",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "CL OPEN B"
+        },
+        {
+          "conditions": [
+            {
+              "key": "btn:ABORT",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "CL ABORT"
+        }
+      ],
+      "displayTokens": "#000000|ST,160,92,#FFFFFF,Cleaning ...,MC,2|TT,160,120,#00FF00,{MINUTE}:{SECOND},0,MC,2|BTN,215,8,95,32,#000000,CANCEL,ABORT|PBAR,50,137,220,14,#505050,#FFFFFF|TT,160,180,#949494,{STATUS},0,TC,2"
+    },
+    {
+      "name": "CLEANING BAL",
+      "durationSec": 20,
+      "durationMode": "bought",
+      "relayBitmask": 6392,
+      "intervalBitmask": 0,
+      "intervalOnSec": 60,
+      "intervalOffSec": 60,
+      "sensorBitmask": 3,
+      "phaseBitmask": 4344,
+      "phase": {
+        "start": {
+          "value": 1,
+          "unit": "min"
+        },
+        "end": {
+          "value": 1,
+          "unit": "min"
+        },
+        "relays": {
+          "hum1": 2,
+          "uv": 5,
+          "hum2": 2,
+          "hum3": 2,
+          "uv2": 5,
+          "heat": 4
+        }
+      },
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "timerZero",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "CL OPEN B"
+        },
+        {
+          "conditions": [
+            {
+              "key": "btn:ABORT",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "CL ABORT"
+        }
+      ],
+      "displayTokens": "#000000|ST,160,92,#FFFFFF,Cleaning ...,MC,2|TT,160,120,#00FF00,{MINUTE}:{SECOND},0,MC,2|BTN,215,8,95,32,#000000,CANCEL,ABORT|PBAR,50,137,220,14,#505050,#FFFFFF|TT,160,180,#949494,{STATUS},0,TC,2"
+    },
+    {
+      "name": "CLEANING BAL FREE",
+      "durationSec": 20,
+      "durationMode": "free",
+      "relayBitmask": 4344,
+      "intervalBitmask": 0,
+      "intervalOnSec": 60,
+      "intervalOffSec": 60,
+      "sensorBitmask": 3,
+      "phaseBitmask": 4200,
+      "phase": {
+        "start": {
+          "value": 1,
+          "unit": "min"
+        },
+        "end": {
+          "value": 1,
+          "unit": "min"
+        },
+        "relays": {
+          "hum1": 1,
+          "hum2": 1,
+          "hum3": 1,
+          "heat": 4
+        }
+      },
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "timerZero",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "CL OPEN B"
+        },
+        {
+          "conditions": [
+            {
+              "key": "btn:ABORT",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "CL ABORT"
+        }
+      ],
+      "displayTokens": "#000000|ST,160,92,#FFFFFF,Cleaning ...,MC,2|TT,160,120,#00FF00,{MINUTE}:{SECOND},0,MC,2|BTN,215,8,95,32,#000000,CANCEL,ABORT|PBAR,50,137,220,14,#505050,#FFFFFF|TT,160,180,#949494,{STATUS},0,TC,2"
+    },
+    {
+      "name": "CL OPEN B",
+      "durationSec": 0,
+      "durationMode": "fixed",
+      "relayBitmask": 1,
+      "intervalBitmask": 0,
+      "intervalOnSec": 60,
+      "intervalOffSec": 60,
+      "sensorBitmask": 3,
+      "phaseBitmask": 0,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "doorOpen",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "CL SENSORS B"
+        }
+      ],
+      "displayTokens": "#000000|ST,160,88,#FFFFFF,Please,MC,2|ST,160,156,#FFFFFF,Door to Proceed,MC,2|TT,152,120,#FFFF00, OPEN,500,MC,4"
+    },
+    {
+      "name": "CL SENSORS B",
+      "durationSec": 0,
+      "durationMode": "fixed",
+      "relayBitmask": 0,
+      "intervalBitmask": 0,
+      "intervalOnSec": 60,
+      "intervalOffSec": 60,
+      "sensorBitmask": 3,
+      "phaseBitmask": 0,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "helmetAbsent",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "CL CLOSE DOOR B"
+        },
+        {
+          "conditions": [
+            {
+              "key": "helmetPresent",
+              "negate": false
+            },
+            {
+              "key": "doorClosed",
+              "negate": false,
+              "joiner": "AND"
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "CL HELMET NOTICE B"
+        }
+      ],
+      "displayTokens": "#000000|ST,160,92,#FFFFFF,Please,MC,2|ST,160,148,#FFFFFF, Headgear Outside,MC,2|TT,160,120,#FFFF00,TAKE,500,MC,4"
+    },
+    {
+      "name": "CL CLOSE DOOR B",
+      "durationSec": 0,
+      "durationMode": "fixed",
+      "relayBitmask": 0,
+      "intervalBitmask": 0,
+      "intervalOnSec": 60,
+      "intervalOffSec": 60,
+      "sensorBitmask": 3,
+      "phaseBitmask": 0,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "doorClosed",
+              "negate": false
+            },
+            {
+              "key": "helmetAbsent",
+              "negate": false,
+              "joiner": "AND"
+            },
+            {
+              "key": "var:retry=used",
+              "negate": true,
+              "joiner": "AND"
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "CL RATE B2"
+        },
+        {
+          "conditions": [
+            {
+              "key": "doorClosed",
+              "negate": false
+            },
+            {
+              "key": "helmetPresent",
+              "negate": false,
+              "joiner": "AND"
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "CL HELMET NOTICE B"
+        },
+        {
+          "conditions": [
+            {
+              "key": "doorClosed",
+              "negate": false
+            },
+            {
+              "key": "helmetAbsent",
+              "negate": false,
+              "joiner": "AND"
+            },
+            {
+              "key": "var:retry=used",
+              "negate": false,
+              "joiner": "AND"
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "CL FINISH"
+        }
+      ],
+      "displayTokens": "#000000|ST,160,92,#FFFFFF,Please,MC,2|ST,160,148,#FFFFFF,Door to Proceed,MC,2|TT,160,120,#FFFF00,CLOSE,500,MC,4"
+    },
+    {
+      "name": "CL RATE B1",
+      "durationSec": 0,
+      "durationMode": "fixed",
+      "relayBitmask": 0,
+      "intervalBitmask": 0,
+      "intervalOnSec": 60,
+      "intervalOffSec": 60,
+      "sensorBitmask": 0,
+      "phaseBitmask": 0,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "var:retry=used",
+              "negate": false
+            },
+            {
+              "key": "ratingFree",
+              "negate": true,
+              "joiner": "AND"
+            },
+            {
+              "key": "btn:ACTION",
+              "negate": false,
+              "joiner": "AND"
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "CL RATE B2"
+        },
+        {
+          "conditions": [
+            {
+              "key": "var:retry=used",
+              "negate": true
+            },
+            {
+              "key": "ratingFree",
+              "negate": false,
+              "joiner": "AND"
+            },
+            {
+              "key": "btn:ACTION",
+              "negate": false,
+              "joiner": "AND"
+            }
+          ],
+          "isElse": false,
+          "remember": [
+            "retry=used"
+          ],
+          "goto": "CL RATE B2"
+        },
+        {
+          "conditions": [
+            {
+              "key": "var:retry=used",
+              "negate": false
+            },
+            {
+              "key": "ratingFree",
+              "negate": false,
+              "joiner": "AND"
+            },
+            {
+              "key": "btn:ACTION",
+              "negate": false,
+              "joiner": "AND"
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "CL RATE B2"
+        },
+        {
+          "conditions": [
+            {
+              "key": "var:retry=used",
+              "negate": true
+            },
+            {
+              "key": "ratingFree",
+              "negate": true,
+              "joiner": "AND"
+            },
+            {
+              "key": "btn:ACTION",
+              "negate": false,
+              "joiner": "AND"
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "CL RATE B2"
+        }
+      ],
+      "displayTokens": "#000000|BTN,19,192,282,36,#1C1C20,CONFIRM,ACTION|ST,160,60,#FFFFFF,DRY O' METER,BC,4|ST,28,20,#FFFFFF,After,MC,1|NR2,24,70,272,100,9,#FFFFFF,#22c55e,MINT;STINKY"
+    },
+    {
+      "name": "CL RATE B2",
+      "durationSec": 0,
+      "durationMode": "fixed",
+      "relayBitmask": 0,
+      "intervalBitmask": 0,
+      "intervalOnSec": 60,
+      "intervalOffSec": 60,
+      "sensorBitmask": 0,
+      "phaseBitmask": 0,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "var:retry=used",
+              "negate": false
+            },
+            {
+              "key": "ratingFree",
+              "negate": true,
+              "joiner": "AND"
+            },
+            {
+              "key": "btn:ACTION",
+              "negate": false,
+              "joiner": "AND"
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "CL FINISH"
+        },
+        {
+          "conditions": [
+            {
+              "key": "var:retry=used",
+              "negate": true
+            },
+            {
+              "key": "ratingFree",
+              "negate": false,
+              "joiner": "AND"
+            },
+            {
+              "key": "btn:ACTION",
+              "negate": false,
+              "joiner": "AND"
+            }
+          ],
+          "isElse": false,
+          "remember": [
+            "retry=used"
+          ],
+          "goto": "CL FREE RETRY"
+        },
+        {
+          "conditions": [
+            {
+              "key": "var:retry=used",
+              "negate": false
+            },
+            {
+              "key": "ratingFree",
+              "negate": false,
+              "joiner": "AND"
+            },
+            {
+              "key": "btn:ACTION",
+              "negate": false,
+              "joiner": "AND"
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "CL FINISH"
+        },
+        {
+          "conditions": [
+            {
+              "key": "var:retry=used",
+              "negate": true
+            },
+            {
+              "key": "ratingFree",
+              "negate": true,
+              "joiner": "AND"
+            },
+            {
+              "key": "btn:ACTION",
+              "negate": false,
+              "joiner": "AND"
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "CL FINISH"
+        }
+      ],
+      "displayTokens": "#000000|BTN,19,192,282,36,#1C1C20,CONFIRM,ACTION|ST,160,60,#FFFFFF,ODOR O' METER,BC,4|ST,28,20,#FFFFFF,After,MC,1|NR2,24,70,272,100,9,#FFFFFF,#22c55e,MINT;STINKY"
+    },
+    {
+      "name": "CL FREE RETRY",
+      "durationSec": 0,
+      "durationMode": "fixed",
+      "relayBitmask": 0,
+      "intervalBitmask": 0,
+      "intervalOnSec": 60,
+      "intervalOffSec": 60,
+      "sensorBitmask": 0,
+      "phaseBitmask": 0,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "btn:FREE_YES",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [
+            "retry=used"
+          ],
+          "goto": "CL OPEN A"
+        },
+        {
+          "conditions": [
+            {
+              "key": "btn:FREE_NO",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "CL FINISH"
+        }
+      ],
+      "displayTokens": "#000000|ST,160,120,#FFFFFF,2 MINUTES,MC,2|ST,160,88,#FFFFFF,FREE TIME,MC,4|BTN,12,154,140,52,#069322,YES,FREE_YES|BTN,168,154,140,52,#A91414,NO,FREE_NO"
+    },
+    {
+      "name": "CL FINISH",
+      "durationSec": 5,
+      "durationMode": "fixed",
+      "relayBitmask": 0,
+      "intervalBitmask": 0,
+      "intervalOnSec": 60,
+      "intervalOffSec": 60,
+      "sensorBitmask": 0,
+      "phaseBitmask": 0,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "timerZero",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "TAPS"
+        }
+      ],
+      "displayTokens": "#000000|ST,160,76,#FFFFFF,Thank you,MC,2|ST,160,102,#FFFFFF,for your patronage!,MC,2|TT,160,144,#FFFF00,We hope to see you again! :D,500,MC,2"
+    },
+    {
+      "name": "CL ABORT",
+      "durationSec": 0,
+      "durationMode": "fixed",
+      "relayBitmask": 0,
+      "intervalBitmask": 0,
+      "intervalOnSec": 60,
+      "intervalOffSec": 60,
+      "sensorBitmask": 0,
+      "phaseBitmask": 0,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "btn:ABORT_YES",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "CL OPEN B"
+        },
+        {
+          "conditions": [
+            {
+              "key": "btn:ABORT_NO",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "__return__"
+        }
+      ],
+      "displayTokens": "#000000|ST,160,120,#FFFFFF,COIN(s) won't be Refunded.,MC,2|ST,160,88,#FFFFFF,Cancel operation?,MC,2|BTN,12,154,140,52,#A91414,CONFIRM,ABORT_YES|BTN,168,154,140,52,#069322,RESUME,ABORT_NO"
+    },
+    {
+      "name": "CL CANCEL",
+      "durationSec": 0,
+      "durationMode": "fixed",
+      "relayBitmask": 0,
+      "intervalBitmask": 0,
+      "intervalOnSec": 60,
+      "intervalOffSec": 60,
+      "sensorBitmask": 0,
+      "phaseBitmask": 0,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "btn:CANCEL_YES",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "TAPS"
+        },
+        {
+          "conditions": [
+            {
+              "key": "btn:CANCEL_NO",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "__return__"
+        }
+      ],
+      "displayTokens": "#000000|ST,160,88,#FFFFFF,Cancel operation?,MC,2|ST,160,120,#FFFFFF,COIN(s) won't be Refunded.,MC,2|BTN,12,154,140,52,#3B891A,YES,CANCEL_YES|BTN,168,154,140,52,#991414,NO,CANCEL_NO"
+    },
+    {
+      "name": "CL HELMET NOTICE A",
+      "durationSec": 2,
+      "durationMode": "fixed",
+      "relayBitmask": 0,
+      "intervalBitmask": 0,
+      "intervalOnSec": 60,
+      "intervalOffSec": 60,
+      "sensorBitmask": 0,
+      "phaseBitmask": 0,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "timerZero",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "CL OPEN A"
+        }
+      ],
+      "displayTokens": "#000000|TT,160,120,#FFFF00,HELMET,500,MC,4|ST,160,92,#FFFFFF,NO,MC,2|ST,160,152,#FFFFFF,DETECTED,MC,2"
+    },
+    {
+      "name": "CL HELMET NOTICE B",
+      "durationSec": 2,
+      "durationMode": "fixed",
+      "relayBitmask": 0,
+      "intervalBitmask": 0,
+      "intervalOnSec": 60,
+      "intervalOffSec": 60,
+      "sensorBitmask": 0,
+      "phaseBitmask": 0,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "timerZero",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "CL OPEN B"
+        }
+      ],
+      "displayTokens": "#000000|TT,160,120,#FFFF00,HELMET,500,MC,4|ST,160,152,#FFFFFF,DETECTED,MC,2"
+    },
+    {
+      "name": "DR RATE A",
+      "durationSec": 0,
+      "durationMode": "fixed",
+      "relayBitmask": 0,
+      "intervalBitmask": 0,
+      "intervalOnSec": 60,
+      "intervalOffSec": 60,
+      "sensorBitmask": 0,
+      "phaseBitmask": 0,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "btn:ACTION",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "DR TIME ALLOT"
+        }
+      ],
+      "displayTokens": "#000000|BTN,19,192,282,36,#1C1C20,CONFIRM,ACTION|ST,160,60,#FFFFFF,DRY O' METER,BC,4|ST,28,20,#FFFFFF,Before,MC,1|NR2,24,70,272,100,1,#FFFFFF,#22c55e,DRY;WET"
+    },
+    {
+      "name": "DR TIME ALLOT",
+      "durationSec": 0,
+      "durationMode": "fixed",
+      "relayBitmask": 0,
+      "intervalBitmask": 0,
+      "intervalOnSec": 60,
+      "intervalOffSec": 60,
+      "sensorBitmask": 0,
+      "phaseBitmask": 0,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "touchPressed",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "DR INSERT COIN"
+        }
+      ],
+      "displayTokens": "#000000|NP,0,0,320,240,#FFFFFF,20,ALLOCATE DRYING TIME"
+    },
+    {
+      "name": "DR INSERT COIN",
+      "durationSec": 0,
+      "durationMode": "fixed",
+      "relayBitmask": 2048,
+      "intervalBitmask": 0,
+      "intervalOnSec": 60,
+      "intervalOffSec": 60,
+      "sensorBitmask": 0,
+      "phaseBitmask": 0,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "coinThreshold",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "DR OPEN A"
+        },
+        {
+          "conditions": [
+            {
+              "key": "btn:INSERT_CANCEL",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "DR CANCEL"
+        }
+      ],
+      "displayTokens": "#000000|ST,160,60,#FFFFFF,INSERT THE REQUIRED COIN,TC,2|TT,144,120,#FFFFFF,/ {REQUIREDCOIN} Coin,0,ML,2|TT,126,120,#FFFF00,{COINS},500,MR,2|BTN,20,190,90,32,#1C1C20,CANCEL,INSERT_CANCEL"
+    },
+    {
+      "name": "DR OPEN A",
+      "durationSec": 0,
+      "durationMode": "fixed",
+      "relayBitmask": 1,
+      "intervalBitmask": 0,
+      "intervalOnSec": 60,
+      "intervalOffSec": 60,
+      "sensorBitmask": 2,
+      "phaseBitmask": 0,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "doorOpen",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "DR SENSORS A"
+        }
+      ],
+      "displayTokens": "#000000|ST,160,88,#FFFFFF,Please,MC,2|ST,160,156,#FFFFFF,Door to Proceed,MC,2|TT,152,120,#FFFF00, OPEN,500,MC,4"
+    },
+    {
+      "name": "DR SENSORS A",
+      "durationSec": 0,
+      "durationMode": "fixed",
+      "relayBitmask": 0,
+      "intervalBitmask": 0,
+      "intervalOnSec": 60,
+      "intervalOffSec": 60,
+      "sensorBitmask": 3,
+      "phaseBitmask": 0,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "helmetPresent",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "DR CLOSE DOOR A"
+        },
+        {
+          "conditions": [
+            {
+              "key": "doorClosed",
+              "negate": false
+            },
+            {
+              "key": "helmetAbsent",
+              "negate": false,
+              "joiner": "AND"
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "DR HELMET NOTICE A"
+        }
+      ],
+      "displayTokens": "#000000|ST,160,92,#FFFFFF,Please,MC,2|ST,160,148,#FFFFFF, Headgear Inside,MC,2|TT,160,120,#FFFF00,PLACE,500,MC,4"
+    },
+    {
+      "name": "DR CLOSE DOOR A",
+      "durationSec": 0,
+      "durationMode": "fixed",
+      "relayBitmask": 0,
+      "intervalBitmask": 0,
+      "intervalOnSec": 60,
+      "intervalOffSec": 60,
+      "sensorBitmask": 3,
+      "phaseBitmask": 0,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "doorClosed",
+              "negate": false
+            },
+            {
+              "key": "helmetPresent",
+              "negate": false,
+              "joiner": "AND"
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "START HEATING"
+        },
+        {
+          "conditions": [
+            {
+              "key": "doorClosed",
+              "negate": false
+            },
+            {
+              "key": "helmetPresent",
+              "negate": true,
+              "joiner": "AND"
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "DR HELMET NOTICE A"
+        }
+      ],
+      "displayTokens": "#000000|ST,160,92,#FFFFFF,Please,MC,2|ST,160,148,#FFFFFF,Door to Proceed,MC,2|TT,160,120,#FFFF00,CLOSE,500,MC,4"
+    },
+    {
+      "name": "START HEATING",
+      "durationSec": 0,
+      "durationMode": "fixed",
+      "relayBitmask": 0,
+      "intervalBitmask": 0,
+      "intervalOnSec": 60,
+      "intervalOffSec": 60,
+      "sensorBitmask": 3,
+      "phaseBitmask": 0,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "doorClosed",
+              "negate": false
+            },
+            {
+              "key": "helmetAbsent",
+              "negate": false,
+              "joiner": "AND"
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "DR OPEN A"
+        },
+        {
+          "conditions": [
+            {
+              "key": "doorClosed",
+              "negate": false
+            },
+            {
+              "key": "helmetPresent",
+              "negate": false,
+              "joiner": "AND"
+            },
+            {
+              "key": "var:retry=used",
+              "negate": true,
+              "joiner": "AND"
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "HEATING"
+        },
+        {
+          "conditions": [
+            {
+              "key": "doorClosed",
+              "negate": false
+            },
+            {
+              "key": "helmetPresent",
+              "negate": false,
+              "joiner": "AND"
+            },
+            {
+              "key": "var:retry=used",
+              "negate": false,
+              "joiner": "AND"
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "HEATING FREE"
+        }
+      ],
+      "displayTokens": "#000000|TT,160,120,#FFFF00,Please Wait...,500,MC,4"
+    },
+    {
+      "name": "HEATING",
+      "durationSec": 20,
+      "durationMode": "bought",
+      "relayBitmask": 6288,
+      "intervalBitmask": 0,
+      "intervalOnSec": 60,
+      "intervalOffSec": 60,
+      "sensorBitmask": 3,
+      "phaseBitmask": 0,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "timerZero",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "COOLDOWN"
+        },
+        {
+          "conditions": [
+            {
+              "key": "btn:ABORT",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "DR ABORT"
+        }
+      ],
+      "displayTokens": "#000000|ST,160,92,#FFFFFF,Drying...,MC,2|TT,160,120,#00FF00,{MINUTE}:{SECOND},0,MC,2|BTN,215,8,95,32,#000000,CANCEL,ABORT|PBAR,50,137,220,14,#505050,#FFFFFF|TT,160,180,#949494,{STATUS},0,TC,2"
+    },
+    {
+      "name": "HEATING FREE",
+      "durationSec": 20,
+      "durationMode": "free",
+      "relayBitmask": 4240,
+      "intervalBitmask": 0,
+      "intervalOnSec": 60,
+      "intervalOffSec": 60,
+      "sensorBitmask": 3,
+      "phaseBitmask": 0,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "timerZero",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "COOLDOWN"
+        },
+        {
+          "conditions": [
+            {
+              "key": "btn:ABORT",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "DR ABORT"
+        }
+      ],
+      "displayTokens": "#000000|ST,160,92,#FFFFFF,Drying...,MC,2|TT,160,120,#00FF00,{MINUTE}:{SECOND},0,MC,2|BTN,215,8,95,32,#000000,CANCEL,ABORT|PBAR,50,137,220,14,#505050,#FFFFFF|TT,160,180,#949494,{STATUS},0,TC,2"
+    },
+    {
+      "name": "COOLDOWN",
+      "durationSec": 60,
+      "durationMode": "fixed",
+      "relayBitmask": 0,
+      "intervalBitmask": 0,
+      "intervalOnSec": 60,
+      "intervalOffSec": 60,
+      "sensorBitmask": 3,
+      "phaseBitmask": 0,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "timerZero",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "DR OPEN B"
+        }
+      ],
+      "displayTokens": "#000000|ST,160,92,#FFFFFF,Cooling Down...,MC,2|TT,160,120,#00FF00,{MINUTE}:{SECOND},0,MC,2|PBAR,50,137,220,14,#505050,#FFFFFF|TT,160,180,#949494,{STATUS},0,TC,2"
+    },
+    {
+      "name": "DR OPEN B",
+      "durationSec": 0,
+      "durationMode": "fixed",
+      "relayBitmask": 1,
+      "intervalBitmask": 0,
+      "intervalOnSec": 60,
+      "intervalOffSec": 60,
+      "sensorBitmask": 3,
+      "phaseBitmask": 0,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "doorOpen",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "DR SENSORS B"
+        }
+      ],
+      "displayTokens": "#000000|ST,160,88,#FFFFFF,Please,MC,2|ST,160,156,#FFFFFF,Door to Proceed,MC,2|TT,152,120,#FFFF00, OPEN,500,MC,4"
+    },
+    {
+      "name": "DR SENSORS B",
+      "durationSec": 0,
+      "durationMode": "fixed",
+      "relayBitmask": 0,
+      "intervalBitmask": 0,
+      "intervalOnSec": 60,
+      "intervalOffSec": 60,
+      "sensorBitmask": 3,
+      "phaseBitmask": 0,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "helmetAbsent",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "DR CLOSE DOOR B"
+        },
+        {
+          "conditions": [
+            {
+              "key": "helmetPresent",
+              "negate": false
+            },
+            {
+              "key": "doorClosed",
+              "negate": false,
+              "joiner": "AND"
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "DR HELMET NOTICE B"
+        }
+      ],
+      "displayTokens": "#000000|ST,160,92,#FFFFFF,Please,MC,2|ST,160,148,#FFFFFF, Headgear Outside,MC,2|TT,160,120,#FFFF00,TAKE,500,MC,4"
+    },
+    {
+      "name": "DR CLOSE DOOR B",
+      "durationSec": 0,
+      "durationMode": "fixed",
+      "relayBitmask": 0,
+      "intervalBitmask": 0,
+      "intervalOnSec": 60,
+      "intervalOffSec": 60,
+      "sensorBitmask": 3,
+      "phaseBitmask": 0,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "doorClosed",
+              "negate": false
+            },
+            {
+              "key": "helmetAbsent",
+              "negate": false,
+              "joiner": "AND"
+            },
+            {
+              "key": "var:retry=used",
+              "negate": true,
+              "joiner": "AND"
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "DR RATE B"
+        },
+        {
+          "conditions": [
+            {
+              "key": "doorClosed",
+              "negate": false
+            },
+            {
+              "key": "helmetPresent",
+              "negate": false,
+              "joiner": "AND"
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "DR HELMET NOTICE B"
+        },
+        {
+          "conditions": [
+            {
+              "key": "doorClosed",
+              "negate": false
+            },
+            {
+              "key": "helmetAbsent",
+              "negate": false,
+              "joiner": "AND"
+            },
+            {
+              "key": "var:retry=used",
+              "negate": false,
+              "joiner": "AND"
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "DR FINISH"
+        }
+      ],
+      "displayTokens": "#000000|ST,160,92,#FFFFFF,Please,MC,2|ST,160,148,#FFFFFF,Door to Proceed,MC,2|TT,160,120,#FFFF00,CLOSE,500,MC,4"
+    },
+    {
+      "name": "DR RATE B",
+      "durationSec": 0,
+      "durationMode": "fixed",
+      "relayBitmask": 0,
+      "intervalBitmask": 0,
+      "intervalOnSec": 60,
+      "intervalOffSec": 60,
+      "sensorBitmask": 0,
+      "phaseBitmask": 0,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "var:retry=used",
+              "negate": false
+            },
+            {
+              "key": "ratingFree",
+              "negate": true,
+              "joiner": "AND"
+            },
+            {
+              "key": "btn:ACTION",
+              "negate": false,
+              "joiner": "AND"
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "DR FINISH"
+        },
+        {
+          "conditions": [
+            {
+              "key": "var:retry=used",
+              "negate": true
+            },
+            {
+              "key": "ratingFree",
+              "negate": false,
+              "joiner": "AND"
+            },
+            {
+              "key": "btn:ACTION",
+              "negate": false,
+              "joiner": "AND"
+            }
+          ],
+          "isElse": false,
+          "remember": [
+            "retry=used"
+          ],
+          "goto": "DR FREE RETRY"
+        },
+        {
+          "conditions": [
+            {
+              "key": "var:retry=used",
+              "negate": false
+            },
+            {
+              "key": "ratingFree",
+              "negate": false,
+              "joiner": "AND"
+            },
+            {
+              "key": "btn:ACTION",
+              "negate": false,
+              "joiner": "AND"
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "DR FINISH"
+        },
+        {
+          "conditions": [
+            {
+              "key": "var:retry=used",
+              "negate": true
+            },
+            {
+              "key": "ratingFree",
+              "negate": true,
+              "joiner": "AND"
+            },
+            {
+              "key": "btn:ACTION",
+              "negate": false,
+              "joiner": "AND"
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "DR FINISH"
+        }
+      ],
+      "displayTokens": "#000000|BTN,19,192,282,36,#1C1C20,CONFIRM,ACTION|ST,160,60,#FFFFFF,DRY O' METER,BC,4|ST,28,20,#FFFFFF,After,MC,1|NR2,24,70,272,100,9,#FFFFFF,#22c55e,DRY;WET"
+    },
+    {
+      "name": "DR FREE RETRY",
+      "durationSec": 0,
+      "durationMode": "fixed",
+      "relayBitmask": 0,
+      "intervalBitmask": 0,
+      "intervalOnSec": 60,
+      "intervalOffSec": 60,
+      "sensorBitmask": 0,
+      "phaseBitmask": 0,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "btn:FREE_YES",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [
+            "retry=used"
+          ],
+          "goto": "DR OPEN A"
+        },
+        {
+          "conditions": [
+            {
+              "key": "btn:FREE_NO",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "DR FINISH"
+        }
+      ],
+      "displayTokens": "#000000|ST,160,120,#FFFFFF,2 MINUTES,MC,2|ST,160,88,#FFFFFF,FREE TIME,MC,4|BTN,12,154,140,52,#069322,YES,FREE_YES|BTN,168,154,140,52,#A91414,NO,FREE_NO"
+    },
+    {
+      "name": "DR FINISH",
+      "durationSec": 5,
+      "durationMode": "fixed",
+      "relayBitmask": 0,
+      "intervalBitmask": 0,
+      "intervalOnSec": 60,
+      "intervalOffSec": 60,
+      "sensorBitmask": 0,
+      "phaseBitmask": 0,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "timerZero",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "TAPS"
+        }
+      ],
+      "displayTokens": "#000000|ST,160,76,#FFFFFF,Thank you,MC,2|ST,160,102,#FFFFFF,for your patronage!,MC,2|TT,160,144,#FFFF00,We hope to see you again! :D,500,MC,2"
+    },
+    {
+      "name": "DR ABORT",
+      "durationSec": 0,
+      "durationMode": "fixed",
+      "relayBitmask": 0,
+      "intervalBitmask": 0,
+      "intervalOnSec": 60,
+      "intervalOffSec": 60,
+      "sensorBitmask": 0,
+      "phaseBitmask": 0,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "btn:ABORT_YES",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "COOLDOWN"
+        },
+        {
+          "conditions": [
+            {
+              "key": "btn:ABORT_NO",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "__return__"
+        }
+      ],
+      "displayTokens": "#000000|ST,160,120,#FFFFFF,COIN(s) won't be Refunded.,MC,2|ST,160,88,#FFFFFF,Cancel operation?,MC,2|BTN,12,154,140,52,#A91414,CONFIRM,ABORT_YES|BTN,168,154,140,52,#069322,RESUME,ABORT_NO"
+    },
+    {
+      "name": "DR CANCEL",
+      "durationSec": 0,
+      "durationMode": "fixed",
+      "relayBitmask": 0,
+      "intervalBitmask": 0,
+      "intervalOnSec": 60,
+      "intervalOffSec": 60,
+      "sensorBitmask": 0,
+      "phaseBitmask": 0,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "btn:CANCEL_YES",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "TAPS"
+        },
+        {
+          "conditions": [
+            {
+              "key": "btn:CANCEL_NO",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "__return__"
+        }
+      ],
+      "displayTokens": "#000000|ST,160,88,#FFFFFF,Cancel operation?,MC,2|ST,160,120,#FFFFFF,COIN(s) won't be Refunded.,MC,2|BTN,12,154,140,52,#3B891A,YES,CANCEL_YES|BTN,168,154,140,52,#991414,NO,CANCEL_NO"
+    },
+    {
+      "name": "DR HELMET NOTICE A",
+      "durationSec": 2,
+      "durationMode": "fixed",
+      "relayBitmask": 0,
+      "intervalBitmask": 0,
+      "intervalOnSec": 60,
+      "intervalOffSec": 60,
+      "sensorBitmask": 0,
+      "phaseBitmask": 0,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "timerZero",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "DR OPEN A"
+        }
+      ],
+      "displayTokens": "#000000|TT,160,120,#FFFF00,HELMET,500,MC,4|ST,160,92,#FFFFFF,NO,MC,2|ST,160,152,#FFFFFF,DETECTED,MC,2"
+    },
+    {
+      "name": "DR HELMET NOTICE B",
+      "durationSec": 2,
+      "durationMode": "fixed",
+      "relayBitmask": 0,
+      "intervalBitmask": 0,
+      "intervalOnSec": 60,
+      "intervalOffSec": 60,
+      "sensorBitmask": 0,
+      "phaseBitmask": 0,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "timerZero",
+              "negate": false
+            }
+          ],
+          "isElse": false,
+          "remember": [],
+          "goto": "DR OPEN B"
+        }
+      ],
+      "displayTokens": "#000000|TT,160,120,#FFFF00,HELMET,500,MC,4|ST,160,152,#FFFFFF,DETECTED,MC,2"
+    },
+    {
+      "name": "MAINTENANCE",
+      "durationSec": 0,
+      "durationMode": "fixed",
+      "relayBitmask": 0,
+      "intervalBitmask": 0,
+      "intervalOnSec": 60,
+      "intervalOffSec": 60,
+      "sensorBitmask": 0,
+      "phaseBitmask": 0,
+      "branches": [],
+      "displayTokens": "#000000|ST,160,80,#FFFFFF,IT'S ON,TC,2|TT,160,120,#FFD84E,MAINTENANCE,1000,MC,4"
+    },
+    {
+      "name": "OUT OF ORDER",
+      "durationSec": 0,
+      "durationMode": "fixed",
+      "relayBitmask": 0,
+      "intervalBitmask": 0,
+      "intervalOnSec": 60,
+      "intervalOffSec": 60,
+      "sensorBitmask": 480,
+      "phaseBitmask": 0,
+      "branches": [
+        {
+          "conditions": [
+            {
+              "key": "alcoholEnough",
+              "negate": false
+            },
+            {
+              "key": "scentedEnough",
+              "negate": false,
+              "joiner": "AND"
+            }
+          ],
+          "isElse": false,
+          "remember": [
+            "bypass=off"
+          ],
+          "goto": "TAPS"
+        }
+      ],
+      "displayTokens": "#000000|TT,160,120,#FF0000,OUT OF ORDER,1000,MC,4"
+    }
+  ]
+}

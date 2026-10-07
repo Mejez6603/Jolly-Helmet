@@ -20,8 +20,18 @@ enum DeviceID : uint8_t {
                         // settings so they survive a Local Server replacement/reflash
     DEVICE_S3C    = 7, // Box 2 Internal Server Management (ESP32-S3) - same role as S3A,
                         // for Box 2 (C1/C2) instead of Box 1
-    DEVICE_A3     = 8  // Box 1 relay controller (added 2026-10-02): every relay-driven output, 12 channels.
-                        // A2 is sensing only once A3 exists. Box 3's B3 will get its own ID later.
+    DEVICE_A3     = 8, // Box 1 relay controller (added 2026-10-02): every relay-driven output, 12 channels.
+                        // A2 is sensing only once A3 exists.
+    // --- Box 3 (Cleaning + Drying), added 2026-10-03: the same four-node split as Box 1 under its own IDs. B1 = A1's role
+    // (screen / touch / coins / buzzer), B2 = A2's role (sensors only; it sends A2SensorPacket with deviceID = DEVICE_B2),
+    // B3 = A3's role plus a Heater relay (13 channels; it sends A3StatusPacket with deviceID = DEVICE_B3), S3B = the brain. ---
+    DEVICE_B1     = 9,
+    DEVICE_B2     = 10,
+    DEVICE_B3     = 11,
+    DEVICE_S3B    = 12, // Box 3 Internal Server Management (ESP32-S3) - runs the whole Box 3 customer flow, like S3A for Box 1
+    // --- 2026-10-03: DEVICE_ACS (3) is now ACS 1 = Box 1's refill system; ACS 2 = Box 3's refill system has its own ID so the two
+    // boards never answer each other's boxes (S3A asks DEVICE_ACS, S3B asks DEVICE_ACS2). Both run the same sketch design. ---
+    DEVICE_ACS2   = 13
 };
 
 // Box 2's state machine - shared here (not Master-local) so both Node S3C (which runs it)
@@ -49,11 +59,25 @@ enum Box2State : uint8_t {
                                    // min/max coins before proceeding
     B2_STATE_INSERT_COIN    = 12, // Step 5: coin accumulation against the chosen duration's cost
                                    // (was B2_STATE_IDLE's role) - has its own Cancel confirmation
-    B2_STATE_COOL_DOWN      = 13, // Step 9: Fan-only cool-down after Heating, before Rate B - not
-                                   // coin-gated, but runs exactly as long as Heating just did (a
-                                   // longer-paid Heating session leaves the helmet hotter)
-    B2_STATE_RATE_B         = 14, // Step 10: moisture/satisfaction rating, after cooling down
-    B2_STATE_CANCEL_CONFIRM = 15  // Step 5's "are you sure you want to cancel?" dialog
+    B2_STATE_COOL_DOWN      = 13, // Fan-only cool-down after Heating, before OPEN B - not coin-gated. Since 2026-10-03 its
+                                   // length is a plain number of seconds (setting "cooldown", default 60), no longer a ratio
+                                   // of the heating time. Also entered after an ABORT, so a hot helmet gets the fan first.
+    B2_STATE_RATE_B         = 14, // moisture/satisfaction rating, after cooling down
+    B2_STATE_CANCEL_CONFIRM = 15, // Step 5's "are you sure you want to cancel?" dialog
+    // --- Added 2026-10-03 for the new Box 2 procedure (Designer export BOX 2 STEP.txt, 24 steps). Appended, never
+    // renumbered. Mapping from the Designer's steps: INSTRUCTIONS = OPEN A, RETRIEVE = OPEN B, HEATING covers
+    // HEATING and HEATING FREE (a flag in S3C), START HEATING is only a routing decision, B2_STATE_SENSORS (2) is
+    // superseded by PLACE_HELMET + CLOSE_DOOR_A. OUT OF ORDER drawn by C1 itself when S3C is silent is C1's own
+    // screen and is not a state; B2_STATE_OUT_OF_ORDER below is S3C's own (C2 is not answering). ---
+    B2_STATE_PLACE_HELMET   = 16, // "SENSORS A": door open, waiting for the helmet to be placed inside
+    B2_STATE_CLOSE_DOOR_A   = 17, // helmet placed, waiting for the door to be closed
+    B2_STATE_TAKE_HELMET    = 18, // "SENSORS B": door open, waiting for the helmet to be taken out
+    B2_STATE_CLOSE_DOOR_B   = 19, // helmet out, waiting for the door to be closed
+    B2_STATE_FREE_RETRY     = 20, // YES / NO prompt after RATE B (once per session)
+    B2_STATE_MAINTENANCE    = 21, // entered from the Local Server dashboard only
+    B2_STATE_HELMET_NOTICE_A = 22, // 2-second "HELMET NO DETECTED" notice, then back to OPEN A
+    B2_STATE_HELMET_NOTICE_B = 23, // 2-second "HELMET DETECTED" notice (still inside), then back to OPEN B
+    B2_STATE_OUT_OF_ORDER   = 24  // S3C-driven: C2 (relays/sensors) is not answering - clears when it is back
 };
 
 enum MachineState : uint8_t {
@@ -103,7 +127,13 @@ enum MachineState : uint8_t {
                                // different from A1's own screen for a dead S3A)
     // Added later the same day, from the user's second Designer export (steps 31-32):
     STATE_HELMET_NOTICE_A = 27, // 2-second "HELMET NO DETECTED" notice, then back to OPEN A
-    STATE_HELMET_NOTICE_B = 28  // 2-second "HELMET DETECTED" notice (still inside), then back to OPEN B
+    STATE_HELMET_NOTICE_B = 28, // 2-second "HELMET DETECTED" notice (still inside), then back to OPEN B
+    // --- Added 2026-10-03 for Box 3 (S3B reuses this enum; Box 3 = Box 1's flow plus the DRYING procedure). Appended, never renumbered. ---
+    STATE_SELECT_MODE     = 29, // CLEANING / DRYING choice (after WELCOME)
+    STATE_SELECT_DRY_ONLY = 30, // same screen with CLEANING greyed out and not pressable (containers low and the refill gave up)
+    STATE_DRYING          = 31, // the DRYING procedure's heating step: Heater + UV 1 + UV 2 (the Designer's HEATING / HEATING FREE)
+    STATE_COOL_DOWN       = 32, // Box 3's passive wait after the heating (no fan on Box 3): everything off, for a number of seconds
+    STATE_RATE_B1         = 33  // cleaning only: the DRYNESS rating after the clean (the odor rating that follows is STATE_RATE_B)
 };
 
 enum CommandOpcode : uint8_t {
@@ -117,11 +147,28 @@ enum CommandOpcode : uint8_t {
     CMD_TOUCH_ACTION    = 7, // Node A1 touch button trigger to Master
     CMD_SYNC_VARS         = 8,  // Real-time {TIMER} and {COINS} telemetry push
     CMD_SET_MAINTENANCE   = 9,  // Pause/resume ACS automatic refill (Node ACS only) - state 1=ON, 0=OFF
-    CMD_REQUEST_DELIVERY  = 10, // Master -> ACS: deliver param16 mL of mixed product to Box 1's Humidifier
+                                 // (2026-10-03: ACS only: state 2 = "retry now" - forget the EMPTY verdicts and try the supplies again)
+    CMD_REQUEST_DELIVERY  = 10, // Box's S3 -> ACS (S3A -> DEVICE_ACS, S3B -> DEVICE_ACS2), redefined 2026-10-03: subIndex 0 = the box's
+                                 // ALCOHOL container, 1 = its SCENTED container. state 0 = "please top it up" (the S3 repeats it every
+                                 // refill interval while the container is still low; the ACS pumps ONE bounded shot per request),
+                                 // state 1 = "stop, it is full" (cancel). param16 unused.
     CMD_SET_CONFIG        = 11, // Dynamic config push, payloadStr CSV, shape depends on target:
-                                 // -> ACS:  "lowDistCm,fullDistCm,mixAlcohol,mixWater,mixScented"
+                                 // -> ACS 1 / ACS 2 (2026-10-03): subIndex 1 LEVELS (8 numbers: per mixer container, alcohol then
+                                 //          scented: emptyCm,lowCm,waterCm,fullCm), subIndex 2 TIMING (11 numbers: noRiseSec,riseMinCm,
+                                 //          wlRiseRaw,phaseMaxSec,deliverSec,emptyHoldSec,reqHoldSec,holdoffSec,wlEnter,wlLeave,wlWetHigher).
+                                 //          The ACS re-broadcasts both as CMD_SET_CONFIG (target 0) with state = 4 (ACS 1) / 5 (ACS 2).
+                                 //          subIndex 0 = the OLD 4-tank payload "lowDistCm,fullDistCm,mixAlcohol,mixWater,mixScented" -
+                                 //          the new ACS ignores it (the old LocalServer still sends it).
                                  // -> S3A:  "helmCm,lowPct,highPct,secPerCoin,minCoinsRequired"
-                                 // -> S3C:  "helmCm,secPerCoin,minCoinsRequired[,maxCoinsAllowed[,coolDownRatio]]"
+                                 // -> S3C:  subIndex 0 (old line) "helmCm,secPerCoin,minCoinsRequired[,maxCoinsAllowed[,coolDownSec]]"
+                                 //          (only helmCm, maxCoins and coolDownSec still mean anything);
+                                 //          subIndex 1 RULES, 20 numbers, same layout as S3A's; subIndex 2 HEAT: "helmCm,coolDownSec".
+                                 //          S3C re-broadcasts both as CMD_SET_CONFIG (target 0) with state = 2 so a listener can tell
+                                 //          Box 2's copy from S3A's (state 0).
+                                 // -> S3B:  subIndex 1 RULES (20 numbers, as S3A), 2 LEVELS (14, as S3A), 3 PHASES (22: paid/free
+                                 //          switches, start/end part lengths of each, and 6 relay patterns each incl. the heater),
+                                 //          4 DRYING (1 number: coolDownSec). S3B re-broadcasts them as CMD_SET_CONFIG (target 0)
+                                 //          with state = 3.
     CMD_HEARTBEAT         = 12, // Broadcast every ~1s by Master AND by each S3 host (S3A/S3C) so
                                  // every node can independently tell whether it's lost contact
                                  // with EITHER one - subIndex carries the sender's own DeviceID
@@ -140,7 +187,9 @@ enum CommandOpcode : uint8_t {
                                  // using plain CMD_STEP_RENDER so it stays fast and glitch-free -
                                  // re-initing the controller on every repaint was tried first and
                                  // caused a visible flash on every single screen change instead.
-    CMD_SET_RELAY_MASK    = 14, // S3A -> A3 (added 2026-10-02): param16 = the WHOLE 12-bit relay mask at
+    CMD_SET_RELAY_MASK    = 14, // (2026-10-03: S3C -> C2 uses it too, with the 6-bit C2RelayIndex mask; and a dashboard sends
+                                 // it to S3A / S3C while they are in MAINTENANCE.)
+                                 // S3A -> A3 (added 2026-10-02): param16 = the WHOLE 12-bit relay mask at
                                  // once (A3RelayIndex bits, 1 = ON/energized). One packet replaces five
                                  // per-relay CMD_SET_RELAY commands, so a single dropped packet cannot
                                  // leave the board half-switched. S3A re-sends the current mask every
@@ -182,6 +231,9 @@ enum C2RelayIndex : uint8_t {
     C2_RELAY_UV_LIGHT       = 4, // Pin 5  (Active LOW: LOW = ON,     HIGH = OFF)
     C2_RELAY_FAN            = 5  // Pin 23 (Active LOW: LOW = ON,     HIGH = OFF)
 };
+#define C2_RELAY_COUNT 6
+#define C2_BIT(i) (1u << (i))
+static const uint16_t C2_MASK_ALL = 0x003F;
 
 // Node ACS (Alcohol Container System / D1) relay map - separate namespace from RelayIndex above.
 enum ACSRelayIndex : uint8_t {
@@ -214,6 +266,12 @@ enum A3RelayIndex : uint8_t {
 #define A3_RELAY_COUNT 12
 #define A3_BIT(i) (1u << (i))
 static const uint16_t A3_MASK_ALL  = 0x0FFF;
+// Node B3 (Box 3 relay controller, 2026-10-03): the same 12 channels in the same order (indices 0-11 are the A3RelayIndex values
+// above) plus the HEATER (a hair dryer aimed at the helmet) on GPIO26 as channel 12 = 13 channels. B3 takes the whole mask in one
+// CMD_SET_RELAY_MASK and reports it in an A3StatusPacket with deviceID = DEVICE_B3.
+#define B3_RELAY_COUNT 13
+#define B3_RELAY_HEATER 12
+static const uint16_t B3_MASK_ALL  = 0x1FFF;
 static const uint16_t A3_MASK_MIST = A3_BIT(A3_RELAY_HUMIDIFIER_1) | A3_BIT(A3_RELAY_HUMIDIFIER_2) | A3_BIT(A3_RELAY_HUMIDIFIER_3);
 static const uint16_t A3_MASK_UV   = A3_BIT(A3_RELAY_UV_1) | A3_BIT(A3_RELAY_UV_2);
 
@@ -241,6 +299,78 @@ struct TelemetryPacket {
                                 // before the mute/debounce filters (pulseCount above is what survived them)
 } __attribute__((packed));
 
+// ---------------------------------------------------------------------
+// ACS 1 (Box 1) / ACS 2 (Box 3) - the refill system, REDESIGNED 2026-10-03 (one design for both, board "E1"): three supply tanks
+// WITHOUT sensors (Water, Alcohol, Scented), two MIXER containers (Alcohol+Water, Scented+Water) each with an ultrasonic (US) and a
+// water-level sensor (WL), six pumps - one runs at a time. The boss's rule: a fill pump runs and the level does not rise => that
+// supply is empty. Everything below ACSStatusPacket is the new design; the ACSRelayIndex / ACSTelemetryPacket / ACSAutoState block
+// after it is the RETIRED 4-tank design, kept only because the old LocalServer still compiles against it.
+// ---------------------------------------------------------------------
+enum ACSPump : uint8_t {              // = bit position in ACSStatusPacket::pumpMask and the subIndex of CMD_SET_RELAY (maintenance)
+    ACS_PUMP_ALCOHOL   = 0,           // GPIO18  alcohol supply  -> alcohol mixer container
+    ACS_PUMP_WATER_A   = 1,           // GPIO21  water supply    -> alcohol mixer container
+    ACS_PUMP_WATER_S   = 2,           // GPIO23  water supply    -> scented mixer container
+    ACS_PUMP_SCENTED   = 3,           // GPIO19  scented supply  -> scented mixer container
+    ACS_PUMP_MIXER_A   = 4,           // GPIO22  alcohol mixer container -> the box's alcohol humidifier container
+    ACS_PUMP_MIXER_S   = 5            // GPIO25  scented mixer container -> the box's scented humidifier container
+};
+#define ACS_PUMP_COUNT 6
+
+enum ACSStep : uint8_t {              // = the Designer's ACS step list (ACS1_/ACS2_STEPS_2026-10-03_draft_v1.json)
+    ACS_STEP_IDLE            = 0,
+    ACS_STEP_ALC_WATER_IN    = 1,
+    ACS_STEP_ALC_ALCOHOL_IN  = 2,
+    ACS_STEP_SCT_WATER_IN    = 3,
+    ACS_STEP_SCT_SCENTED_IN  = 4,
+    ACS_STEP_DELIVER_ALCOHOL = 5,
+    ACS_STEP_DELIVER_SCENTED = 6,
+    ACS_STEP_WATER_EMPTY     = 7,     // shown while idle with the water supply judged empty (retry timer running)
+    ACS_STEP_ALCOHOL_EMPTY   = 8,
+    ACS_STEP_SCENTED_EMPTY   = 9,
+    ACS_STEP_MAINTENANCE     = 10
+};
+
+// ACSStatusPacket::flags
+#define ACS_F_ALC_LOW   0x01          // alcohol mixer container is below its LOW line
+#define ACS_F_ALC_FULL  0x02          // ... at/above its FULL line (US) or the WL is wet
+#define ACS_F_SCT_LOW   0x04
+#define ACS_F_SCT_FULL  0x08
+#define ACS_F_ALC_WET   0x10          // the alcohol container's water-level sensor says WET
+#define ACS_F_SCT_WET   0x20
+#define ACS_F_MAINT     0x40          // maintenance mode (automatic work paused, pumps by hand)
+#define ACS_F_REQUEST   0x80          // a refill request from the box is waiting
+// ACSStatusPacket::empty - the supply tanks have no sensors; these are the verdicts of "the pump ran and the level did not rise"
+#define ACS_E_WATER     0x01
+#define ACS_E_ALCOHOL   0x02
+#define ACS_E_SCENTED   0x04
+// ACSStatusPacket::warn
+#define ACS_W_US_ALC    0x01          // no echo from the alcohol container's ultrasonic
+#define ACS_W_US_SCT    0x02
+#define ACS_W_DISAGREE_A 0x04         // WL says wet but the US reads far from full (alcohol container)
+#define ACS_W_DISAGREE_S 0x08
+#define ACS_W_INCOMPLETE_A 0x10       // the alcohol container holds a half-made mix (recipe interrupted) - it will not be delivered
+#define ACS_W_INCOMPLETE_S 0x20
+#define ACS_W_TIMEOUT   0x40          // a pump hit its time limit without reaching its line (blocked tube / wrong line setting)
+
+#pragma pack(push, 1)
+struct ACSStatusPacket {              // 22 bytes - must stay different from every other packet's size (static_assert below)
+    uint8_t  deviceID;                // DEVICE_ACS (ACS 1, Box 1) or DEVICE_ACS2 (ACS 2, Box 3)
+    uint8_t  step;                    // ACSStep (the "displayed" step: an idle ACS with a supply judged empty shows its *_EMPTY step)
+    uint8_t  pumpMask;                // bit n = ACSPump n is running
+    uint8_t  flags;                   // ACS_F_*
+    uint8_t  empty;                   // ACS_E_*
+    uint8_t  warn;                    // ACS_W_*
+    float    usAlcCm;                 // ultrasonic distance, alcohol mixer container (0 = no echo)
+    float    usSctCm;                 // ... scented mixer container
+    uint16_t wlAlcRaw;                // water-level sensor raw 12-bit reading, alcohol mixer container
+    uint16_t wlSctRaw;
+    uint8_t  levelAlcPct;             // 0-100, from the US (WL wet = 100)
+    uint8_t  levelSctPct;
+    uint16_t stepSec;                 // seconds in the current step; while an EMPTY verdict is pending, seconds until the retry
+} __attribute__((packed));
+#pragma pack(pop)
+
+// ---- RETIRED 4-tank design (kept so the old LocalServer still compiles; the new ACS does not send this packet) ----
 // Node ACS (D1) Telemetry Structure Payload
 struct ACSTelemetryPacket {
     uint8_t  deviceID;             // DEVICE_ACS
@@ -297,13 +427,9 @@ struct Box2ConfigPacket {
                                  // independent of Box 1's (S3A's) value
     uint32_t minCoinsRequired;  // coins that must be inserted before B2_STATE_IDLE -> B2_STATE_INSTRUCTIONS
     uint32_t maxCoinsAllowed;   // Box 2 only - coins beyond this stop adding cycle time (0 = no cap)
-    float    coolDownRatio;     // Added 2026-09-14, Box 2 only - fraction of Heating's actual
-                                 // duration that B2_STATE_COOL_DOWN runs for (1.0 Full / 0.75 /
-                                 // 0.5 Half / 0.25 Quarter - dashboard constrains it to these 4).
-                                 // Independent knob from secondsPerCoin/minCoinsRequired since a
-                                 // long Heating session doesn't necessarily need equally long
-                                 // cooling to be safely wearable - default 1.0 preserves the
-                                 // originally-shipped "matches Heating exactly" behavior.
+    uint32_t coolDownSec;       // 2026-10-03, Box 2 only - how many SECONDS B2_STATE_COOL_DOWN runs (default 60, set from
+                                 // the dashboard / console). Replaces the old float coolDownRatio ("Full / 3/4 / 1/2 / 1/4 of
+                                 // the heating time"): same 4 bytes, so the packet stays 19 bytes and clear of every other size.
 } __attribute__((packed));
 
 // Live state-machine status for either Box 1 (from Node S3A) or Box 2 (from Node S3C),
@@ -421,5 +547,14 @@ static_assert(sizeof(A2SensorPacket) != sizeof(CommandPacket) &&
               sizeof(A2SensorPacket) != sizeof(BoxStatusPacket) &&
               sizeof(A2SensorPacket) != sizeof(A3StatusPacket),
               "A2SensorPacket collides in size with another packet type - onDataRecv() dispatch-by-length will misroute packets");
+static_assert(sizeof(ACSStatusPacket) != sizeof(CommandPacket) &&
+              sizeof(ACSStatusPacket) != sizeof(TelemetryPacket) &&
+              sizeof(ACSStatusPacket) != sizeof(ACSTelemetryPacket) &&
+              sizeof(ACSStatusPacket) != sizeof(Box1ConfigPacket) &&
+              sizeof(ACSStatusPacket) != sizeof(Box2ConfigPacket) &&
+              sizeof(ACSStatusPacket) != sizeof(BoxStatusPacket) &&
+              sizeof(ACSStatusPacket) != sizeof(A3StatusPacket) &&
+              sizeof(ACSStatusPacket) != sizeof(A2SensorPacket),
+              "ACSStatusPacket collides in size with another packet type - onDataRecv() dispatch-by-length will misroute packets");
 
 #endif // SHARED_COMMON_H

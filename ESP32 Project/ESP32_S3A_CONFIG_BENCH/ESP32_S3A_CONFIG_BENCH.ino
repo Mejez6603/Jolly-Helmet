@@ -79,7 +79,7 @@ void onDataRecv(const esp_now_recv_info_t *info, const uint8_t *incomingData, in
         CommandPacket c;
         memcpy(&c, incomingData, sizeof(CommandPacket));
         // The S3A re-broadcasts its settings as CMD_SET_CONFIG to everyone (target 0): subIndex 1 = RULES, 2 = LEVELS.
-        if (c.commandID != CMD_SET_CONFIG || c.targetDeviceID != 0) return;
+        if (c.commandID != CMD_SET_CONFIG || c.targetDeviceID != 0 || c.state != 0) return;   // state 0 = Box 1's S3A; state 2 = Box 2's S3C and 3 = Box 3's S3B send the same lists
         c.payloadStr[sizeof(c.payloadStr) - 1] = '\0';
         portENTER_CRITICAL(&mux);
         if (c.subIndex == 1) copyCsv(rulesCsv, sizeof(rulesCsv), c.payloadStr);
