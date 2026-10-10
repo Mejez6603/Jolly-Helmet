@@ -50,7 +50,7 @@ async function pollOnce() {
 
 /* keeps the last ~90 container levels for the little graphs (only while the page stays open) */
 function pushHistory(L) {
-  const add = (k, v) => { if (typeof v !== 'number' || v < 0) return; const a = S.hist[k] || (S.hist[k] = []); a.push(v); if (a.length > 90) a.shift(); };
+  const add = (k, v) => { if (typeof v !== 'number' || v < 0) return; const a = S.hist[k] || (S.hist[k] = []); a.push(v); if (a.length > 90) a.shift(); if (typeof Hist !== 'undefined') Hist.push(k, v, Date.now()); };
   (L.b || []).forEach((b, i) => { add('b' + i + 'a', b && b[5]); add('b' + i + 's', b && b[6]); });
   (L.a || []).forEach((a, i) => { add('a' + i + 'a', a && a[5]); add('a' + i + 's', a && a[6]); });
 }

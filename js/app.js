@@ -4,18 +4,21 @@
 /* ---- status badge + "updated x ago" (runs every second) ---- */
 function tickStatus() {
   const pill = $('pill'), t = $('pillT'), ag = $('agoText');
+  const was = S.link;
   if (S.err) {
+    S.link = 'err';
     pill.className = 'pill dead'; t.textContent = /token/i.test(S.err) ? 'BAD TOKEN' : 'NO LINK';
     ag.textContent = S.okAt ? 'last answer ' + ago((Date.now() - S.okAt) / 1000) + ' ago' : ''; return;
   }
-  if (!S.okAt) { pill.className = 'pill'; t.textContent = 'CONNECTING'; ag.textContent = ''; return; }
-  if (!S.live) { pill.className = 'pill late'; t.textContent = 'NO DATA'; ag.textContent = ''; return; }
+  if (!S.okAt) { S.link = 'wait'; pill.className = 'pill'; t.textContent = 'CONNECTING'; ag.textContent = ''; return; }
+  if (!S.live) { S.link = 'nodata'; pill.className = 'pill late'; t.textContent = 'NO DATA'; ag.textContent = ''; return; }
   const iv = nz(S.live.iv, 60), now = Date.now();
   const age = (S.live.ts > 1.6e9) ? Math.max(0, now / 1000 - S.live.ts) : (now - S.lastChange) / 1000;   // device time if it has one
   ag.textContent = 'updated ' + ago(age) + ' ago';
-  if (age <= iv * 2 + 15)      { pill.className = 'pill live'; t.textContent = DEMO ? 'DEMO' : 'LIVE'; }
-  else if (age <= iv * 6 + 30) { pill.className = 'pill late'; t.textContent = 'DELAYED'; }
-  else                         { pill.className = 'pill dead'; t.textContent = 'OLD DATA'; }
+  if (age <= iv * 2 + 15)      { S.link = 'live'; pill.className = 'pill live'; t.textContent = DEMO ? 'DEMO' : 'LIVE'; }
+  else if (age <= iv * 6 + 30) { S.link = 'late'; pill.className = 'pill late'; t.textContent = 'DELAYED'; }
+  else                         { S.link = 'dead'; pill.className = 'pill dead'; t.textContent = 'OLD DATA'; }
+  if (was !== S.link && (S.link === 'dead' || was === 'dead') && typeof Alerts !== 'undefined') Alerts.update(S.live);   // the data went stale (or came back) between two readings
 }
 
 /* ---- refresh loop ---- */
@@ -28,7 +31,7 @@ async function loop(force) {
       S.err = (e && e.message) || 'network error';
       if (/Failed to fetch|NetworkError|Load failed|abort/i.test(S.err)) S.err = 'no internet, or Blynk did not answer.';
     }
-    renderAll(); tickStatus();
+    renderAll(); tickStatus(); Alerts.update(S.live);
   }
   timer = setTimeout(loop, (S.err && /token/i.test(S.err) ? 30 : cfg.pollSec) * 1000);
 }
@@ -62,5 +65,9 @@ $('themeBtn').onclick = () => {
   document.documentElement.dataset.theme = nx; store.set('jh_theme', nx);
 };
 if (store.get('jh_theme')) document.documentElement.dataset.theme = store.get('jh_theme');
+const qTheme = new URLSearchParams(location.search).get('theme');          // index.html?theme=light or ?theme=dark (handy for screenshots)
+if (qTheme === 'light' || qTheme === 'dark') document.documentElement.dataset.theme = qTheme;
 
+Checklist.publish();
 start();
+Tabs.route();                                          // open the tab named in the address (#alerts, #reports ...)

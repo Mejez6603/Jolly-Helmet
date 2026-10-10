@@ -1,0 +1,23 @@
+/* Customer status page (status.html). Uses the colour tokens of style.css, so light and dark both work. */
+body.statuspage { padding-bottom:30px; }
+.shead { background:var(--top); color:#fff; box-shadow:0 2px 8px rgba(0,0,0,.25); }
+.shead-in { max-width:760px; margin:0 auto; padding:9px 16px; display:flex; align-items:center; gap:12px; }
+.smain { max-width:760px; margin:0 auto; padding:18px 16px; display:grid; gap:14px; }
+.smain h1 { font-size:26px; color:var(--head); line-height:1.15; }
+.upd { color:var(--muted); font-size:13px; margin-top:-8px; }
+.sboxes { display:grid; gap:12px; }
+.bx { display:flex; gap:16px; align-items:center; padding:18px 18px; border-radius:18px; background:var(--card); box-shadow:var(--shadow); border-left:10px solid var(--idle); }
+.bx .ic { flex:none; width:68px; height:68px; border-radius:50%; display:grid; place-items:center; font-size:34px; font-weight:800; background:var(--idlebg); color:var(--idle); }
+.bx .nm { font-size:15px; font-weight:800; color:var(--head); } .bx .nm small { font-weight:600; color:var(--muted); font-size:13px; margin-left:6px; }
+.bx .stt { font-size:30px; font-weight:900; letter-spacing:.3px; line-height:1.1; margin:2px 0; }
+.bx .hint { font-size:15px; color:var(--ink); } .bx .pr { font-size:13px; color:var(--muted); margin-top:4px; }
+.bx .tl { font-variant-numeric:tabular-nums; font-weight:800; }
+.bx.free { border-left-color:var(--ok); } .bx.free .ic { background:var(--okbg); color:var(--ok); } .bx.free .stt { color:var(--ok); }
+.bx.busy { border-left-color:var(--use); } .bx.busy .ic { background:var(--usebg); color:var(--use); } .bx.busy .stt { color:var(--use); }
+.bx.oos { border-left-color:var(--bad); background:var(--badbg); } .bx.oos .ic { background:var(--card); color:var(--bad); } .bx.oos .stt { color:var(--bad); }
+.bx.maint { border-left-color:var(--maint); } .bx.maint .ic { background:var(--maintbg); color:var(--maint); } .bx.maint .stt { color:var(--maint); }
+.bx.dryonly { border-left-color:var(--amber); } .bx.dryonly .ic { background:var(--warnbg); color:var(--warn); } .bx.dryonly .stt { color:var(--warn); }
+.bx.noinfo .stt { color:var(--idle); }
+.how h2 { font-size:15px; letter-spacing:.2px; text-transform:none; color:var(--head); margin:0 0 6px; }
+.how ol { margin:0 0 0 20px; display:grid; gap:5px; } .how p { color:var(--ink); }
+@media (max-width:480px) { .bx { padding:14px; gap:12px; } .bx .ic { width:54px; height:54px; font-size:28px; } .bx .stt { font-size:25px; } .smain h1 { font-size:22px; } }

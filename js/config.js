@@ -13,7 +13,19 @@ const CONFIG = {
   token: '',
   server: 'blynk.cloud',
   pollSec: 10,
-  coin: '₱'
+  coin: '₱',
+  // ---- the customer page (status.html) ----
+  // publicToken  token of the SECOND, PUBLIC Blynk device that the Online Server writes the customer status to (Online Server setup page, "Public status
+  //              device token"). It is meant to be public: it holds nothing but which machine is free, busy or out of order. NEVER put the
+  //              private token here. Leave empty to give it in the address instead:  status.html#t=THE_PUBLIC_TOKEN  (that is what the QR code does).
+  publicToken: '',
+  statusPollSec: 30,                     // how often a customer's page asks Blynk (only while it is open and visible)
+  prices: {                              // shown on the customer page, edit to match the Control Center prices
+    'Box 1': '15 coins = 5 minutes',
+    'Box 2': '10 coins = 3 minutes',
+    'Box 3': '15 coins = 5 minutes'
+  },
+  contact: 'Ask the staff, or tell the owner.'     // "Something wrong?" line on the customer page
 };
 
 /* ---- demo mode:  index.html?demo   or   index.html?demo=alerts   (made-up data, no Blynk needed) ---- */

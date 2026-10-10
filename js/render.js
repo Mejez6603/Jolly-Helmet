@@ -77,33 +77,14 @@ function acsCard(i, a) {
   return h + `</div>`;
 }
 
-/* ---- everything that needs attention ---- */
-function alertsFor(L) {
-  const out = [], n = nodeFlags(L);
-  (L.b || []).forEach((b, i) => {
-    if (!b) return; const def = BOXES[i];
-    if (n[def.brain]) {
-      const name = def.st[b[0]] || '';
-      if (name === 'OUT OF ORDER') out.push(`${def.name} is OUT OF ORDER`);
-      if (name === 'SELECT DRY ONLY') out.push(`${def.name}: CLEANING is switched off (a container is low). Drying still works.`);
-      if (name === 'SAFETY PAUSE') out.push(`${def.name}: paused, a door was opened during a run`);
-    }
-    if (def.tanks && n[def.sensors]) {
-      if (nz(b[5], -1) >= 0 && b[5] < 15) out.push(`${def.name}: alcohol container is low (${Math.round(b[5])}%)`);
-      if (nz(b[6], -1) >= 0 && b[6] < 15) out.push(`${def.name}: scented container is low (${Math.round(b[6])}%)`);
-    }
-  });
-  (L.a || []).forEach((a, i) => {
-    if (!a || !a[0]) return; const t = 'ACS ' + (i + 1), flags = a[2], empty = a[3];
-    if (empty & 1) out.push(`${t}: WATER tank is empty`); if (empty & 2) out.push(`${t}: ALCOHOL tank is empty`); if (empty & 4) out.push(`${t}: SCENTED tank is empty`);
-    if (flags & 1) out.push(`${t}: alcohol mixer container is low`); if (flags & 4) out.push(`${t}: scented mixer container is low`);
-  });
-  if (L.n != null) {
-    const off = n.map((v, i) => v ? null : NODES[i]).filter(Boolean);
-    if (off.length && off.length < 13) out.push('Not heard (offline): ' + off.join(', '));
-    if (off.length === 13) out.push('The Online Server hears no machine board at all (radio or power problem at the site).');
-  }
-  return out;
+/* ---- the banners at the top of the Monitor tab (errors, then everything that needs attention: see alerts.js) ---- */
+function drawBanners() {
+  const ban = [];
+  if (S.err) ban.push(`<div class="note"><b>Cannot read Blynk:</b> ${esc(S.err)}${/token/i.test(S.err) ? ' Open Settings and check the token.' : ''}</div>`);
+  if (S.noData && !S.err) ban.push(`<div class="note"><b>Connected to Blynk, but no data yet.</b> The Online Server has not written datastream v0 yet (check that it is powered, that its setup page says ONLINE, and that datastream v0 exists in the Blynk template).</div>`);
+  ban.push(Alerts.banner());
+  const h = ban.join('');
+  const el = $('banners'); if (el && el.dataset.h !== h) { el.dataset.h = h; el.innerHTML = h; }
 }
 
 /* ---- analytics ---- */
@@ -158,16 +139,14 @@ function renderSys() {
 function renderAll() {
   const L = S.live;
   $('connect').hidden = true; $('view').hidden = false;
-  const ban = [];
-  if (S.err) ban.push(`<div class="note"><b>Cannot read Blynk:</b> ${esc(S.err)}${/token/i.test(S.err) ? ' Open Settings and check the token.' : ''}</div>`);
-  if (S.noData && !S.err) ban.push(`<div class="note"><b>Connected to Blynk, but no data yet.</b> The Online Server has not written datastream v0 yet (check that it is powered, that its setup page says ONLINE, and that datastream v0 exists in the Blynk template).</div>`);
-  if (L) { const al = alertsFor(L); if (al.length) ban.push(`<div class="alert">Needs attention<ul>${al.map(a => `<li>${esc(a)}</li>`).join('')}</ul></div>`); }
-  $('banners').innerHTML = ban.join('');
+  drawBanners();
   if (L) {
     const n = nodeFlags(L);
     $('boxes').innerHTML = [0, 1, 2].map(i => boxCard(i, (L.b || [])[i], n)).join('');
     $('acs').innerHTML = [0, 1].map(i => acsCard(i, (L.a || [])[i])).join('');
-  } else { $('boxes').innerHTML = ''; $('acs').innerHTML = ''; }
+    renderLevels(L);
+  } else { $('boxes').innerHTML = ''; $('acs').innerHTML = ''; $('levels').innerHTML = ''; }
   $('data').hidden = !L;                                // nothing to show until the first data arrives
   renderStats(); renderSys();
+  if (typeof Reports !== 'undefined') Reports.refresh();
 }

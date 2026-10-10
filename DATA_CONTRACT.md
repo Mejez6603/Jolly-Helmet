@@ -67,6 +67,10 @@ Container percent: the S3 holds the LOW line (`alcLowCm`, `sctLowCm`) and the FU
 | `cv`, `ss`, `cn`, `rv`, `ad` | Coin value (pesos), customers served, coins counted, revenue (pesos), average session seconds. Straight from the LocalServer's totals. Missing until the LocalServer has been heard. |
 | `h` | Last 10 finished sessions, oldest first, each `[seconds, pesos]`. |
 | `dy` | Last 14 days, oldest first, each `[coins, customers]`; the last entry is today. Counted by the Online Server from the change of the LocalServer totals, per local day (time zone set in the setup page). Missing until the clock is set. |
+| `sn` | Unix time when the Online Server started counting the three lists below (the moment the clock became known; reset from the setup page). |
+| `bx` | Per box, `[finished sessions, coins]` for Box 1, Box 2, Box 3, counted by the Online Server from each brain's `completedSessionSeq` (BoxStatusPacket). Revenue = coins x `cv`. |
+| `hr` | 24 numbers: finished sessions per local hour of the day (0 = midnight hour), since `sn`. |
+| `wd` | 7 numbers: finished sessions per weekday, Sunday first, since `sn`. |
 | `sys.up`, `sys.rst`, `sys.boots` | Online Server uptime (s), last restart reason, number of starts. |
 | `sys.rssi`, `sys.heap` | Wi-Fi signal (dBm) at the last upload, free memory (bytes). |
 | `sys.mq`, `sys.mqmax` | Uploads counted this calendar month, and the plan limit (only sent if you entered one). |
@@ -77,3 +81,20 @@ Container percent: the S3 holds the LOW line (`alcLowCm`, `sctLowCm`) and the FU
 * **One radio, two channels**: the machines are on channel 1, the user's router is on some other channel, and one radio can only be on one channel. The board listens on channel 1 almost all the time, takes a snapshot every `iv` seconds, joins the user's Wi-Fi for a few seconds, uploads, and goes back to channel 1. So **any Wi-Fi works** (no need to move the router to channel 1).
 * **Security**: the TLS certificate is checked against ISRG Root X1 (blynk.cloud validates against it alone; checked with openssl on 2026-10-09). Everything Blynk could send back is ignored. A Blynk token can also write values through the web API: do not publish it.
 * **Setup Wi-Fi**: the board's own Wi-Fi `JollyHelmet-Online` (password in the firmware, default `12345678`) opens a captive portal where the user picks the Wi-Fi, pastes the Blynk token and sees whether the board is connected.
+
+## 5. The public status device (added 2026-10-10) - for `status.html`, the page customers see
+A Blynk token can also WRITE, so the private token of section 1 must never be published. For a customer page a **second Blynk device** is used:
+1. Blynk Console > Devices > New device, from the SAME template (it already has V0, String). Copy its Auth Token. This token is meant to be public.
+2. Online Server setup page (JollyHelmet-Online) > "Public status device token": paste it, Save. From then on every upload also writes V0 of that device.
+3. Put the same token in `js/config.js` (`publicToken`) or give it in the address: `status.html#t=THE_PUBLIC_TOKEN` (the QR button of the monitor does that).
+
+What it holds (about 90 bytes, nothing else):
+```json
+{"seq":5,"ts":1791540182,"iv":60,"b":[[10,0,1],[3,41,1],[31,95,1]]}
+```
+`b` = Box 1, Box 2, Box 3, each `[step number, seconds left, brain heard 0/1]`; the step numbers are the same as in section 3 (`js/names.js`). The page shows
+FREE for TAPS/IDLE, IN USE for every other step (with the minutes left while it is running), OUT OF ORDER, NOT AVAILABLE for MAINTENANCE, and NO INFORMATION when
+the brain is not heard or the data is older than about 4 minutes.
+Worst case if somebody misuses the public token: they can write a wrong status into that one device (the next upload, within a minute, overwrites it) and use up
+some of your Blynk messages. They cannot reach the private device, its data or the machines.
+Cost: one more Blynk message per upload (a minute: about 43,200 more a month).
