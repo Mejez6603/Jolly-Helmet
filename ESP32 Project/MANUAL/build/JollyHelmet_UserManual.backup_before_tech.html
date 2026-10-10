@@ -1,0 +1,827 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<title>Jolly Helmet - User Manual</title>
+<style>
+ @page { size: 8in 5.1667in; margin: 0; }
+ :root { --bg:#fff2c6; --bg2:#ffe69a; --navy:#14325c; --deep:#0c2340; --amber:#f59e0b; --ink:#1d2433; --white:#fff; --green:#1b8a3f; --red:#b3261e; }
+ * { box-sizing:border-box; margin:0; padding:0; }
+ html,body { background:#777; }
+ body { font-family:Arial,Helvetica,sans-serif; color:var(--ink); }
+ .spread { width:8in; height:5.1667in; display:flex; gap:0.16in; background:#fff; page-break-after:always; break-after:page; overflow:hidden; margin:0 auto 14px; }
+ @media print { html,body{background:#fff} .spread{margin:0} }
+ .page { position:relative; width:3.92in; height:5.1667in; background:var(--bg); overflow:hidden; }
+ .page.navy { background:var(--deep); color:#fff; }
+ .page.navy img:not(.lg) { filter:drop-shadow(0 0 2px #fff) drop-shadow(0 0 5px rgba(255,255,255,.7)) drop-shadow(0 4px 6px rgba(0,0,0,.45)) !important; }
+ .page.white { background:#fff; }
+ .page.art { background:linear-gradient(160deg,var(--bg2),var(--bg)); }
+ .hdr { position:absolute; left:14px; top:10px; display:flex; align-items:center; gap:7px; }
+ .hdr img { height:30px; width:auto; filter:drop-shadow(0 1px 1px rgba(0,0,0,.3)); }
+ .hdr b { font:800 15px Arial,Helvetica,sans-serif; color:var(--navy); line-height:1; display:block; }
+ .hdr small { font:700 6.5px Arial,Helvetica,sans-serif,sans-serif; color:#5b6678; display:block; margin-top:1px; }
+ .body { position:absolute; left:14px; right:14px; top:50px; bottom:56px; }
+ .bar { position:absolute; left:0; right:0; bottom:22px; height:34px; background:var(--navy); color:#fff; font:800 12px Arial,Helvetica,sans-serif; padding:0 14px; display:flex; align-items:center; letter-spacing:.3px; }
+ .pno { position:absolute; bottom:3px; font:800 11px Arial,Helvetica,sans-serif,sans-serif; color:var(--ink); }
+ .page:nth-child(1) .pno { left:14px; } .page:nth-child(2) .pno { right:14px; }
+ h1 { font:800 19px Arial,Helvetica,sans-serif; color:var(--navy); line-height:1.05; margin-bottom:5px; }
+ h2 { font:800 12.5px Arial,Helvetica,sans-serif; color:var(--navy); margin:6px 0 2px; }
+ p, li { font-size:9.7px; line-height:1.4; }
+ p { margin-bottom:4px; }
+ ol, ul { margin-left:14px; margin-bottom:4px; }
+ li { margin-bottom:2px; }
+ .num { counter-reset:n; list-style:none; margin-left:0; }
+ .num li { position:relative; padding-left:19px; margin-bottom:4px; }
+ .num li::before { counter-increment:n; content:counter(n); position:absolute; left:0; top:0; width:14px; height:14px; border-radius:50%; background:var(--amber); color:#fff; font:800 8.5px/14px Arial,Helvetica,sans-serif,sans-serif; text-align:center; }
+ .tip { background:#fff; border-left:3px solid var(--amber); border-radius:4px; padding:4px 6px; font-size:9.1px; line-height:1.35; margin:5px 0; }
+ .warn { background:#fde8e6; border-left:3px solid var(--red); border-radius:4px; padding:4px 6px; font-size:9.1px; line-height:1.35; margin:5px 0; }
+ .row { display:flex; gap:8px; align-items:flex-start; }
+ .col { flex:1; min-width:0; }
+ .dev { background:#15151a; border-radius:9px; padding:5px; box-shadow:0 3px 6px rgba(0,0,0,.35); display:inline-block; }
+ .dev canvas { display:block; width:156px; height:117px; border-radius:3px; }
+ .dev.sm canvas { width:132px; height:99px; }
+ .dev.xs canvas { width:98px; height:73.5px; }
+ .dev.xs { padding:4px; border-radius:7px; }
+ .dev.lg canvas { width:176px; height:132px; }
+ .cap { font:700 7.8px Arial,Helvetica,sans-serif,sans-serif; color:#56607a; text-align:center; margin-top:2px; }
+ .laptop { background:#1b1f27; border-radius:6px 6px 2px 2px; padding:4px 4px 6px; box-shadow:0 3px 6px rgba(0,0,0,.35); }
+ .laptop img { display:block; width:100%; border-radius:2px; }
+ .laptop.m, .laptop.m + .base { width:78%; margin-left:auto; margin-right:auto; }
+ .laptop.m + .base { margin-top:0; }
+ .base { height:5px; background:#c8ccd4; border-radius:0 0 8px 8px; margin:0 -9px; }
+ table { border-collapse:collapse; width:100%; font-size:9.1px; }
+ th { background:var(--navy); color:#fff; font:800 8.6px Arial,Helvetica,sans-serif; padding:3px 4px; text-align:left; }
+ td { padding:3px 4px; border-bottom:1px solid rgba(20,50,92,.18); vertical-align:top; }
+ tr:nth-child(even) td { background:rgba(255,255,255,.55); }
+ .toc div { display:flex; font:700 9.5px Arial,Helvetica,sans-serif; margin:3px 0; } .toc div i { flex:1; border-bottom:1.5px dotted #6b7280; margin:0 3px 3px; } .toc .sec { font:800 10.5px Arial,Helvetica,sans-serif; color:var(--navy); margin-top:7px; }
+ .ph { border:1.5px dashed #9aa3b5; border-radius:6px; background:rgba(255,255,255,.6); color:#6b7280; font:700 8px Arial,Helvetica,sans-serif; display:flex; align-items:center; justify-content:center; text-align:center; padding:4px; }
+ .big { font:800 30px/0.95 Arial,Helvetica,sans-serif; }
+ .pill { display:inline-block; background:var(--navy); color:#fff; border-radius:9px; padding:1px 7px; font:800 8.2px Arial,Helvetica,sans-serif; }
+ code { font:700 8.6px Consolas,monospace; background:rgba(255,255,255,.8); padding:0 3px; border-radius:3px; }
+</style></head>
+<body>
+
+
+<!-- ============ 1 COVER ============ -->
+<section class="spread">
+ <div class="page navy">
+  <div style="position:absolute;left:30px;top:96px;display:flex;align-items:center;gap:12px">
+   <img src="images/logo.png" alt="" style="height:56px;width:auto;filter:drop-shadow(0 4px 4px rgba(0,0,0,.4))">
+   <div><div class="big" style="color:#fff">Jolly<span style="color:var(--amber)"> Helmet</span></div>
+   <div style="font:800 10px Arial,Helvetica,sans-serif;color:#ffd98a;margin-top:4px">Make your Helmet Happy Again!</div></div>
+  </div>
+  <div style="position:absolute;left:0;right:0;top:268px;background:#fff;color:var(--ink);padding:12px 14px;text-align:center">
+   <div style="font:800 10.5px/1.5 Arial,Helvetica,sans-serif">MEJEZ STUDIO</div>
+   <div style="font:700 8.6px/1.5 Arial,Helvetica,sans-serif">[Member Name 1], [Member Name 2],<br>[Member Name 3], [Member Name 4]</div>
+   <div style="font:700 7px Arial,Helvetica,sans-serif;color:#6b7280;margin-top:3px">DEVELOPERS AND DESIGNERS</div>
+  </div>
+  <div class="bar" style="bottom:0;background:var(--amber);color:var(--deep)">USER MANUAL</div>
+ </div>
+ <div class="page navy">
+  <div style="position:absolute;left:0;right:0;top:70px;text-align:center">
+   <img src="images/logo.png" alt="" style="height:153px;width:auto;filter:drop-shadow(0 6px 8px rgba(0,0,0,.45))">
+   <div style="font:800 21px/1.05 Arial,Helvetica,sans-serif;margin-top:14px">Clean it. Dry it.<br><span style="color:var(--amber)">Wear it happy.</span></div>
+   <div style="font:700 9px Arial,Helvetica,sans-serif;color:#cfd8ea;margin-top:8px">Coin-operated helmet cleaning and drying stations</div>
+  </div>
+  <div class="bar" style="bottom:0;background:var(--amber);color:var(--deep)">USER MANUAL</div>
+ </div>
+</section>
+
+<!-- ============ 2 TABLE OF CONTENTS ============ -->
+<section class="spread">
+ <div class="page">
+  <div class="hdr"><img class="lg" src="images/logo.png" alt=""><div><b>Jolly Helmet</b><small>Make your Helmet Happy Again!</small></div></div>
+  <div class="body toc" style="top:56px">
+   <h1 style="text-align:center">Table of contents</h1>
+   <div class="sec">FOR CUSTOMERS</div>
+   <div>Meet the machines<i></i>3</div>
+   <div>Before you start<i></i>4</div>
+   <div>Box 1 - Cleaner<i></i>5</div>
+   <div>Box 2 - Dryer<i></i>11</div>
+   <div>Box 3 - Cleaner + Dryer<i></i>13</div>
+   <div>Prices and time<i></i>15</div>
+   <div>Special screens and safety<i></i>16</div>
+   <div class="sec">FOR ADMINS (Control Center)</div>
+   <div>Connecting and Home page<i></i>21</div>
+   <div>Box settings (rules, levels, phases)<i></i>23</div>
+   <div>Screen refresh and maintenance<i></i>27</div>
+   <div>Refill station (ACS)<i></i>29</div>
+   <div>Troubleshooting and care<i></i>33</div>
+  </div>
+  <div class="bar">USER MANUAL</div><div class="pno">i</div>
+ </div>
+ <div class="page art">
+  <div class="hdr"><img class="lg" src="images/logo.png" alt=""><div><b>Jolly Helmet</b><small>Make your Helmet Happy Again!</small></div></div>
+  <div style="position:absolute;left:0;right:0;top:70px;text-align:center">
+   <img src="images/logo.png" alt="" style="height:117px;width:auto;">
+   <div style="font:800 25px/1 Arial,Helvetica,sans-serif;color:var(--navy);margin-top:12px">Welcome to<br><span style="color:var(--amber)">Jolly Helmet!</span></div>
+   <div style="font:700 9.5px/1.4 Arial,Helvetica,sans-serif;color:var(--ink);margin:10px 24px 0">A self-service station that cleans and dries your motorcycle helmet while you wait.</div>
+  </div>
+  <div class="bar">USER MANUAL</div><div class="pno">ii</div>
+ </div>
+</section>
+
+<!-- ============ 3 MEET THE MACHINES | BEFORE YOU START ============ -->
+<section class="spread">
+ <div class="page">
+  <div class="hdr"><img class="lg" src="images/logo.png" alt=""><div><b>Jolly Helmet</b><small>Make your Helmet Happy Again!</small></div></div>
+  <div class="body">
+   <h1>Meet the machines</h1>
+   <p>There are three Jolly Helmet stations. Each one has a touch screen, a coin slot and a door. Pick the one that fits what your helmet needs.</p>
+   <div class="row" style="margin-top:4px">
+    <div class="col"><div class="ph" style="height:62px"><img src="photos/box1.jpg" style="max-width:100%;max-height:100%" onerror="this.parentNode.textContent='Photo: Box 1'"></div></div>
+    <div class="col"><div class="ph" style="height:62px"><img src="photos/box2.jpg" style="max-width:100%;max-height:100%" onerror="this.parentNode.textContent='Photo: Box 2'"></div></div>
+    <div class="col"><div class="ph" style="height:62px"><img src="photos/box3.jpg" style="max-width:100%;max-height:100%" onerror="this.parentNode.textContent='Photo: Box 3'"></div></div>
+   </div>
+   <table style="margin-top:6px">
+    <tr><th>Station</th><th>What it does</th></tr>
+    <tr><td><b>Box 1</b><br>Cleaner</td><td>Removes odor. UV light plus a fine mist of alcohol, scented liquid, or both.</td></tr>
+    <tr><td><b>Box 2</b><br>Dryer</td><td>Dries a wet helmet with warm air, then cools it down before you take it out.</td></tr>
+    <tr><td><b>Box 3</b><br>Cleaner + Dryer</td><td>One station, two modes. Choose CLEANING or DRYING on the first screen.</td></tr>
+   </table>
+   <div class="tip"><b>Tip / Paalala:</b> Pwede mong gamitin ang Box 1 at Box 2 nang magkasunod: linis muna, tapos tuyo.</div>
+  </div>
+  <div class="bar">USER MANUAL</div><div class="pno">3</div>
+ </div>
+ <div class="page">
+  <div class="hdr"><img class="lg" src="images/logo.png" alt=""><div><b>Jolly Helmet</b><small>Make your Helmet Happy Again!</small></div></div>
+  <div class="body">
+   <h1>Before you start</h1>
+   <p><b>You need:</b> your helmet and coins. The machine counts coins by value: a one-peso coin counts as 1.</p>
+   <h2>How the touch screen works</h2>
+   <div class="row">
+    <div class="col">
+     <div class="dev sm"><canvas data-screen="RATE_ODOR"></canvas></div>
+     <div class="cap">Rating grid: tap a box 1-10, then CONFIRM</div>
+    </div>
+    <div class="col">
+     <div class="dev sm"><canvas data-screen="TIME_CLEAN"></canvas></div>
+     <div class="cap">Number pad: type the minutes and seconds, then OK</div>
+    </div>
+   </div>
+   <ul style="margin-top:6px">
+    <li><b>Big words</b> (yellow) tell you what to do next: OPEN, PLACE, CLOSE, TAKE.</li>
+    <li><b>Buttons</b> are the dark boxes with white words. Tap them once.</li>
+    <li>The screen blinks briefly now and then. This is normal, it refreshes itself.</li>
+   </ul>
+   <div class="warn"><b>Never</b> put your hand in while the machine runs. If you open the door, the machine pauses by itself.</div>
+  </div>
+  <div class="bar">USER MANUAL</div><div class="pno">4</div>
+ </div>
+</section>
+
+<!-- ============ 4 BOX 1: START ============ -->
+<section class="spread">
+ <div class="page">
+  <div class="hdr"><img class="lg" src="images/logo.png" alt=""><div><b>Jolly Helmet</b><small>Make your Helmet Happy Again!</small></div></div>
+  <div class="body">
+   <h1>Box 1 - Cleaner</h1>
+   <div class="row">
+    <div class="col"><div class="dev"><canvas data-screen="TAPS"></canvas></div><div class="cap">1. Tap anywhere to START</div></div>
+    <div class="col"><div class="dev"><canvas data-screen="WELCOME"></canvas></div><div class="cap">2. Welcome</div></div>
+   </div>
+   <ol class="num" style="margin-top:6px">
+    <li><b>Wake the machine.</b> Tap anywhere on the screen. For a moment it says "Please Wait" while it checks its alcohol and scented liquid.</li>
+    <li><b>Tap to START</b> on the welcome screen.</li>
+   </ol>
+   <div class="tip">If the screen says <b>OUT OF ORDER</b>, the station needs refilling or service. Please tell the staff.</div>
+  </div>
+  <div class="bar">USER MANUAL</div><div class="pno">5</div>
+ </div>
+ <div class="page">
+  <div class="hdr"><img class="lg" src="images/logo.png" alt=""><div><b>Jolly Helmet</b><small>Make your Helmet Happy Again!</small></div></div>
+  <div class="body">
+   <h1>Rate it and choose the mist</h1>
+   <div class="row">
+    <div class="col"><div class="dev"><canvas data-screen="RATE_ODOR"></canvas></div><div class="cap">3. ODOR O' METER</div></div>
+    <div class="col"><div class="dev"><canvas data-screen="METHOD"></canvas></div><div class="cap">4. CLEANING MODE</div></div>
+   </div>
+   <ol class="num" start="3" style="margin-top:6px;counter-reset:n 2">
+    <li><b>Rate the smell.</b> Tap 1 (MINT, fresh) to 10 (STINKY), then <b>CONFIRM</b>. The worse the smell, the more time we suggest.</li>
+    <li><b>Choose the mist.</b> <b>BALANCED</b> uses both liquids, <b>MORE ALCOHOL</b> is stronger against germs, <b>MORE SCENTED</b> leaves a fresher scent.</li>
+   </ol>
+  </div>
+  <div class="bar">USER MANUAL</div><div class="pno">6</div>
+ </div>
+</section>
+
+<!-- ============ 5 BOX 1: TIME, COINS, LOAD ============ -->
+<section class="spread">
+ <div class="page">
+  <div class="hdr"><img class="lg" src="images/logo.png" alt=""><div><b>Jolly Helmet</b><small>Make your Helmet Happy Again!</small></div></div>
+  <div class="body">
+   <h1>Pick the time and pay</h1>
+   <div class="row">
+    <div class="col"><div class="dev"><canvas data-screen="TIME_CLEAN"></canvas></div><div class="cap">5. ALLOCATE CLEAN TIME</div></div>
+    <div class="col"><div class="dev"><canvas data-screen="INSERT_COIN"></canvas></div><div class="cap">6. INSERT THE REQUIRED COIN</div></div>
+   </div>
+   <ol class="num" style="margin-top:6px;counter-reset:n 4">
+    <li><b>Allocate time.</b> The pad shows the time we suggest for your rating. Type a different time if you like, then tap <b>OK</b>. The shortest time and the longest time are shown if you go outside them.</li>
+    <li><b>Insert the coins.</b> The screen counts up: coins inserted / coins required. When it is enough, the machine moves on by itself.</li>
+   </ol>
+   <div class="tip">Extra coins beyond the price give no extra time and are not refunded. Tap <b>CANCEL</b> before paying if you change your mind.</div>
+  </div>
+  <div class="bar">USER MANUAL</div><div class="pno">7</div>
+ </div>
+ <div class="page">
+  <div class="hdr"><img class="lg" src="images/logo.png" alt=""><div><b>Jolly Helmet</b><small>Make your Helmet Happy Again!</small></div></div>
+  <div class="body">
+   <h1>Load your helmet</h1>
+   <div class="row">
+    <div class="col"><div class="dev xs"><canvas data-screen="OPEN_A"></canvas></div><div class="cap">7. OPEN</div></div>
+    <div class="col"><div class="dev xs"><canvas data-screen="PLACE"></canvas></div><div class="cap">8. PLACE</div></div>
+    <div class="col"><div class="dev xs"><canvas data-screen="CLOSE"></canvas></div><div class="cap">9. CLOSE</div></div>
+   </div>
+   <ol class="num" style="margin-top:6px;counter-reset:n 6">
+    <li><b>OPEN</b> the door when the screen asks.</li>
+    <li><b>PLACE</b> your helmet inside, opening facing the front, then step back.</li>
+    <li><b>CLOSE</b> the door. The machine checks that the door is shut and the helmet is inside, then starts.</li>
+   </ol>
+   <div class="tip">If you see <b>HELMET NO DETECTED</b>, the machine did not see your helmet. Open the door and place it again.</div>
+  </div>
+  <div class="bar">USER MANUAL</div><div class="pno">8</div>
+ </div>
+</section>
+
+<!-- ============ 6 BOX 1: CLEANING + FINISH ============ -->
+<section class="spread">
+ <div class="page">
+  <div class="hdr"><img class="lg" src="images/logo.png" alt=""><div><b>Jolly Helmet</b><small>Make your Helmet Happy Again!</small></div></div>
+  <div class="body">
+   <h1>While it cleans</h1>
+   <div class="row">
+    <div class="col"><div class="dev"><canvas data-screen="CLEANING"></canvas></div><div class="cap">10. Cleaning... time left</div></div>
+    <div class="col"><div class="dev"><canvas data-screen="ABORT"></canvas></div><div class="cap">CANCEL asks first</div></div>
+   </div>
+   <ul style="margin-top:6px">
+    <li>The big green number is the <b>time left</b>. The bar fills as it goes.</li>
+    <li>The small grey line shows what is on: the mist, the UV light.</li>
+    <li>To stop early tap <b>CANCEL</b>, then <b>CONFIRM</b>. <b>Coins are not refunded.</b> <b>RESUME</b> keeps cleaning.</li>
+   </ul>
+   <div class="warn">If the door is opened during a run, everything pauses (SAFETY PAUSE). Close the door and it continues where it stopped.</div>
+  </div>
+  <div class="bar">USER MANUAL</div><div class="pno">9</div>
+ </div>
+ <div class="page">
+  <div class="hdr"><img class="lg" src="images/logo.png" alt=""><div><b>Jolly Helmet</b><small>Make your Helmet Happy Again!</small></div></div>
+  <div class="body">
+   <h1>All done</h1>
+   <div class="row">
+    <div class="col"><div class="dev sm"><canvas data-screen="TAKE"></canvas></div><div class="cap">11. TAKE your helmet</div></div>
+    <div class="col"><div class="dev sm"><canvas data-screen="FREE_RETRY"></canvas></div><div class="cap">13. FREE TIME?</div></div>
+   </div>
+   <ol class="num" style="margin-top:6px;counter-reset:n 10">
+    <li><b>OPEN</b> the door and <b>TAKE</b> your helmet. Close the door again.</li>
+    <li><b>Rate it again</b> on the same 1-10 grid, then CONFIRM.</li>
+    <li><b>Free retry.</b> Not happy yet? The machine may offer a short <b>FREE TIME</b> (2 minutes). Tap <b>YES</b> to run once more, or <b>NO</b>. It is offered once per visit.</li>
+    <li>The screen thanks you and returns to the start.</li>
+   </ol>
+  </div>
+  <div class="bar">USER MANUAL</div><div class="pno">10</div>
+ </div>
+</section>
+
+<!-- ============ 7 BOX 2 ============ -->
+<section class="spread">
+ <div class="page">
+  <div class="hdr"><img class="lg" src="images/logo.png" alt=""><div><b>Jolly Helmet</b><small>Make your Helmet Happy Again!</small></div></div>
+  <div class="body">
+   <h1>Box 2 - Dryer</h1>
+   <div class="row">
+    <div class="col"><div class="dev sm"><canvas data-screen="RATE_DRY"></canvas></div><div class="cap">DRY O' METER</div></div>
+    <div class="col"><div class="dev sm"><canvas data-screen="TIME_HEAT"></canvas></div><div class="cap">ALLOCATE HEATING TIME</div></div>
+   </div>
+   <ol class="num" style="margin-top:6px">
+    <li><b>Tap anywhere</b>, then <b>Tap to START</b> (same as Box 1).</li>
+    <li><b>Rate how wet it is:</b> 1 = DRY ... 10 = WET, then CONFIRM.</li>
+    <li><b>Allocate heating time</b> on the number pad, then OK.</li>
+    <li><b>Insert the coins</b> shown on the screen.</li>
+    <li><b>OPEN, PLACE, CLOSE</b> the door, same as Box 1.</li>
+   </ol>
+  </div>
+  <div class="bar">USER MANUAL</div><div class="pno">11</div>
+ </div>
+ <div class="page">
+  <div class="hdr"><img class="lg" src="images/logo.png" alt=""><div><b>Jolly Helmet</b><small>Make your Helmet Happy Again!</small></div></div>
+  <div class="body">
+   <h1>Heating and cooling</h1>
+   <div class="row">
+    <div class="col"><div class="dev sm"><canvas data-screen="HEATING"></canvas></div><div class="cap">6. Heating...</div></div>
+    <div class="col"><div class="dev sm"><canvas data-screen="COOLDOWN"></canvas></div><div class="cap">7. Cooling Down...</div></div>
+   </div>
+   <ol class="num" style="margin-top:6px;counter-reset:n 5">
+    <li><b>Heating.</b> Warm air dries the helmet and UV light freshens it. You can CANCEL, but coins are not refunded.</li>
+    <li><b>Cooling down.</b> A fan runs alone so the helmet is not hot to wear. The door stays locked until it ends.</li>
+    <li><b>OPEN</b> the door, <b>TAKE</b> your helmet, <b>CLOSE</b> the door.</li>
+    <li><b>Rate it again,</b> then use the <b>free retry</b> if you want one.</li>
+   </ol>
+   <div class="tip">If you cancel while heating, the machine still cools the helmet down first, for your safety.</div>
+  </div>
+  <div class="bar">USER MANUAL</div><div class="pno">12</div>
+ </div>
+</section>
+
+<!-- ============ 8 BOX 3 ============ -->
+<section class="spread">
+ <div class="page">
+  <div class="hdr"><img class="lg" src="images/logo.png" alt=""><div><b>Jolly Helmet</b><small>Make your Helmet Happy Again!</small></div></div>
+  <div class="body">
+   <h1>Box 3 - Cleaner + Dryer</h1>
+   <div class="row">
+    <div class="col"><div class="dev sm"><canvas data-screen="SELECT_MODE"></canvas></div><div class="cap">SELECT MODE</div></div>
+    <div class="col"><div class="dev sm"><canvas data-screen="SELECT_DRY_ONLY"></canvas></div><div class="cap">CLEANING unavailable</div></div>
+   </div>
+   <ol class="num" style="margin-top:6px">
+    <li><b>Tap anywhere</b>, then <b>Tap to START</b>.</li>
+    <li><b>SELECT MODE.</b> Tap <b>CLEANING</b> or <b>DRYING</b>.</li>
+   </ol>
+   <div class="tip">If CLEANING is grey and says <b>UNAVAILABLE</b>, the cleaning liquids are being refilled or are low. <b>DRYING still works.</b></div>
+   <h2>CLEANING mode</h2>
+   <p>Same steps as Box 1: rate the odor, choose the mist, pick the time, pay, load the helmet. At the end you rate <b>two things</b>: how dry it is, then how it smells. The heater runs only in the last minute, together with the UV light.</p>
+  </div>
+  <div class="bar">USER MANUAL</div><div class="pno">13</div>
+ </div>
+ <div class="page">
+  <div class="hdr"><img class="lg" src="images/logo.png" alt=""><div><b>Jolly Helmet</b><small>Make your Helmet Happy Again!</small></div></div>
+  <div class="body">
+   <h1>DRYING mode</h1>
+   <div class="row">
+    <div class="col"><div class="dev sm"><canvas data-screen="DRYING"></canvas></div><div class="cap">Drying...</div></div>
+    <div class="col"><div class="dev sm"><canvas data-screen="COOLDOWN3"></canvas></div><div class="cap">Cooling Down...</div></div>
+   </div>
+   <ol class="num" style="margin-top:6px">
+    <li><b>Rate how wet</b> the helmet is (DRY O' METER), then CONFIRM.</li>
+    <li><b>Allocate drying time</b> on the number pad.</li>
+    <li><b>Pay, then OPEN, PLACE, CLOSE.</b></li>
+    <li><b>Drying</b> uses warm air and UV light. After it, the machine <b>cools down</b> for about a minute with nothing running.</li>
+    <li><b>OPEN, TAKE, CLOSE,</b> rate again and use the free retry if offered. A free retry after cleaning is another cleaning; after drying it is another drying.</li>
+   </ol>
+  </div>
+  <div class="bar">USER MANUAL</div><div class="pno">14</div>
+ </div>
+</section>
+
+<!-- ============ 9 PRICES | SPECIAL SCREENS ============ -->
+<section class="spread">
+ <div class="page">
+  <div class="hdr"><img class="lg" src="images/logo.png" alt=""><div><b>Jolly Helmet</b><small>Make your Helmet Happy Again!</small></div></div>
+  <div class="body">
+   <h1>Prices and time</h1>
+   <p><b>Box 1 and Box 3</b> (cleaning): 15 coins = 5 minutes.</p>
+   <table>
+    <tr><th>Rating</th><th>Suggested time</th><th>Coins</th></tr>
+    <tr><td>1 - 5</td><td>5 minutes</td><td>15</td></tr>
+    <tr><td>6 - 7</td><td>10 minutes</td><td>30</td></tr>
+    <tr><td>8 - 9</td><td>15 minutes</td><td>45</td></tr>
+    <tr><td>10</td><td>20 minutes</td><td>60</td></tr>
+   </table>
+   <p style="margin-top:4px">Longest session: 30 minutes (90 coins).</p>
+   <p style="margin-top:3px"><b>Box 2</b> (drying): 10 coins = 3 minutes.</p>
+   <table>
+    <tr><th>Rating</th><th>Suggested time</th><th>Coins (about)</th></tr>
+    <tr><td>1 - 3</td><td>3 minutes</td><td>10</td></tr>
+    <tr><td>4 - 6</td><td>5 minutes</td><td>17</td></tr>
+    <tr><td>7 - 8</td><td>8 minutes</td><td>27</td></tr>
+    <tr><td>9 - 10</td><td>10 minutes</td><td>34</td></tr>
+   </table>
+   <div class="tip">These are the starting prices. The admin can change them, so always check the <b>INSERT THE REQUIRED COIN</b> screen for the exact amount.</div>
+  </div>
+  <div class="bar">USER MANUAL</div><div class="pno">15</div>
+ </div>
+ <div class="page">
+  <div class="hdr"><img class="lg" src="images/logo.png" alt=""><div><b>Jolly Helmet</b><small>Make your Helmet Happy Again!</small></div></div>
+  <div class="body">
+   <h1>Special screens</h1>
+   <div class="row">
+    <div class="col"><div class="dev sm"><canvas data-screen="SAFETY_PAUSE"></canvas></div><div class="cap">Door opened during a run</div></div>
+    <div class="col"><div class="dev sm"><canvas data-screen="OUT_OF_ORDER"></canvas></div><div class="cap">Station needs service</div></div>
+   </div>
+   <table style="margin-top:6px">
+    <tr><th>You see</th><th>What it means / what to do</th></tr>
+    <tr><td><b>SAFETY PAUSE</b></td><td>The door was opened. Close it and the run continues.</td></tr>
+    <tr><td><b>HELMET NO DETECTED</b></td><td>No helmet seen. Open the door and place it again.</td></tr>
+    <tr><td><b>OUT OF ORDER</b></td><td>The station cannot work now. Use another station and tell the staff.</td></tr>
+    <tr><td><b>CLEANING UNAVAILABLE</b></td><td>Cleaning liquids are low. Use DRYING or come back later.</td></tr>
+    <tr><td><b>MAINTENANCE</b></td><td>A technician is working on the station.</td></tr>
+   </table>
+  </div>
+  <div class="bar">USER MANUAL</div><div class="pno">16</div>
+ </div>
+</section>
+
+<!-- ============ 10 SAFETY | FAQ ============ -->
+<section class="spread">
+ <div class="page">
+  <div class="hdr"><img class="lg" src="images/logo.png" alt=""><div><b>Jolly Helmet</b><small>Make your Helmet Happy Again!</small></div></div>
+  <div class="body">
+   <h1>Safety first</h1>
+   <ul>
+    <li><b>Helmets only.</b> Do not put bags, gloves, liquids or anything else inside.</li>
+    <li><b>Keep your hands out</b> while the machine runs. Hot air and UV light are used.</li>
+    <li><b>UV light</b> is strong. Never look into the chamber while it is on. The door must be closed.</li>
+    <li><b>Do not force the door.</b> It is locked on purpose while the machine runs. To stop, use CANCEL on the screen.</li>
+    <li><b>Remove your helmet's accessories</b> (camera, speaker, visor tint film) if they are not heat-safe.</li>
+    <li><b>Children</b> should use the machine with an adult.</li>
+    <li><b>In an emergency,</b> tap <b>CANCEL</b>, then <b>CONFIRM</b>. The machine stops and the door unlocks (on the dryers after a short cool-down).</li>
+   </ul>
+   <div class="warn">If a helmet is stuck because of a power cut, the door unlocks by itself after a short while. Do not pull on it.</div>
+  </div>
+  <div class="bar">USER MANUAL</div><div class="pno">17</div>
+ </div>
+ <div class="page">
+  <div class="hdr"><img class="lg" src="images/logo.png" alt=""><div><b>Jolly Helmet</b><small>Make your Helmet Happy Again!</small></div></div>
+  <div class="body">
+   <h1>Questions</h1>
+   <table>
+    <tr><th>Question</th><th>Answer</th></tr>
+    <tr><td>The screen went white.</td><td>Wait a moment, it restarts itself. If it stays white, tell the staff.</td></tr>
+    <tr><td>I inserted a coin but nothing changed.</td><td>Insert the coin again slowly. Tell the staff if the count does not move.</td></tr>
+    <tr><td>Can I get a refund?</td><td>Coins are not refunded after the run has started or been cancelled.</td></tr>
+    <tr><td>The time is too long / too short.</td><td>On the number pad, type the time you want before tapping OK.</td></tr>
+    <tr><td>Why was I offered a free retry?</td><td>Because the helmet may need one more round. It is offered once per visit.</td></tr>
+    <tr><td>Which station should I use?</td><td>Smelly: Box 1 or Box 3 CLEANING. Wet: Box 2 or Box 3 DRYING.</td></tr>
+   </table>
+  </div>
+  <div class="bar">USER MANUAL</div><div class="pno">18</div>
+ </div>
+</section>
+
+<!-- ============ 11 ADMIN DIVIDER ============ -->
+<section class="spread">
+ <div class="page art">
+  <div class="hdr"><img class="lg" src="images/logo.png" alt=""><div><b>Jolly Helmet</b><small>Make your Helmet Happy Again!</small></div></div>
+  <div style="position:absolute;left:14px;right:14px;top:62px">
+   <h1 style="text-align:center;font-size:22px">ADMIN USER MANUAL</h1>
+   <div style="text-align:center;font:700 9px Arial,Helvetica,sans-serif;margin-bottom:8px">The Control Center: settings, calibration and maintenance</div>
+   <div class="laptop"><img src="images/home.png" alt=""></div><div class="base"></div>
+   <div style="text-align:center;font:800 8.4px Arial,Helvetica,sans-serif;margin-top:8px;color:var(--navy);letter-spacing:.5px">WEB PANEL FOR ADMINS AND TECHNICIANS</div>
+  </div>
+  <div class="bar">USER MANUAL</div><div class="pno">19</div>
+ </div>
+ <div class="page art">
+  <div class="hdr"><img class="lg" src="images/logo.png" alt=""><div><b>Jolly Helmet</b><small>Make your Helmet Happy Again!</small></div></div>
+  <div style="position:absolute;left:0;right:0;top:80px;text-align:center">
+   <img src="images/logo.png" alt="" style="height:108px;width:auto;">
+   <div style="font:800 21px/1.05 Arial,Helvetica,sans-serif;color:var(--navy);margin-top:12px">For admins<br><span style="color:var(--amber)">and technicians</span></div>
+  </div>
+  <div class="bar">USER MANUAL</div><div class="pno">20</div>
+ </div>
+</section>
+
+<!-- ============ 12 CONNECT | HOME ============ -->
+<section class="spread">
+ <div class="page">
+  <div class="hdr"><img class="lg" src="images/logo.png" alt=""><div><b>Jolly Helmet</b><small>Make your Helmet Happy Again!</small></div></div>
+  <div class="body">
+   <h1>Connecting</h1>
+   <p>The Control Center is a small web server (the <b>LocalServer</b>) inside the machine. You connect to it with a phone or laptop. It does not need internet.</p>
+   <ol class="num">
+    <li>Switch on the machine and wait about 30 seconds.</li>
+    <li>On your phone, join the Wi-Fi <code>ESP32_LOCAL</code>, password <code>12345678</code>.</li>
+    <li>Open a browser and go to <code>http://192.168.4.1</code> (the page often opens by itself).</li>
+    <li>The Home page appears. Use the <b>menu button</b> (three lines, top left) to open the settings pages.</li>
+   </ol>
+   <div class="tip">The machines keep running and keep every setting even when the LocalServer is off or being replaced. It only shows, and sends your changes.</div>
+   <div class="warn">The Wi-Fi password is printed here for admins. Change it in the LocalServer program if this manual is shared outside the team.</div>
+  </div>
+  <div class="bar">USER MANUAL</div><div class="pno">21</div>
+ </div>
+ <div class="page">
+  <div class="hdr"><img class="lg" src="images/logo.png" alt=""><div><b>Jolly Helmet</b><small>Make your Helmet Happy Again!</small></div></div>
+  <div class="body">
+   <h1>Home page</h1>
+   <div class="laptop"><img src="images/home.png" alt=""></div><div class="base"></div>
+   <ul style="margin-top:7px">
+    <li><b>Alert banner</b> (red): empty supplies, low mixers, a station out of order.</li>
+    <li><b>Configure and calibrate:</b> big buttons to Box 1, Box 2, Box 3 and ACS.</li>
+    <li><b>The three boxes:</b> current step, coins counted, time left, plus <b>settings</b> and <b>refresh screen</b> links.</li>
+    <li><b>Refill systems:</b> ACS status, mixer levels, empty or running pumps.</li>
+    <li><b>Statistics:</b> users served, revenue, average time, coins, last 10 cycles.</li>
+    <li><b>Menu list:</b> online/offline badge for every board.</li>
+   </ul>
+  </div>
+  <div class="bar">USER MANUAL</div><div class="pno">22</div>
+ </div>
+</section>
+
+<!-- ============ 13 BOX SETTINGS: RULES | LEVELS ============ -->
+<section class="spread">
+ <div class="page">
+  <div class="hdr"><img class="lg" src="images/logo.png" alt=""><div><b>Jolly Helmet</b><small>Make your Helmet Happy Again!</small></div></div>
+  <div class="body">
+   <h1>Rules and prices</h1>
+   <div class="laptop m"><img src="images/rules.png" alt=""></div><div class="base"></div>
+   <p style="margin-top:7px"><b>How to use it</b> (Box 1, Box 2 and Box 3 have the same section):</p>
+   <ol class="num">
+    <li>Open the box page, scroll to <b>Rules</b>.</li>
+    <li>Set the <b>rating bands</b> (which ratings suggest how many minutes), the <b>shortest session</b>, the <b>most coins</b> and the <b>coin rate</b> (N coins = X minutes).</li>
+    <li>Set the <b>free retry</b> (from which rating, for how many minutes).</li>
+    <li>Tap <b>Send RULES</b>. A green tick means the box has saved them.</li>
+   </ol>
+  </div>
+  <div class="bar">USER MANUAL</div><div class="pno">23</div>
+ </div>
+ <div class="page">
+  <div class="hdr"><img class="lg" src="images/logo.png" alt=""><div><b>Jolly Helmet</b><small>Make your Helmet Happy Again!</small></div></div>
+  <div class="body">
+   <h1>Containers and sensors</h1>
+   <div class="laptop m"><img src="images/levels.png" alt=""></div><div class="base"></div>
+   <ul style="margin-top:7px">
+    <li><b>Check the container levels:</b> keep OFF until the numbers are measured.</li>
+    <li><b>Low / High at:</b> fill to the line, tap <b>use live</b>. Bigger number = emptier.</li>
+    <li><b>Helmet inside under:</b> put a helmet in, tap <b>use live</b>, raise it a little.</li>
+    <li><b>Water sensors:</b> <b>dry now</b>, then <b>wet now</b> in the real liquid (alcohol conducts poorly).</li>
+    <li><b>Refill tries:</b> tick <b>send the request to the ACS</b> only when the ACS works. Then tap <b>Send LEVELS</b>.</li>
+   </ul>
+  </div>
+  <div class="bar">USER MANUAL</div><div class="pno">24</div>
+ </div>
+</section>
+
+<!-- ============ 14 PHASES | DRYING ============ -->
+<section class="spread">
+ <div class="page">
+  <div class="hdr"><img class="lg" src="images/logo.png" alt=""><div><b>Jolly Helmet</b><small>Make your Helmet Happy Again!</small></div></div>
+  <div class="body">
+   <h1>Cleaning phases</h1>
+   <div class="laptop m"><img src="images/phases.png" alt=""></div><div class="base"></div>
+   <p style="margin-top:7px">A cleaning is cut into a <b>START</b> part, a <b>MIDDLE</b> part and an <b>END</b> part. Tick when each relay is on.</p>
+   <ul>
+    <li>Example: UV on in Start and End, mist in the Middle.</li>
+    <li><b>Always on</b> = tick Start, Middle and End.</li>
+    <li>Box 3: keep the <b>HEATER</b> in the End part only, never with a humidifier. The page warns you if they overlap.</li>
+    <li>Paid cleaning and the free retry have their own tables.</li>
+   </ul>
+   <p>Tap <b>Send PHASES</b>.</p>
+  </div>
+  <div class="bar">USER MANUAL</div><div class="pno">25</div>
+ </div>
+ <div class="page">
+  <div class="hdr"><img class="lg" src="images/logo.png" alt=""><div><b>Jolly Helmet</b><small>Make your Helmet Happy Again!</small></div></div>
+  <div class="body">
+   <h1>Heating and drying</h1>
+   <ul>
+    <li><b>Box 2 - Heating:</b> set the <b>helmet distance</b> (put a helmet in, <b>use live</b>) and the <b>cool-down seconds</b> (default 60, 5 to 900). Tap <b>Send HEAT</b>.</li>
+    <li><b>Box 3 - Drying:</b> set the <b>cool-down seconds</b>, then <b>Send DRYING</b>. The drying time itself comes from the customer's choice and the Rules.</li>
+   </ul>
+   <h2>Good to know</h2>
+   <ul>
+    <li>Every setting is saved <b>inside the box's own board</b>, so it survives a power cut or a LocalServer replacement.</li>
+    <li>If a number is outside its allowed range, the box refuses it. The green tick will not appear.</li>
+    <li>Use <b>Reload</b> beside a Send button to bring back what the box really has.</li>
+   </ul>
+   <div class="tip">Change one thing at a time and test it with a short session before leaving it.</div>
+  </div>
+  <div class="bar">USER MANUAL</div><div class="pno">26</div>
+ </div>
+</section>
+
+<!-- ============ 15 SCREEN REFRESH | MAINTENANCE ============ -->
+<section class="spread">
+ <div class="page">
+  <div class="hdr"><img class="lg" src="images/logo.png" alt=""><div><b>Jolly Helmet</b><small>Make your Helmet Happy Again!</small></div></div>
+  <div class="body">
+   <h1>Screen (touch display)</h1>
+   <div class="laptop m"><img src="images/screen.png" alt=""></div><div class="base"></div>
+   <p style="margin-top:7px">A heavy load switching on can make the touch screen go <b>white</b>. Three tools cure it:</p>
+   <ul>
+    <li><b>Force refresh the screen:</b> restarts it now.</li>
+    <li><b>Auto hard refresh every N seconds:</b> restarts it by itself (0 = never, 60 = max). Rating and number-pad screens are skipped.</li>
+    <li><b>Refresh when a relay switches:</b> tick the relays (ON and/or OFF) that should trigger it. The lock is normally ticked OFF.</li>
+   </ul>
+  </div>
+  <div class="bar">USER MANUAL</div><div class="pno">27</div>
+ </div>
+ <div class="page">
+  <div class="hdr"><img class="lg" src="images/logo.png" alt=""><div><b>Jolly Helmet</b><small>Make your Helmet Happy Again!</small></div></div>
+  <div class="body">
+   <h1>Maintenance mode</h1>
+   <div class="laptop"><img src="images/maint.png" alt=""></div><div class="base"></div>
+   <ol class="num" style="margin-top:7px">
+    <li>Make sure the station is on its start screen (TAPS) or OUT OF ORDER.</li>
+    <li>Tap <b>Maintenance</b>. The machine shows MAINTENANCE.</li>
+    <li>Tap a relay button to switch it on or off by hand. Green = on.</li>
+    <li>Tap <b>Maintenance</b> again. Everything switches off.</li>
+   </ol>
+   <div class="warn">The hand-set heater turns itself off after 5 minutes and the lock after 60 seconds. Keep the door shut and clear when testing the heater.</div>
+  </div>
+  <div class="bar">USER MANUAL</div><div class="pno">28</div>
+ </div>
+</section>
+
+<!-- ============ 16 ACS ============ -->
+<section class="spread">
+ <div class="page">
+  <div class="hdr"><img class="lg" src="images/logo.png" alt=""><div><b>Jolly Helmet</b><small>Make your Helmet Happy Again!</small></div></div>
+  <div class="body">
+   <h1>Refill station (ACS)</h1>
+   <div class="laptop m"><img src="images/acs.png" alt=""></div><div class="base"></div>
+   <p style="margin-top:7px"><b>ACS 1</b> refills Box 1, <b>ACS 2</b> refills Box 3. Each has three supply tanks (water, alcohol, scented), two mixer containers, and six pumps. Choose the ACS at the top of the page.</p>
+   <ul>
+    <li>When a mixer drops to its <b>refill from</b> line, the ACS adds water first, then the alcohol (or scented liquid) up to FULL.</li>
+    <li>When a box asks, the matching <b>mixer pump</b> sends one short shot to the box.</li>
+   </ul>
+  </div>
+  <div class="bar">USER MANUAL</div><div class="pno">29</div>
+ </div>
+ <div class="page">
+  <div class="hdr"><img class="lg" src="images/logo.png" alt=""><div><b>Jolly Helmet</b><small>Make your Helmet Happy Again!</small></div></div>
+  <div class="body">
+   <h1>Setting up the ACS</h1>
+   <ol class="num">
+    <li><b>Mixer container lines:</b> fill each mixer to the line and tap <b>use live</b> for <i>refill from</i>, <i>LOW</i>, <i>FULL</i> and <i>empty</i>. Smaller number = fuller. Tap <b>Send LEVELS</b>.</li>
+    <li><b>Mix:</b> the water share of each top-up (30% water = 70/30 alcohol). Tap <b>Send MIX</b>.</li>
+    <li><b>Timing / water-level sensors:</b> use <b>dry now / wet now</b> for each sensor and <b>Work out the thresholds</b>. Tap <b>Send TIMING</b>.</li>
+    <li><b>Check the pumps</b> one at a time in Maintenance before the first automatic run.</li>
+   </ol>
+   <div class="tip">Use plain water in all three supply tanks for the first test.</div>
+  </div>
+  <div class="bar">USER MANUAL</div><div class="pno">30</div>
+ </div>
+</section>
+
+<!-- ============ 17 ACS STATES | TRY IT ============ -->
+<section class="spread">
+ <div class="page">
+  <div class="hdr"><img class="lg" src="images/logo.png" alt=""><div><b>Jolly Helmet</b><small>Make your Helmet Happy Again!</small></div></div>
+  <div class="body">
+   <h1>Reading the ACS</h1>
+   <table>
+    <tr><th>You see</th><th>It means</th></tr>
+    <tr><td><span class="pill">IDLE</span></td><td>Nothing to do. Mixers are above the refill line.</td></tr>
+    <tr><td><span class="pill">ALC WATER IN</span><br><span class="pill">ALC ALCOHOL IN</span></td><td>Filling the alcohol mixer: water, then alcohol.</td></tr>
+    <tr><td><span class="pill">SCT WATER IN</span><br><span class="pill">SCT SCENTED IN</span></td><td>Filling the scented mixer.</td></tr>
+    <tr><td><span class="pill">DELIVER ...</span></td><td>Sending one shot to the box.</td></tr>
+    <tr><td><span class="pill" style="background:#b3261e">WATER / ALCOHOL / SCENTED EMPTY</span></td><td>That supply tank is empty (or its pump is dead). The pump stopped and it retries in 5 minutes.</td></tr>
+    <tr><td><b>Half-made mix</b></td><td>A recipe was interrupted. The mixer is not delivered until it is finished.</td></tr>
+   </table>
+  </div>
+  <div class="bar">USER MANUAL</div><div class="pno">31</div>
+ </div>
+ <div class="page">
+  <div class="hdr"><img class="lg" src="images/logo.png" alt=""><div><b>Jolly Helmet</b><small>Make your Helmet Happy Again!</small></div></div>
+  <div class="body">
+   <h1>Try it and fix it</h1>
+   <ul>
+    <li><b>Ask: alcohol / scented</b> pretends to be the box and makes one delivery shot. <b>Stop</b> cancels it.</li>
+    <li><b>Retry now</b> forgets an EMPTY verdict after you refilled a tank.</li>
+    <li><b>Mixers are fine as they are</b> clears the half-made flag when the mixers really hold good mix.</li>
+    <li><b>Maintenance:</b> run each of the six pumps by hand, one at a time. Each pump stops itself after 60 seconds.</li>
+   </ul>
+   <h2>Refilling a supply tank</h2>
+   <ol class="num">
+    <li>The three supply tanks have no sensors: look at them during your daily check.</li>
+    <li>Refill the tank that is low or reported EMPTY.</li>
+    <li>Tap <b>Retry now</b>.</li>
+   </ol>
+   <div class="warn">Never run a pump dry. If liquid does not move when a pump runs, check the tube and the relay wiring first.</div>
+  </div>
+  <div class="bar">USER MANUAL</div><div class="pno">32</div>
+ </div>
+</section>
+
+<!-- ============ 18 TROUBLESHOOTING | CARE ============ -->
+<section class="spread">
+ <div class="page">
+  <div class="hdr"><img class="lg" src="images/logo.png" alt=""><div><b>Jolly Helmet</b><small>Make your Helmet Happy Again!</small></div></div>
+  <div class="body">
+   <h1>Troubleshooting</h1>
+   <table>
+    <tr><th>Problem</th><th>What to do</th></tr>
+    <tr><td>Screen white or garbled</td><td>Box page, <b>Force refresh the screen</b>. If it returns, tick the relay that causes it or lower the auto-refresh time.</td></tr>
+    <tr><td>A board shows OFFLINE</td><td>Check its power and wiring, then watch its badge on Home.</td></tr>
+    <tr><td>Station shows OUT OF ORDER</td><td>One board is silent (sensor or relay board). See the offline badges.</td></tr>
+    <tr><td>CLEANING is UNAVAILABLE</td><td>Containers are low. Check the ACS; refill, then <b>Retry now</b>.</td></tr>
+    <tr><td>Coins not counted</td><td>Use the coin check on the box page: pulses should rise by the coin's value.</td></tr>
+    <tr><td>Touch is off or upside down</td><td>The terminal needs its touch calibration or rotation checked.</td></tr>
+    <tr><td>Home says last restart BROWNOUT</td><td>Power dipped. Use a stronger supply and a short cable.</td></tr>
+   </table>
+  </div>
+  <div class="bar">USER MANUAL</div><div class="pno">33</div>
+ </div>
+ <div class="page">
+  <div class="hdr"><img class="lg" src="images/logo.png" alt=""><div><b>Jolly Helmet</b><small>Make your Helmet Happy Again!</small></div></div>
+  <div class="body">
+   <h1>Care and spare parts</h1>
+   <h2>Daily check</h2>
+   <ul>
+    <li>Home page: every badge <b>ONLINE</b>, no red banner.</li>
+    <li>Look at the three ACS supply tanks (they have no sensors).</li>
+    <li>Check the revenue and the number of users.</li>
+   </ul>
+   <h2>When a board breaks</h2>
+   <ol class="num">
+    <li>Keep one spare ESP32 per role, <b>flashed and labelled</b> (A1, S3B, ACS 2...).</li>
+    <li>Swap it in and wire it exactly like the old one.</li>
+    <li>Watch its badge turn ONLINE on Home, then re-enter that box's settings if they were lost.</li>
+    <li>After rewiring, test each relay or pump by hand in Maintenance first.</li>
+   </ol>
+   <div class="tip">S3A, S3B, S3C and the LocalServer are ESP32-S3 boards (16 MB, OPI PSRAM). The relay boards A3 and B3 must be plain ESP32 boards.</div>
+  </div>
+  <div class="bar">USER MANUAL</div><div class="pno">34</div>
+ </div>
+</section>
+
+<!-- ============ 19 BACK COVER ============ -->
+<section class="spread">
+ <div class="page navy">
+  <div style="position:absolute;left:0;right:0;top:120px;text-align:center">
+   <img src="images/logo.png" alt="" style="height:81px;width:auto;">
+   <div class="big" style="font-size:24px;margin-top:10px">Thank you for using<br><span style="color:var(--amber)">Jolly Helmet</span></div>
+   <div style="font:700 9px/1.5 Arial,Helvetica,sans-serif;color:#cfd8ea;margin:10px 30px 0">We hope to see you again!<br>Make your Helmet Happy Again.</div>
+  </div>
+  <div class="bar" style="bottom:0;background:var(--amber);color:var(--deep)">USER MANUAL</div>
+ </div>
+ <div class="page navy">
+  <div style="position:absolute;left:0;right:0;top:140px;text-align:center;font:700 9px/1.7 Arial,Helvetica,sans-serif;color:#cfd8ea">
+   <div style="font:800 13px Arial,Helvetica,sans-serif;color:#fff">MEJEZ STUDIO</div>
+   [School / contact details here]<br>[Email or phone number here]
+  </div>
+  <div class="bar" style="bottom:0;background:var(--amber);color:var(--deep)">USER MANUAL</div>
+ </div>
+</section>
+
+<script>
+// ---------------------------------------------------------------------------------------------------------
+// Draws the machine's touch-screen pages from the SAME strings the firmware sends to the terminals (S3A/S3B/S3C screens), so the manual
+// matches the real display. Format: "#bg|ST,x,y,color,text,anchor,font|TT,...|BTN,x,y,w,h,color,label,action|SHP|NR2|NP|PBAR".
+// ---------------------------------------------------------------------------------------------------------
+const SCREENS = {
+ TAPS: "#000000|ST,165,105,#FFFFFF,TAP anywhere to ,MC,2|TT,160,136,#FFFF00,START,500,MC,4",
+ WELCOME: "#000000|ST,160,60,#FFFFFF,Welcome to,BC,2|ST,160,60,#FFFFFF,JOLLY HELMET,TC,4|ST,162,120,#FFFFFF,Make your Helmet,BC,2|ST,160,120,#FFFFFF,Happy Again!,TC,4|TT,160,180,#FFFF00,Tap to START,500,TC,2",
+ SELECT_MODE: "#000000|ST,160,44,#FFFFFF,SELECT MODE,MC,4|BTN,90,80,140,56,#1C1C20,CLEANING,MODE_CLEAN|BTN,90,152,140,56,#1C1C20,DRYING,MODE_DRY",
+ SELECT_DRY_ONLY: "#000000|ST,160,44,#FFFFFF,SELECT MODE,MC,4|SHP,90,80,140,56,#555555,0|ST,160,102,#6B6B6B,CLEANING,MC,2|ST,160,124,#6B6B6B,UNAVAILABLE,MC,1|BTN,90,152,140,56,#1C1C20,DRYING,MODE_DRY",
+ RATE_ODOR: "#000000|BTN,19,192,282,36,#1C1C20,CONFIRM,ACTION|ST,160,60,#FFFFFF,ODOR O' METER,BC,4|ST,28,20,#FFFFFF,Before,MC,1|NR2,24,70,272,100,7,#FFFFFF,#22c55e,MINT;STINKY",
+ RATE_DRY: "#000000|BTN,19,192,282,36,#1C1C20,CONFIRM,ACTION|ST,160,60,#FFFFFF,DRY O' METER,BC,4|ST,28,20,#FFFFFF,Before,MC,1|NR2,24,70,272,100,4,#FFFFFF,#22c55e,DRY;WET",
+ METHOD: "#000000|ST,160,60,#FFFFFF,CLEANING MODE,MC,4|BTN,90,98,140,44,#1C1C20,BALANCED,MIST_BAL|BTN,10,158,140,44,#1C1C20,MORE ALCOHOL,MIST_ALC|BTN,170,158,140,44,#1C1C20,MORE SCENTED,MIST_SCN",
+ TIME_CLEAN: "#000000|NP,0,0,320,240,#FFFFFF,20,ALLOCATE CLEAN TIME,300",
+ TIME_HEAT: "#000000|NP,0,0,320,240,#FFFFFF,18,ALLOCATE HEATING TIME,180",
+ INSERT_COIN: "#000000|ST,160,60,#FFFFFF,INSERT THE REQUIRED COIN,TC,2|TT,144,120,#FFFFFF,/ {REQUIREDCOIN} Coin,0,ML,2|TT,126,120,#FFFF00,{COINS},500,MR,2|BTN,20,190,90,32,#1C1C20,CANCEL,INSERT_CANCEL",
+ OPEN_A: "#000000|ST,160,88,#FFFFFF,Please,MC,2|ST,160,156,#FFFFFF,Door to Proceed,MC,2|TT,152,120,#FFFF00, OPEN,500,MC,4",
+ PLACE: "#000000|ST,160,92,#FFFFFF,Please,MC,2|ST,160,148,#FFFFFF, Headgear Inside,MC,2|TT,160,120,#FFFF00,PLACE,500,MC,4",
+ CLOSE: "#000000|ST,160,92,#FFFFFF,Please,MC,2|ST,160,148,#FFFFFF,Door to Proceed,MC,2|TT,160,120,#FFFF00,CLOSE,500,MC,4",
+ TAKE: "#000000|ST,160,92,#FFFFFF,Please,MC,2|ST,160,148,#FFFFFF, Headgear Outside,MC,2|TT,160,120,#FFFF00,TAKE,500,MC,4",
+ CLEANING: "#000000|ST,160,92,#FFFFFF,Cleaning ...,MC,2|TT,160,120,#00FF00,{MINUTE}:{SECOND},0,MC,2|BTN,215,8,95,32,#000000,CANCEL,ABORT|PBAR,50,137,220,14,#505050,#FFFFFF,300|TT,160,180,#949494,{STATUS},0,TC,2",
+ HEATING: "#000000|ST,160,92,#FFFFFF,Heating...,MC,2|TT,160,120,#00FF00,{MINUTE}:{SECOND},0,MC,2|BTN,215,8,95,32,#000000,CANCEL,ABORT|PBAR,50,137,220,14,#505050,#FFFFFF,300|TT,160,180,#949494,{STATUS},0,TC,2",
+ DRYING: "#000000|ST,160,92,#FFFFFF,Drying...,MC,2|TT,160,120,#00FF00,{MINUTE}:{SECOND},0,MC,2|BTN,215,8,95,32,#000000,CANCEL,ABORT|PBAR,50,137,220,14,#505050,#FFFFFF,300|TT,160,180,#949494,{STATUS},0,TC,2",
+ COOLDOWN: "#000000|ST,160,92,#FFFFFF,Cooling Down...,MC,2|TT,160,120,#00FF00,{MINUTE}:{SECOND},0,MC,2|PBAR,50,137,220,14,#505050,#FFFFFF,60|TT,160,180,#949494,{STATUS},0,TC,2",
+ COOLDOWN3: "#000000|ST,160,92,#FFFFFF,Cooling Down...,MC,2|TT,160,120,#00FF00,{MINUTE}:{SECOND},0,MC,2|PBAR,50,137,220,14,#505050,#FFFFFF,60|TT,160,180,#949494,{STATUS},0,TC,2",
+ FREE_RETRY: "#000000|ST,160,120,#FFFFFF,2 MINUTES,MC,2|ST,160,88,#FFFFFF,FREE TIME,MC,4|BTN,12,154,140,52,#069322,YES,FREE_YES|BTN,168,154,140,52,#A91414,NO,FREE_NO",
+ ABORT: "#000000|ST,160,120,#FFFFFF,COIN(s) won't be Refunded.,MC,2|ST,160,88,#FFFFFF,Cancel operation?,MC,2|BTN,12,154,140,52,#A91414,CONFIRM,ABORT_YES|BTN,168,154,140,52,#069322,RESUME,ABORT_NO",
+ SAFETY_PAUSE: "#800000|ST,160,90,#FFFFFF,SAFETY PAUSE,MC,4|TT,160,140,#FFFF00,CLOSE THE DOOR,500,MC,2",
+ OUT_OF_ORDER: "#000000|TT,160,120,#FF0000,OUT OF ORDER,1000,MC,4"
+};
+const TOK = { '{REQUIREDCOIN}':'15', '{COINS}':'7', '{MINUTE}':'04', '{SECOND}':'32', '{STATUS}':'UV: ON', '{TRY}':'2', '{TRIES}':'10', '{MAXCOINS}':'90', '{MINCOINS}':'15', '{TIMER}':'272' };
+const FONT = { 1:9, 2:14, 4:24 };
+function hexColor(c){ return (c && c[0] === '#') ? c : '#ffffff'; }
+function drawScreen(cv, str, status){
+  const S = 2; cv.width = 320*S; cv.height = 240*S;
+  const g = cv.getContext('2d'); g.scale(S,S);
+  const parts = str.split('|'); let bg = '#000000'; let k = 0;
+  if (parts[0][0] === '#') { bg = parts[0]; k = 1; }
+  g.fillStyle = bg; g.fillRect(0,0,320,240);
+  const items = parts.slice(k).map(p => p.split(','));
+  const rr = (x,y,w,h,r) => { g.beginPath(); g.moveTo(x+r,y); g.arcTo(x+w,y,x+w,y+h,r); g.arcTo(x+w,y+h,x,y+h,r); g.arcTo(x,y+h,x,y,r); g.arcTo(x,y,x+w,y,r); g.closePath(); };
+  const text = (t, x, y, color, anchor, font, bold) => {
+    g.fillStyle = hexColor(color); g.font = (bold ? '700 ' : '600 ') + (FONT[font] || 14) + 'px Arial, Helvetica, sans-serif';
+    const a = (anchor || 'TL'); const v = a[0], h = a[1];
+    g.textAlign = h === 'C' ? 'center' : (h === 'R' ? 'right' : 'left');
+    g.textBaseline = v === 'M' ? 'middle' : (v === 'B' ? 'bottom' : 'top');
+    g.fillText(t, x, y);
+  };
+  // shapes first, then widgets, then text (the real terminal draws in this order too)
+  items.filter(i => i[0] === 'SHP').forEach(i => { const [,x,y,w,h,c,f] = i; g.strokeStyle = hexColor(c); g.fillStyle = hexColor(c); g.lineWidth = 2; if (f === '1') g.fillRect(+x,+y,+w,+h); else g.strokeRect(+x,+y,+w,+h); });
+  items.filter(i => i[0] === 'BTN').forEach(i => { const [,x,y,w,h,c,label] = i; rr(+x,+y,+w,+h,7); g.fillStyle = hexColor(c); g.fill(); g.strokeStyle = '#ffffff'; g.lineWidth = 1.5; g.stroke(); text(label, +x + +w/2, +y + +h/2, '#FFFFFF', 'MC', (label.length > 10 ? 1 : 2), true); });
+  items.filter(i => i[0] === 'PBAR').forEach(i => { const [,x,y,w,h,tr,fl] = i; g.fillStyle = hexColor(tr); g.fillRect(+x,+y,+w,+h); g.fillStyle = hexColor(fl); g.fillRect(+x,+y,Math.round(+w*0.45),+h); });
+  items.filter(i => i[0] === 'NR2').forEach(i => {
+    const [,x0,y0,w,h,val,tc,sel,caps] = i; const X=+x0, Y=+y0, W=+w, H=+h, V=+val;
+    const capH = Math.max(10, Math.min(18, Math.floor(H*9/100))); const [top,bot] = (caps||'').split(';');
+    const topH = top ? capH : 0, botH = bot ? capH : 0; const gap = Math.max(3, Math.min(8, Math.floor(W*25/1000)));
+    const rowH = Math.floor((H - topH - botH - gap)/2); const cellW = Math.floor((W - gap*4)/5);
+    if (top) text(top, X, Y + topH/2, '#FFFFFF', 'ML', 1, true);
+    if (bot) text(bot, X + W, Y + H - botH/2, '#FFFFFF', 'MR', 1, true);
+    for (let n = 1; n <= 10; n++) {
+      const r = n <= 5 ? 0 : 1, c = (n-1) % 5; const cx = X + c*(cellW+gap), cy = Y + topH + r*(rowH+gap);
+      rr(cx,cy,cellW,rowH,5); g.fillStyle = (n === V) ? hexColor(sel) : '#1C1C20'; g.fill(); g.strokeStyle = '#555'; g.lineWidth = 1; g.stroke();
+      text(String(n), cx + cellW/2, cy + rowH/2, (n === V) ? '#000000' : hexColor(tc), 'MC', 2, true);
+    }
+  });
+  items.filter(i => i[0] === 'NP').forEach(i => {
+    const label = i[7] || 'Pick Your Time'; const secs = +(i[8] || 300);
+    const mm = String(Math.floor(secs/60)).padStart(2,'0'), ss = String(secs % 60).padStart(2,'0');
+    text(label, 160, 14, '#FFFFFF', 'TC', 2, true);
+    rr(60,40,200,44,8); g.fillStyle = '#101018'; g.fill(); g.strokeStyle = '#888'; g.lineWidth = 1.5; g.stroke();
+    text(mm + ':' + ss, 160, 62, '#FFFF00', 'MC', 4, true);
+    const spc = +(i[6] || 20), coins = Math.ceil(secs / spc);
+    text('= ' + coins + ' coins', 160, 96, '#9CA3AF', 'MC', 2, false);
+    const keys = ['1','2','3','4','5','6','7','8','9','BACK','0','OK'];
+    keys.forEach((kk, n) => { const c = n % 3, r = Math.floor(n/3); const kx = 60 + c*68, ky = 108 + r*31;
+      rr(kx,ky,64,27,5); g.fillStyle = kk === 'OK' ? '#069322' : (kk === 'BACK' ? '#A91414' : '#1C1C20'); g.fill(); g.strokeStyle = '#ffffff'; g.lineWidth = 1; g.stroke(); text(kk, kx+32, ky+14, '#FFFFFF', 'MC', 2, true); });
+  });
+  items.filter(i => i[0] === 'ST').forEach(i => { const [,x,y,c,t,a,f] = i; text(t, +x, +y, c, a, +(f||2), +(f||2) >= 4); });
+  items.filter(i => i[0] === 'TT').forEach(i => { let [,x,y,c,t,blink,a,f] = i; if (status !== undefined) t = t.split('{STATUS}').join(status); Object.keys(TOK).forEach(key => { t = t.split(key).join(TOK[key]); }); text(t, +x, +y, c, a, +(f||2), +(f||2) >= 4); });
+}
+// what the small grey status line says on the running screens (the S3 writes these lines while it runs)
+const STATUS_BY = { CLEANING:'HUMID BOTH: Misting', HEATING:'HEAT: ON', DRYING:'HEAT: ON', COOLDOWN:'FAN: ON', COOLDOWN3:' ' };
+document.querySelectorAll('canvas[data-screen]').forEach(cv => drawScreen(cv, SCREENS[cv.dataset.screen], STATUS_BY[cv.dataset.screen]));
+window.__ready = true;
+</script>
+</body></html>

@@ -65,6 +65,7 @@ function runsXml(runs, base = {}) {
     const o = { ...base };
     if (r.b) o.b = true;
     if (r.i) o.i = true;
+    if (r.cf) { o.b = true; o.color = '8A4B00'; o.shd = 'FFF1B0'; }
     if (r.code) { o.font = 'Courier New'; o.b = true; o.shd = 'EEF1F6'; o.color = NAVY; }
     if (r.pill) { o.b = true; o.color = 'FFFFFF'; o.shd = r.pill === 'red' ? 'B3261E' : NAVY; return T(' ' + r.t + ' ', o); }
     return T(r.t, o);
@@ -119,6 +120,7 @@ function inline(node, st, out) {
     else if (tag === 'B' || tag === 'STRONG') inline(n, { ...st, b: true }, out);
     else if (tag === 'I' || tag === 'EM') inline(n, { ...st, i: true }, out);
     else if (tag === 'CODE') inline(n, { ...st, code: true }, out);
+    else if (tag === 'SPAN' && n.classList.contains('cf')) inline(n, { ...st, cf: true }, out);
     else if (tag === 'SPAN' && n.classList.contains('pill')) inline(n, { ...st, pill: /b3261e/i.test(n.getAttribute('style') || '') ? 'red' : 'navy' }, out);
     else inline(n, st, out);
   }
@@ -181,9 +183,11 @@ function callout(kind, runs) {
   const b = `<w:top w:val="nil"/><w:left w:val="single" w:sz="36" w:space="0" w:color="${col}"/><w:bottom w:val="nil"/><w:right w:val="nil"/>`;
   return gap(60) + TBL([TW], TR(TC(TW, P(runsXml(runs), { style: 'Callout' }), { fill, borders: b, mar: MAR(100, 170, 100, 170), va: 'center' }))) + gap(120);
 }
-function dataTable(t) {
+function dataTable(t, wAttr, boldFirst) {
   const n = (t.head || t.rows[0]).length; let widths;
-  if (n === 2) { const mx = Math.max(...t.rows.map(r => plain(r[0]).length)); const share = Math.min(0.42, Math.max(0.28, 0.2 + mx * 0.008)); const a = Math.round(TW * share); widths = [a, TW - a]; }
+  const ws = wAttr ? wAttr.split(',').map(Number) : null;
+  if (ws && ws.length === n) { const sum = ws.reduce((a, b) => a + b, 0); widths = ws.map(w => Math.floor(TW * w / sum)); widths[n - 1] += TW - widths.reduce((a, b) => a + b, 0); }
+  else if (n === 2) { const mx = Math.max(...t.rows.map(r => plain(r[0]).length)); const share = Math.min(0.42, Math.max(0.28, 0.2 + mx * 0.008)); const a = Math.round(TW * share); widths = [a, TW - a]; }
   else { const a = Math.round(TW / n); widths = Array.from({ length: n }, (_, i) => i === n - 1 ? TW - a * (n - 1) : a); }
   const cm = MAR(60, 120, 60, 120);
   let rows = '';
@@ -191,7 +195,7 @@ function dataTable(t) {
   t.rows.forEach((r, ri) => {
     const fill = ri % 2 ? 'FFF8E1' : 'FFFFFF';
     const bd = `<w:top w:val="nil"/><w:left w:val="nil"/><w:bottom w:val="single" w:sz="4" w:space="0" w:color="C9D1E0"/><w:right w:val="nil"/>`;
-    rows += TR(r.map((c, i) => TC(widths[i], P(runsXml(c), { style: 'TableText' }), { fill, borders: bd })).join(''));
+    rows += TR(r.map((c, i) => TC(widths[i], P(runsXml(c, boldFirst && i === 0 ? { b: true } : {}), { style: 'TableText' }), { fill, borders: bd })).join(''));
   });
   return gap(40) + TBL(widths, rows, { cellMar: cm }) + gap(120);
 }
@@ -228,6 +232,28 @@ async function screenRow(cols) {
 async function shot(src, m, alt) {
   const img = await loadImg(src);
   return P(pic(img, docRels, m ? 5.0 : 6.4, alt, { border: 'C8CCD4', maxH: 5.2 }), { jc: 'center', before: 40, after: 140 });
+}
+
+// an inline <svg> figure -> PNG (2x), registered like any other picture
+async function svgToImg(svgEl) {
+  const vb = svgEl.getAttribute('viewBox').trim().split(/\s+/).map(Number), W2 = vb[2] * 2, H2 = vb[3] * 2;
+  let s = new XMLSerializer().serializeToString(svgEl);
+  if (!/<svg[^>]*xmlns=/.test(s)) s = s.replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg"');
+  s = s.replace(/<svg([^>]*?)>/, (m, a) => '<svg' + a.replace(/\s(width|height)="[^"]*"/g, '') + ` width="${W2}" height="${H2}">`);
+  const img = new Image();
+  await new Promise((res, rej) => { img.onload = res; img.onerror = () => rej(new Error('svg render failed')); img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(s); });
+  const c = document.createElement('canvas'); c.width = W2; c.height = H2;
+  const g = c.getContext('2d'); g.fillStyle = '#ffffff'; g.fillRect(0, 0, W2, H2); g.drawImage(img, 0, 0, W2, H2);
+  const blob = await new Promise(r => c.toBlob(r, 'image/png'));
+  const bytes = new Uint8Array(await blob.arrayBuffer());
+  const name = 'image' + (++imgN) + '.png'; media[name] = bytes;
+  return { name, w: W2, h: H2, ext: 'png' };
+}
+async function figure(el) {
+  const svg = el.querySelector('svg'), cap = el.querySelector('figcaption');
+  const img = await svgToImg(svg), capText = cap ? plain(runsOf(cap)) : '';
+  return P(pic(img, docRels, 6.2, capText || 'figure', { border: 'D6DBE6', maxH: 5.4 }), { jc: 'center', before: 80, after: 0, keepNext: true }) +
+    (capText ? P(T(capText), { style: 'Caption' }) : gap(100));
 }
 
 // ------------------------------------------------------------------ main
@@ -298,6 +324,27 @@ async function shot(src, m, alt) {
         else if (cls.contains('laptop')) { const im = el.querySelector('img'); body += await shot(im.getAttribute('src'), cls.contains('m'), 'Control Center screenshot'); }
         else if (cls.contains('base')) { /* laptop stand: not needed */ }
         else LOG('WARN: unhandled <' + tag + ' class="' + el.className + '">');
+      }
+    }
+
+    // ---- technician guide: the same hidden flow the PDF lays out into spreads
+    const tflow = doc.querySelector('#techFlow');
+    if (tflow) {
+      body += heading('Technician guide (Hardware and maintenance)', 1, true);
+      body += P(T('Components, pinouts, wiring, firmware and maintenance', { b: 1, color: NAVY, sz: 24 }), { jc: 'center', before: 40, after: 120 });
+      for (const el of tflow.children) {
+        const tag = el.tagName, cls = el.classList;
+        if (tag === 'H1') body += heading(plain(runsOf(el)), 2, el.hasAttribute('data-pb'));
+        else if (tag === 'H2') body += P(T(plain(runsOf(el))), { style: 'Heading3' });
+        else if (tag === 'H3') body += P(T(plain(runsOf(el))), { style: 'Heading4' });
+        else if (tag === 'P') body += P(runsXml(runsOf(el)));
+        else if (tag === 'UL') body += listXml('ul', [...el.children].map(runsOf));
+        else if (tag === 'OL') body += listXml('ol', [...el.children].map(runsOf), olStart(el));
+        else if (cls.contains('tip')) body += callout('tip', runsOf(el));
+        else if (cls.contains('warn')) body += callout('warn', runsOf(el));
+        else if (tag === 'TABLE') body += dataTable(parseTable(el), el.getAttribute('data-w'), cls.contains('pin'));
+        else if (tag === 'FIGURE') body += await figure(el);
+        else LOG('WARN: unhandled flow <' + tag + ' class="' + el.className + '">');
       }
     }
 
@@ -404,7 +451,7 @@ ${numOverrides.map(n => `<w:num w:numId="${n.numId}"><w:abstractNumId w:val="${n
     for (const [k, v] of Object.entries(parts)) zip.file(k, v, { createFolders: false });
     for (const [k, v] of Object.entries(media)) zip.file('word/media/' + k, v, { createFolders: false });
     const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } });
-    const res = await fetch('/save/JollyHelmet_UserManual.docx', { method: 'POST', body: blob });
+    const res = await fetch('/save/' + (new URLSearchParams(location.search).get('out') || 'JollyHelmet_UserManual.docx'), { method: 'POST', body: blob });
     LOG('headings in contents: ' + tocEntries.length + ', numbered lists: ' + numOverrides.length + ', images: ' + Object.keys(media).length);
     LOG('docx: ' + blob.size + ' bytes -> ' + (await res.text()));
     LOG('DONE');

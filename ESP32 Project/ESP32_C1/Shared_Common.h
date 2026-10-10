@@ -482,6 +482,21 @@ struct A2SensorPacket {
     uint16_t seq;            // rolling counter - lets a listener see dropped packets / tell fresh from repeated
 } __attribute__((packed));   // 25 bytes - must stay different from every other packet's size
 
+// LocalServer revenue totals (added 2026-10-09 for the Online Server): the LocalServer broadcasts this every 10 s so the Online Server
+// shows the same customers / coins / revenue numbers as the Control Center without counting anything itself. Only the Online Server
+// uses it; every other node ignores it (unknown size). Sent only by the LocalServer.
+struct HubStatsPacket {
+    uint8_t  deviceID;          // DEVICE_SERVER
+    uint8_t  histCount;         // valid entries in histDur / histCoins (0..10), OLDEST FIRST
+    uint16_t coinValueX100;     // pesos per coin x 100 (1.00 peso = 100)
+    uint32_t totalSessions;     // customers served
+    uint32_t totalCoins;        // coins counted
+    uint32_t totalDurationSec;  // summed length of all sessions
+    uint16_t seq;               // +1 on every broadcast
+    uint16_t histDur[10];       // length in seconds of the last finished sessions
+    uint16_t histCoins[10];     // coins used in those sessions
+} __attribute__((packed));      // 58 bytes - must stay different from every other packet's size
+
 // Universal Command Packet
 struct CommandPacket {
     uint8_t  targetDeviceID;    // 1 for A1, 2 for A2, 0 for Broadcast
@@ -556,5 +571,15 @@ static_assert(sizeof(ACSStatusPacket) != sizeof(CommandPacket) &&
               sizeof(ACSStatusPacket) != sizeof(A3StatusPacket) &&
               sizeof(ACSStatusPacket) != sizeof(A2SensorPacket),
               "ACSStatusPacket collides in size with another packet type - onDataRecv() dispatch-by-length will misroute packets");
+static_assert(sizeof(HubStatsPacket) != sizeof(CommandPacket) &&
+              sizeof(HubStatsPacket) != sizeof(TelemetryPacket) &&
+              sizeof(HubStatsPacket) != sizeof(ACSTelemetryPacket) &&
+              sizeof(HubStatsPacket) != sizeof(Box1ConfigPacket) &&
+              sizeof(HubStatsPacket) != sizeof(Box2ConfigPacket) &&
+              sizeof(HubStatsPacket) != sizeof(BoxStatusPacket) &&
+              sizeof(HubStatsPacket) != sizeof(A3StatusPacket) &&
+              sizeof(HubStatsPacket) != sizeof(A2SensorPacket) &&
+              sizeof(HubStatsPacket) != sizeof(ACSStatusPacket),
+              "HubStatsPacket collides in size with another packet type - onDataRecv() dispatch-by-length will misroute packets");
 
 #endif // SHARED_COMMON_H

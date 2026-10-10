@@ -1,0 +1,382 @@
+<!-- Technician guide content. Assembled into JollyHelmet_UserManual.html by buildssemble_tech.ps1 (a figure placeholder is replaced by the svg of the same name in figs.html). -->
+<section id="techFlow" hidden>
+
+<h1 id="t-build" data-pb>How it is built</h1>
+<p>Each machine is a small team of ESP32 boards that talk by radio (ESP-NOW, channel 1). The only wires between the boards are power wires.</p>
+<figure class="fig">@@FIG:system@@<figcaption class="cap">The whole installation: three boxes, two refill stations and the LocalServer</figcaption></figure>
+<h2>The 14 boards</h2>
+<table data-w="14,17,69">
+<tr><th>Board</th><th>Where</th><th>What it does (sketch folder)</th></tr>
+<tr><td><b>S3A</b></td><td>Box 1</td><td>Brain. Runs every step and keeps the settings. (ESP32_S3A)</td></tr>
+<tr><td><b>A1</b></td><td>Box 1</td><td>Touch screen, coin slot, buzzer. (ESP32_A1)</td></tr>
+<tr><td><b>A2</b></td><td>Box 1</td><td>Sensors: 4 doors, helmet, 2 containers, 2 water sensors. (ESP32_A2)</td></tr>
+<tr><td><b>A3</b></td><td>Box 1</td><td>12 relays: 4 locks, 3 humidifiers, 2 UV, 2 drain pumps, coin power. (ESP32_A3)</td></tr>
+<tr><td><b>S3C</b></td><td>Box 2</td><td>Brain. (ESP32_S3C)</td></tr>
+<tr><td><b>C1</b></td><td>Box 2</td><td>Touch screen, coin slot, buzzer. (ESP32_C1)</td></tr>
+<tr><td><b>C2</b></td><td>Box 2</td><td>3 door sensors, helmet sensor and 6 relays: 3 locks, heater, UV, fan. (ESP32_C2)</td></tr>
+<tr><td><b>S3B</b></td><td>Box 3</td><td>Brain. (ESP32_S3B)</td></tr>
+<tr><td><b>B1</b></td><td>Box 3</td><td>Touch screen, coin slot, buzzer. (ESP32_B1)</td></tr>
+<tr><td><b>B2</b></td><td>Box 3</td><td>Sensors, same as A2. (ESP32_B2)</td></tr>
+<tr><td><b>B3</b></td><td>Box 3</td><td>13 relays: same as A3 plus the heater. (ESP32_B3)</td></tr>
+<tr><td><b>ACS 1</b></td><td>Box 1 refill</td><td>6 pumps, 2 mixer containers (ultrasonic and water sensor each). (ESP32_ACS1)</td></tr>
+<tr><td><b>ACS 2</b></td><td>Box 3 refill</td><td>Same as ACS 1. (ESP32_ACS2)</td></tr>
+<tr><td><b>LocalServer</b></td><td>Control Center</td><td>Wi-Fi ESP32_LOCAL, settings pages, revenue. (ESP32_LOCALSRV)</td></tr>
+</table>
+<h2>Brains and terminals</h2>
+<ul>
+<li><b>Brains</b> (S3A, S3B, S3C, LocalServer) are ESP32-S3 boards with 16 MB flash and 8 MB PSRAM. Nothing is wired to them except power.</li>
+<li><b>Terminals</b> (the A, B, C and ACS boards) are plain ESP32 (WROOM) boards on screw-terminal expansion boards. They hold every sensor, relay and display wire. A3 and B3 must not be WROVER (PSRAM) boards, because GPIO 16 and 17 are relays.</li>
+<li>Settings are saved inside the brains (S3A, S3B, S3C) and the ACS boards. The LocalServer only saves the revenue numbers.</li>
+<li>If a terminal hears nothing from its brain for 15 seconds, it switches its relays off (heater, UV, mist, pumps, coin power). If a helmet is stuck behind a closed door, it also lets the enclosure lock go.</li>
+</ul>
+
+<h1 id="t-parts" data-pb>Component list</h1>
+<p>Quantities are for the whole installation: Box 1, Box 2, Box 3, ACS 1 and ACS 2. A yellow <span class="cf">confirm</span> mark means: check this against your real part and edit it.</p>
+<h2>Boards and display</h2>
+<table data-w="52,8,40">
+<tr><th>Item</th><th>Qty</th><th>Used in</th></tr>
+<tr><td>ESP32 DevKit (ESP32-WROOM-32) with screw-terminal expansion board</td><td>10</td><td>A1 A2 A3 B1 B2 B3 C1 C2 ACS 1 ACS 2</td></tr>
+<tr><td>ESP32-S3 DevKit N16R8 (16 MB flash, 8 MB OPI PSRAM)</td><td>4</td><td>S3A S3B S3C LocalServer</td></tr>
+<tr><td>2.8 in SPI TFT with resistive touch (ST7789, 240 x 320)</td><td>3</td><td>A1, B1, C1</td></tr>
+<tr><td>Allan multi-coin acceptor, 12 V</td><td>3</td><td>One per box</td></tr>
+<tr><td>Active buzzer</td><td>3</td><td>A1, B1, C1</td></tr>
+<tr><td>Resistor 10 kΩ</td><td>3</td><td>Coin signal lines</td></tr>
+</table>
+<h2>Sensors</h2>
+<table data-w="40,8,52">
+<tr><th>Item</th><th>Qty</th><th>Used in</th></tr>
+<tr><td>MC-38 magnetic door sensor (reed)</td><td>11</td><td>Box 1: 4, Box 2: 3, Box 3: 4</td></tr>
+<tr><td>Ultrasonic distance sensor <span class="cf">confirm model</span></td><td>11</td><td>Helmet: 3 (one per box). Main containers: 4. ACS mixers: 4.</td></tr>
+<tr><td>Analog water-level sensor</td><td>8</td><td>Box 1: 2, Box 3: 2, ACS 1: 2, ACS 2: 2</td></tr>
+</table>
+<h2>Relay boards</h2>
+<table data-w="46,8,46">
+<tr><th>Item</th><th>Qty</th><th>Used in</th></tr>
+<tr><td>16-channel relay board, active-LOW</td><td>2</td><td>A3 (12 used), B3 (13 used)</td></tr>
+<tr><td>6-channel relay module</td><td>1</td><td>C2 (all 6 used)</td></tr>
+<tr><td>8-channel relay module with JD-VCC</td><td>2</td><td>ACS 1, ACS 2 (6 used each)</td></tr>
+</table>
+<h2>Loads</h2>
+<table data-w="34,8,58">
+<tr><th>Item</th><th>Qty</th><th>Used in</th></tr>
+<tr><td>12 V solenoid door lock</td><td>11</td><td>Box 1: 4 (enclosure, panel, back, ACS side). Box 2: 3. Box 3: 4.</td></tr>
+<tr><td>Humidifier (mist maker), 5 V <span class="cf">confirm</span></td><td>6</td><td>Box 1: 3, Box 3: 3 (alcohol, scented, both)</td></tr>
+<tr><td>Drain pump, 5 V <span class="cf">confirm</span></td><td>4</td><td>Box 1: 2, Box 3: 2</td></tr>
+<tr><td>Refill pump, 5 V <span class="cf">confirm</span></td><td>12</td><td>ACS 1: 6, ACS 2: 6</td></tr>
+<tr><td>UV light, 12 V strip <span class="cf">confirm</span></td><td>5</td><td>Box 1: 2, Box 2: 1, Box 3: 2</td></tr>
+<tr><td>Heater (hair dryer), 220 V</td><td>2</td><td>Box 2, Box 3</td></tr>
+<tr><td>Fan <span class="cf">confirm voltage</span></td><td>1</td><td>Box 2 cool-down</td></tr>
+</table>
+<h2>Power and protection</h2>
+<table data-w="40,12,48">
+<tr><th>Item</th><th>Qty</th><th>Used in</th></tr>
+<tr><td>12 V power supply</td><td><span class="cf">confirm</span></td><td>Locks, UV, coin slots and the 5 V converters</td></tr>
+<tr><td>DC-DC step-down, 12 V to 5 V</td><td><span class="cf">confirm</span></td><td>All ESP32 boards, screens, relay boards, sensors</td></tr>
+<tr><td>Diode 1N4007</td><td>11 or more</td><td>One across every lock solenoid</td></tr>
+<tr><td>Fuses, 220 V inlet or outlets, earth</td><td><span class="cf">confirm</span></td><td>Mains side, heaters</td></tr>
+</table>
+<p>Not electrical: 2 main containers (alcohol, scented) in Box 1 and in Box 3. In each ACS: 3 supply tanks (water, alcohol, scented) and 2 mixer containers. Tubing and fittings.</p>
+<h2>What is in each unit</h2>
+<table data-w="40,12,12,12,12,12">
+<tr><th>Item</th><th>Box 1</th><th>Box 2</th><th>Box 3</th><th>ACS 1</th><th>ACS 2</th></tr>
+<tr><td>ESP32 terminal boards</td><td>3</td><td>2</td><td>3</td><td>1</td><td>1</td></tr>
+<tr><td>ESP32-S3 brain</td><td>1</td><td>1</td><td>1</td><td>-</td><td>-</td></tr>
+<tr><td>Touch screen, coin slot, buzzer</td><td>1</td><td>1</td><td>1</td><td>-</td><td>-</td></tr>
+<tr><td>Door sensors</td><td>4</td><td>3</td><td>4</td><td>-</td><td>-</td></tr>
+<tr><td>Ultrasonic sensors</td><td>3</td><td>1</td><td>3</td><td>2</td><td>2</td></tr>
+<tr><td>Water-level sensors</td><td>2</td><td>-</td><td>2</td><td>2</td><td>2</td></tr>
+<tr><td>Door locks</td><td>4</td><td>3</td><td>4</td><td>-</td><td>-</td></tr>
+<tr><td>Humidifiers</td><td>3</td><td>-</td><td>3</td><td>-</td><td>-</td></tr>
+<tr><td>Drain pumps</td><td>2</td><td>-</td><td>2</td><td>-</td><td>-</td></tr>
+<tr><td>Refill pumps</td><td>-</td><td>-</td><td>-</td><td>6</td><td>6</td></tr>
+<tr><td>UV lights</td><td>2</td><td>1</td><td>2</td><td>-</td><td>-</td></tr>
+<tr><td>Heater</td><td>-</td><td>1</td><td>1</td><td>-</td><td>-</td></tr>
+<tr><td>Fan</td><td>-</td><td>1</td><td>-</td><td>-</td><td>-</td></tr>
+</table>
+
+<h1 id="t-pins" data-pb>Pinouts</h1>
+<p>GPIO numbers are the ESP32 pin names (D4 = GPIO4). Every relay input is active-LOW: the pin goes LOW to switch the relay ON. These tables match the flashed firmware and the pin sheet <i>RevisedJollyHelmet_Checked.xlsx</i>.</p>
+<div class="tip">Relay input numbers (IN1, IN2...) come from the Cirkit drawing. The GPIO is what the firmware drives. If a relay sits on a different input, trust the GPIO and fix the label.</div>
+<h2>S3A, S3B, S3C and LocalServer - nothing to wire</h2>
+<p>These four boards have no external wiring: power (5 V) and the USB cable for flashing only. GPIO 35, 36 and 37 are used inside the module by the OPI PSRAM: never connect anything to them.</p>
+<h2>A1, B1, C1 - screen, coin slot, buzzer</h2>
+<p>Identical wiring on all three boards:</p>
+<table class="pin" data-w="12,28,60">
+<tr><th>GPIO</th><th>Signal</th><th>Wired to</th></tr>
+<tr><td>15</td><td>TFT CS</td><td>Display CS</td></tr>
+<tr><td>4</td><td>TFT RESET</td><td>Display RST</td></tr>
+<tr><td>2</td><td>TFT DC</td><td>Display DC (RS)</td></tr>
+<tr><td>13</td><td>MOSI (shared)</td><td>Display SDI (SDA) and touch T_DIN</td></tr>
+<tr><td>14</td><td>SCK (shared)</td><td>Display SCK (SCL) and touch T_CLK</td></tr>
+<tr><td>27</td><td>Touch CS</td><td>Touch T_CS</td></tr>
+<tr><td>12</td><td>Touch MISO</td><td>Touch T_DO</td></tr>
+<tr><td>23</td><td>Coin signal</td><td>Allan COIN, through a 10 kΩ resistor</td></tr>
+<tr><td>21</td><td>Buzzer</td><td>Active buzzer +</td></tr>
+<tr><td>5V</td><td>Display power</td><td>Display VCC and LED (BLK) <span class="cf">confirm VCC rail</span></td></tr>
+<tr><td>GND</td><td>Ground</td><td>Display, coin acceptor, buzzer -</td></tr>
+</table>
+<ul>
+<li>Not connected: display SDO (MISO), touch T_IRQ, coin COUNTER.</li>
+<li>Coin acceptor 12 V: from the COIN POWER relay on A3 and B3 (Box 1, Box 3). Straight from the 12 V supply in Box 2.</li>
+<li>Free pins: 5, 16, 17, 18, 19, 22, 25, 26, 32, 33.</li>
+</ul>
+<h2>A2, B2 - sensors (Box 1, Box 3)</h2>
+<table class="pin" data-w="12,38,50">
+<tr><th>GPIO</th><th>Signal</th><th>Wired to</th></tr>
+<tr><td>26</td><td>Helmet ultrasonic TRIG</td><td>Sensor TRIG</td></tr>
+<tr><td>25</td><td>Helmet ultrasonic ECHO</td><td>Sensor ECHO</td></tr>
+<tr><td>32</td><td>Alcohol container TRIG</td><td>Sensor TRIG</td></tr>
+<tr><td>33</td><td>Alcohol container ECHO</td><td>Sensor ECHO</td></tr>
+<tr><td>23</td><td>Scented container TRIG</td><td>Sensor TRIG</td></tr>
+<tr><td>22</td><td>Scented container ECHO</td><td>Sensor ECHO</td></tr>
+<tr><td>27</td><td>Enclosure door</td><td>MC-38 sensor S</td></tr>
+<tr><td>14</td><td>Panel door</td><td>MC-38 sensor S</td></tr>
+<tr><td>19</td><td>Back door</td><td>MC-38 sensor S</td></tr>
+<tr><td>18</td><td>ACS side door</td><td>MC-38 sensor S</td></tr>
+<tr><td>34</td><td>Alcohol water sensor</td><td>SIG (analog, input only)</td></tr>
+<tr><td>35</td><td>Scented water sensor</td><td>SIG (analog, input only)</td></tr>
+</table>
+<ul>
+<li>Ultrasonic VCC 5 V. Water sensors 3.3 V. Door sensors: the other wire goes to GND, the ESP32 supplies the pull-up (closed = LOW).</li>
+<li>Free pins: 2, 4, 12, 13, 15, 16, 21.</li>
+</ul>
+<h2>A3 - Box 1 relays (16-channel board)</h2>
+<table class="pin" data-w="11,12,57,20">
+<tr><th>GPIO</th><th>Input</th><th>Load</th><th>Supply</th></tr>
+<tr><td>4</td><td>IN1</td><td>Enclosure door lock</td><td>12 V</td></tr>
+<tr><td>16</td><td>IN2</td><td>Panel door lock</td><td>12 V</td></tr>
+<tr><td>17</td><td>IN3</td><td>Back door lock</td><td>12 V</td></tr>
+<tr><td>23</td><td>IN4</td><td>ACS side-door lock</td><td>12 V</td></tr>
+<tr><td>18</td><td>IN5</td><td>Humidifier 1 (alcohol)</td><td>5 V</td></tr>
+<tr><td>19</td><td>IN6</td><td>Humidifier 2 (scented)</td><td>5 V</td></tr>
+<tr><td>25</td><td>IN7</td><td>Humidifier 3 (both)</td><td>5 V</td></tr>
+<tr><td>22</td><td>IN9</td><td>Coin power (the coin slot's 12 V)</td><td>12 V</td></tr>
+<tr><td>27</td><td>IN10</td><td>UV 1</td><td>12 V</td></tr>
+<tr><td>21</td><td>IN11</td><td>UV 2</td><td>12 V</td></tr>
+<tr><td>33</td><td>IN12</td><td>Drain pump 1 (alcohol container)</td><td>5 V</td></tr>
+<tr><td>32</td><td>IN13</td><td>Drain pump 2 (scented container)</td><td>5 V</td></tr>
+</table>
+<ul>
+<li>Supply column: from the pin-sheet totals (12 V x 7, 5 V x 5). <span class="cf">confirm</span></li>
+<li>IN8 and IN14 to IN16 are not used. GPIO 2, 12 and 15 are left idle (boot pins).</li>
+</ul>
+<h2>B3 - Box 3 relays (16-channel board)</h2>
+<p>Pin for pin the same as A3, plus one more relay:</p>
+<table class="pin" data-w="11,12,57,20">
+<tr><th>GPIO</th><th>Input</th><th>Load</th><th>Supply</th></tr>
+<tr><td>26</td><td>IN14</td><td>Heater (hair dryer)</td><td>220 V via the relay contacts</td></tr>
+</table>
+<h2>C2 - Box 2 sensors and relays</h2>
+<table class="pin" data-w="12,38,50">
+<tr><th>GPIO</th><th>Signal</th><th>Wired to</th></tr>
+<tr><td>26</td><td>Helmet ultrasonic TRIG</td><td>Sensor TRIG</td></tr>
+<tr><td>25</td><td>Helmet ultrasonic ECHO</td><td>Sensor ECHO</td></tr>
+<tr><td>27</td><td>Enclosure door</td><td>MC-38 sensor S</td></tr>
+<tr><td>14</td><td>Panel door</td><td>MC-38 sensor S</td></tr>
+<tr><td>19</td><td>Back door</td><td>MC-38 sensor S</td></tr>
+</table>
+<p>Relays (6-channel module):</p>
+<table class="pin" data-w="11,12,57,20">
+<tr><th>GPIO</th><th>Input</th><th>Load</th><th>Supply</th></tr>
+<tr><td>4</td><td>IN1</td><td>Enclosure door lock</td><td>12 V</td></tr>
+<tr><td>16</td><td>IN2</td><td>Panel door lock</td><td>12 V</td></tr>
+<tr><td>17</td><td>IN3</td><td>Back door lock</td><td>12 V</td></tr>
+<tr><td>18</td><td>IN4</td><td>Heater (hair dryer)</td><td>220 V</td></tr>
+<tr><td>23</td><td>IN5</td><td>Fan</td><td><span class="cf">confirm</span></td></tr>
+<tr><td>5</td><td>IN6</td><td>UV strip light</td><td>12 V</td></tr>
+</table>
+<ul>
+<li>GPIO5 gives a short pulse when the board powers up, so the UV relay may click once. Harmless. Boot-safe spare pins: 13, 21, 22, 32, 33.</li>
+</ul>
+<h2>ACS 1 and ACS 2 - refill stations</h2>
+<p>Identical wiring on both. Relays (8-channel module with JD-VCC, 6 used):</p>
+<table class="pin" data-w="11,12,57,20">
+<tr><th>GPIO</th><th>Input</th><th>Pump</th><th>Supply</th></tr>
+<tr><td>18</td><td>IN1</td><td>Alcohol pump (tank to alcohol mixer)</td><td>5 V</td></tr>
+<tr><td>19</td><td>IN2</td><td>Scented pump (tank to scented mixer)</td><td>5 V</td></tr>
+<tr><td>21</td><td>IN3</td><td>Water pump for the alcohol mixer</td><td>5 V</td></tr>
+<tr><td>23</td><td>IN4</td><td>Water pump for the scented mixer</td><td>5 V</td></tr>
+<tr><td>22</td><td>IN5</td><td>Mixer alcohol pump (mixer to the box)</td><td>5 V</td></tr>
+<tr><td>25</td><td>IN6</td><td>Mixer scented pump (mixer to the box)</td><td>5 V</td></tr>
+</table>
+<p>Sensors:</p>
+<table class="pin" data-w="12,48,40">
+<tr><th>GPIO</th><th>Signal</th><th>Wired to</th></tr>
+<tr><td>4</td><td>Alcohol mixer ultrasonic TRIG</td><td>Sensor TRIG</td></tr>
+<tr><td>14</td><td>Alcohol mixer ultrasonic ECHO</td><td>Sensor ECHO</td></tr>
+<tr><td>26</td><td>Scented mixer ultrasonic TRIG</td><td>Sensor TRIG</td></tr>
+<tr><td>33</td><td>Scented mixer ultrasonic ECHO</td><td>Sensor ECHO</td></tr>
+<tr><td>34</td><td>Alcohol mixer water sensor</td><td>SIG (analog)</td></tr>
+<tr><td>35</td><td>Scented mixer water sensor</td><td>SIG (analog)</td></tr>
+</table>
+<ul>
+<li>The three supply tanks (water, alcohol, scented) have no sensors. The ACS detects an empty tank when the mixer level does not rise.</li>
+<li>Pumps are 5 V <span class="cf">confirm</span>. Check each pump by hand in Maintenance before the first automatic run (the relay inputs were mixed up once).</li>
+</ul>
+<h1 id="t-wiring" data-pb>Circuit and wiring</h1>
+<h2>Circuit summary</h2>
+<ul>
+<li>Every box and refill station is a group of ESP32 boards. They share only power and the radio channel.</li>
+<li>Every lock, lamp, pump and heater is switched by a relay contact. Every sensor is read directly by a terminal board.</li>
+<li>Voltages: 12 V (door locks, UV lights, coin slots), 5 V (ESP32 boards, screens, relay boards, ultrasonic sensors, humidifiers, pumps), 3.3 V (water-level sensors, from the ESP32 3V3 pin), 220 V (the heaters).</li>
+</ul>
+<h2>Power and grounding</h2>
+<ul>
+<li>Measure every DC-DC converter with a meter before you connect boards. Never put 12 V on an ESP32 pin or on the 5 V rail.</li>
+<li>Join all grounds: 12 V -, 5 V - and every ESP32 GND. Never join a 12 V + to a 5 V +.</li>
+<li>A relay module has a JD-VCC jumper. Jumper on: the coils run from the module's VCC (one 5 V supply, shared ground). Jumper off: feed JD-VCC and its GND from a separate 5 V supply. <span class="cf">confirm how each module is set</span></li>
+<li>Locks, pumps and heaters starting can pull the 5 V down. Symptoms: white screen, LocalServer restarts, odd resets. Cures: short thick 5 V wires, a 470 to 1000 µF capacitor next to the TFT and the ESP32, a separate 5 V for the relay coils. The firmware also switches relays on 25 ms apart.</li>
+<li>Put a fuse on every supply. Keep the 220 V wiring in its own enclosure, away from the boards.</li>
+</ul>
+<figure class="fig">@@FIG:power@@<figcaption class="cap">Power for one box (the exact rails are listed in the component tables)</figcaption></figure>
+<h2>Relay outputs</h2>
+<figure class="fig">@@FIG:relay@@<figcaption class="cap">One relay channel</figcaption></figure>
+<ul>
+<li>Wire the load to COM and NO. Then it stays off when the relay or the board has no power. Leave unused channels unwired.</li>
+<li>Relay pins avoid GPIO 0, 1, 2, 3, 5, 12, 14, 15 because they pulse at boot. Safe output pins: 4, 13, 16 to 19, 21 to 23, 25 to 27, 32, 33.</li>
+<li>GPIO 34, 35, 36 and 39 are input only.</li>
+</ul>
+<h2>Door locks</h2>
+<figure class="fig">@@FIG:lock@@<figcaption class="cap">A door lock with its flyback diode</figcaption></figure>
+<p>The locks are <b>power-to-unlock</b>: the relay is ON only while the door may open (the OPEN steps, Maintenance, or the trapped-helmet release). With no power the lock stays locked. The 1N4007 takes the voltage spike when the relay lets go of the coil. Without it the spike can reset the board and burn the relay contacts.</p>
+<div class="warn">After a power cut the doors stay locked. When power is back, release the enclosure lock from the Control Center: Box page, Maintenance, ENCLOSURE LOCK. It switches itself off after 60 seconds.</div>
+<h2>Coin slot and buzzer</h2>
+<figure class="fig">@@FIG:coin@@<figcaption class="cap">Coin acceptor and buzzer on A1, B1 and C1</figcaption></figure>
+<ul>
+<li>The Allan COIN output pulls to ground once per coin pulse. The pin is INPUT_PULLUP and the firmware counts falling edges, so the pin never sees more than 3.3 V. Check it once with a meter on every new unit.</li>
+<li>FAST, MED, SLOW and SET are switches on the acceptor itself, not wires. COUNTER is not used.</li>
+<li>The buzzer is the active type: GPIO21 HIGH = sound. If it sounds weak, or the board resets when it sounds, drive it through a transistor.</li>
+</ul>
+<h2>Sensors</h2>
+<table data-w="22,18,60">
+<tr><th>Sensor</th><th>Wire</th><th>Goes to</th></tr>
+<tr><td><b>Ultrasonic</b></td><td>VCC</td><td>5 V</td></tr>
+<tr><td></td><td>TRIG</td><td>GPIO (output)</td></tr>
+<tr><td></td><td>ECHO</td><td>GPIO (input), through a divider if the module gives 5 V</td></tr>
+<tr><td></td><td>GND</td><td>GND</td></tr>
+<tr><td><b>Water-level</b></td><td>SIG</td><td>GPIO34 or GPIO35 (analog, input only)</td></tr>
+<tr><td></td><td>VCC</td><td>3.3 V</td></tr>
+<tr><td></td><td>GND</td><td>GND</td></tr>
+<tr><td><b>MC-38 door</b></td><td>S</td><td>GPIO (INPUT_PULLUP). Magnet near = closed = LOW</td></tr>
+<tr><td></td><td>GND</td><td>GND</td></tr>
+</table>
+<div class="tip">ECHO divider: ECHO to 1 kΩ to the GPIO, and 2 kΩ from that GPIO to GND. A 3.3 V module (HC-SR04P, RCWL-1601) needs none. The pin sheet shows no divider, so check which modules you have. <span class="cf">confirm</span></div>
+<h2>Screen and touch</h2>
+<p>The display and the touch controller share the SPI lines MOSI (13) and SCK (14). Each has its own chip select (15 and 27). TFT_eSPI drives the display as an ST7789, 240 x 320. B1 is mounted upside down, so it runs setRotation(3).</p>
+<h2>Mains and UV safety</h2>
+<div class="warn"><b>Mains can kill.</b> Unplug the machine and wait before you open a box. Keep the heater wiring fused, earthed, in a closed enclosure with strain relief, away from the low-voltage boards.</div>
+<div class="warn"><b>UV light injures eyes and skin.</b> The firmware switches UV and mist off the moment a door opens, but firmware is not a safety device. Recommended: a door switch in series with the UV supply, so the light cannot be on with the door open, and a warning label.</div>
+
+<h1 id="t-fw" data-pb>Firmware and flashing</h1>
+<h2>Arduino IDE settings</h2>
+<table data-w="30,70">
+<tr><th>Board type</th><th>Settings</th></tr>
+<tr><td><b>Terminals</b> (A, B, C, ACS)</td><td>Board: ESP32 Dev Module. esp32 core 3.3.7. Upload speed 921600. Other options default.</td></tr>
+<tr><td><b>Brains</b> (S3A, S3B, S3C) and <b>LocalServer</b></td><td>Board: ESP32S3 Dev Module. USB CDC On Boot: Enabled. CPU 240 MHz. Flash mode QIO 80 MHz. Flash size 16 MB. Partition: 16M Flash (3MB APP/9.9MB FATFS). PSRAM: OPI PSRAM. Upload speed 921600.</td></tr>
+</table>
+<h2>Libraries</h2>
+<ul>
+<li>TFT_eSPI 2.5.43: only A1, B1, C1 (edit its User_Setup.h, see below).</li>
+<li>ArduinoJson 7.4.3, Async TCP 3.5.0, ESP Async WebServer 3.12.0: only the LocalServer.</li>
+<li>Everything else (WiFi, ESP-NOW, Preferences) comes with the ESP32 core.</li>
+</ul>
+<h2>TFT_eSPI User_Setup.h</h2>
+<table data-w="50,50">
+<tr><th>Setting</th><th>Value</th></tr>
+<tr><td>Driver</td><td>ST7789_DRIVER (the only one not commented out)</td></tr>
+<tr><td>TFT_WIDTH, TFT_HEIGHT</td><td>240, 320</td></tr>
+<tr><td>TFT_MISO, TFT_MOSI, TFT_SCLK</td><td>12, 13, 14</td></tr>
+<tr><td>TFT_CS, TFT_DC, TFT_RST</td><td>15, 2, 4</td></tr>
+<tr><td>TOUCH_CS</td><td>27</td></tr>
+<tr><td>SPI_FREQUENCY, SPI_TOUCH_FREQUENCY</td><td>20000000, 1000000</td></tr>
+</table>
+<h2>Flash a new or replacement board</h2>
+<ol class="num">
+<li>Find the board in the table <b>The 14 boards</b> and open its sketch folder in the Arduino IDE.</li>
+<li>The folder must hold the same <b>Shared_Common.h</b> as ESP32_S3A (the master copy). Different copies make boards ignore each other's messages.</li>
+<li>Choose the settings above, plug in the USB cable and upload.</li>
+<li>Open the Serial Monitor at 115200 baud to read the board's log.</li>
+<li>Watch the board's badge turn ONLINE on the Control Center Home page.</li>
+<li>For a brain (S3) or an ACS board, enter its settings again on its Control Center page. A new board starts with the default values.</li>
+</ol>
+<div class="warn">Never run a bench or settings sketch (ESP32_S3A_CONFIG_BENCH, ESP32_S3C_CONFIG_BENCH, ESP32_ACS_CONFIG_BENCH, ESP32_A1_WIDGET_TEST) at the same time as the LocalServer or the real brain. They send the same messages and fight over them.</div>
+<h2>Test sketches</h2>
+<table data-w="40,60">
+<tr><th>Sketch</th><th>Use</th></tr>
+<tr><td>ESP32_A3_BENCH_TEST</td><td>Tests A3 alone: it pretends to be S3A and A2.</td></tr>
+<tr><td>ESP32_B3_RELAY_TEST</td><td>Wi-Fi page (BOX 3 B3 TEST, password 12345678) to switch each B3 relay by hand.</td></tr>
+<tr><td>ESP32_BUZZER_ULTRASOUND_TEST</td><td>Wi-Fi page to test a buzzer and read an ultrasonic sensor.</td></tr>
+<tr><td>ESP32_C1_CALIBRATE</td><td>Touch calibration: touch the 4 targets, copy the printed calData line into the terminal sketch.</td></tr>
+</table>
+<h2>Safety built into the firmware</h2>
+<ul>
+<li>Every relay pin is set OFF before it becomes an output, so relays do not pulse at power-up.</li>
+<li>Relays that turn on are staggered 25 ms apart, so loads do not start in the same instant.</li>
+<li>A door that opens during a run switches UV and mist off at once (SAFETY PAUSE).</li>
+<li>A terminal that loses its brain for 15 seconds switches its relays off.</li>
+<li>Hand-set relays in Maintenance switch themselves off: heater after 5 minutes, locks after 60 seconds, ACS pumps after 60 seconds.</li>
+<li>The coin slot only has power while a payment is possible (Box 1 and Box 3).</li>
+</ul>
+
+<h1 id="t-maint" data-pb>Maintenance</h1>
+<div class="warn">Before you open a box: finish or cancel any run, switch the machine off at the mains and unplug it. Wait for the heater to cool.</div>
+<h2>Schedule</h2>
+<table data-w="18,82">
+<tr><th>When</th><th>What to do</th></tr>
+<tr><td><b>Every day</b></td><td>Home page: every badge ONLINE and no red banner. Look at the 3 supply tanks in each ACS and the 2 main containers. Wipe the touch screens. Collect the coins and note the revenue.</td></tr>
+<tr><td><b>Every week</b></td><td>Wipe the helmet chamber and the door seals. Open each door during a run: SAFETY PAUSE must show. Listen for each lock clicking. Look for leaks at pump tubes and mixers. Check the UV lights glow and the humidifiers make mist.</td></tr>
+<tr><td><b>Every month</b></td><td>Switch every relay by hand in Maintenance and listen for the click. Clean the ultrasonic sensor faces and the water-level probes. Compare each distance with a ruler (use live). Test the coin slot with every coin. Check screw terminals and plugs are tight and nothing is hot or discoloured. Clean the humidifier discs and the heater and fan air intakes.</td></tr>
+<tr><td><b>Every 3 months</b></td><td>Capture the water sensors again, dry and wet, with the real liquids. Check the touch accuracy. With the power off, check the mains wiring, earth and fuses. Take a screenshot of every Control Center settings page and keep it.</td></tr>
+<tr><td><b>Once a year or when worn</b></td><td>Replace UV lights at the end of their rated hours. Replace pump tubing and slow pumps. Replace any lock that sticks or gets hot. Replace humidifier discs.</td></tr>
+</table>
+<h2>Calibrate</h2>
+<table data-w="30,70">
+<tr><th>What</th><th>How (Control Center)</th></tr>
+<tr><td>Helmet distance</td><td>Box page: put a helmet in, tap <b>use live</b>, then Send. Do the same on Box 2 (HEAT).</td></tr>
+<tr><td>Container lines</td><td>LEVELS: fill to each line, tap <b>use live</b>. Bigger number = emptier.</td></tr>
+<tr><td>Water sensors</td><td>LEVELS: <b>dry now</b>, then <b>wet now</b> in the real liquid (alcohol conducts poorly).</td></tr>
+<tr><td>ACS mixer lines and sensors</td><td>ACS page: LEVELS and TIMING, use live and <b>Work out the thresholds</b>.</td></tr>
+<tr><td>Coin slot</td><td>Check the coin pulses on the box page: they must rise by the coin's value. Speed (FAST, MED, SLOW) is set on the acceptor.</td></tr>
+<tr><td>Touch screen</td><td>Flash ESP32_C1_CALIBRATE on the terminal, touch the 4 targets, copy the calData line into the terminal sketch and flash it again. B1 (Box 3) may still need this.</td></tr>
+</table>
+<h2>Test every output by hand</h2>
+<ol class="num">
+<li>Put the box on its start screen (TAPS) or OUT OF ORDER.</li>
+<li>Control Center, box page, <b>Maintenance</b>. Tap each relay and check that the right thing happens.</li>
+<li>Do the ACS pumps one at a time and compare each with its label before you trust the automatic run.</li>
+<li>Tap <b>Maintenance</b> again. Everything switches off.</li>
+</ol>
+<h2>Replace a broken board</h2>
+<ol class="num">
+<li>Power off. Photograph the wiring, or print the pin table of that board.</li>
+<li>Move the wires one at a time to the same GPIO on the new board.</li>
+<li>Flash the right sketch (see Firmware and flashing). A3 and B3 must be plain ESP32 boards.</li>
+<li>Power on and wait for the ONLINE badge, then test each output by hand.</li>
+<li>Brain (S3) or ACS replaced: enter its settings again. LocalServer replaced: the revenue numbers start from zero.</li>
+</ol>
+<h2>Spare parts to keep</h2>
+<ul>
+<li>One spare ESP32 per role, flashed and labelled: A1, A2, A3, C1, C2, B1, B2, B3, ACS, plus one ESP32-S3.</li>
+<li>One spare relay board of each size, 2 MC-38 sensors, 2 ultrasonic sensors, 2 water-level sensors.</li>
+<li>One door lock solenoid, one 12 V supply, 2 DC-DC converters, fuses.</li>
+<li>Spare pumps and tubing, one UV light, one humidifier, a 10 pack of 1N4007 and 10 kΩ, a few 470 to 1000 µF capacitors.</li>
+</ul>
+
+<h1 id="t-trouble" data-pb="hard">Hardware troubleshooting</h1>
+<table data-w="26,32,42">
+<tr><th>Symptom</th><th>Likely cause</th><th>What to do</th></tr>
+<tr><td>Screen goes white when a lock or pump switches</td><td>The 5 V dips</td><td>Force refresh or Auto hard refresh (Control Center). Add a 470 to 1000 µF capacitor at the TFT supply. Shorter, thicker 5 V wires.</td></tr>
+<tr><td>A relay clicks once at power-up</td><td>A pin that pulses at boot (GPIO5 on C2)</td><td>Harmless. Move it to a boot-safe pin if it bothers you.</td></tr>
+<tr><td>A relay stays ON with no command</td><td>A boot-active pin, or a wire on the wrong input</td><td>Use a boot-safe pin (GPIO13 was moved to 33 on A3 and B3). Check the wiring.</td></tr>
+<tr><td>LocalServer restarts when a phone connects</td><td>Supply dip (Home page says BROWNOUT)</td><td>Own 5 V supply, short cable, a 470 to 1000 µF capacitor.</td></tr>
+<tr><td>A board shows OFFLINE</td><td>No power, the wrong sketch, or a bench sketch running</td><td>Measure 5 V at the board. Flash the right folder. Switch off every bench sketch. All boards use ESP-NOW channel 1.</td></tr>
+<tr><td>Door always open or always closed</td><td>Magnet too far, or a wrong wire</td><td>Check the gap (a few mm) and the wire from S to the GPIO. Closed must read LOW.</td></tr>
+<tr><td>Ultrasonic reads 0 or jumps</td><td>No echo, dirty face, TRIG and ECHO swapped, loose wire</td><td>Clean the face, check both wires, read the board's log.</td></tr>
+<tr><td>Water sensor always wet or always dry</td><td>Dirty probes, or a bad dry/wet capture</td><td>Clean the probes. Capture dry and wet again in the real liquid.</td></tr>
+<tr><td>Coins not counted</td><td>Coin slot has no power, loose COIN wire, wrong speed setting</td><td>The slot is powered only in the pay steps. Measure its 12 V at DC12V then. Check the 10 kΩ and the COIN wire.</td></tr>
+<tr><td>A pump runs but the wrong liquid moves</td><td>Relay wired to the wrong pump</td><td>Run each pump by hand in Maintenance and fix the wiring.</td></tr>
+<tr><td>A lock does not release</td><td>No 12 V at the solenoid, or the door presses on the latch</td><td>Measure the solenoid while its relay is ON. Push the door in a little.</td></tr>
+<tr><td>A lock is hot</td><td>It was powered too long</td><td>Check for a stuck relay. The firmware limits how long a lock stays energized.</td></tr>
+<tr><td>Helmet stuck after a power cut</td><td>Locks are power-to-unlock</td><td>When power is back, use Maintenance, ENCLOSURE LOCK.</td></tr>
+</table>
+</section>

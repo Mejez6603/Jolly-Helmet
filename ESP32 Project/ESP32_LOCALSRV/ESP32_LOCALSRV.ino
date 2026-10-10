@@ -185,6 +185,28 @@ void trackSession(uint8_t i, const BoxStatusPacket& s) {
     }
 }
 
+// Revenue totals for the Online Server (2026-10-09): the same numbers the Home page shows, broadcast every 10 s so the Online Server needs
+// no counting of its own. Nothing else listens to this packet (its size is unique, see Shared_Common.h).
+uint16_t hubStatsSeq = 0;
+void broadcastHubStats() {
+    HubStatsPacket p;
+    memset(&p, 0, sizeof(p));
+    p.deviceID         = DEVICE_SERVER;
+    int cv             = (int)(coinValuePeso * 100.0f + 0.5f);
+    p.coinValueX100    = (uint16_t)(cv < 0 ? 0 : (cv > 65535 ? 65535 : cv));
+    p.totalSessions    = statTotalSessions;
+    p.totalCoins       = statTotalCoins;
+    p.totalDurationSec = statTotalDurationSec;
+    p.seq              = ++hubStatsSeq;
+    p.histCount        = statHistoryCount;
+    for (uint8_t i = 0; i < statHistoryCount && i < 10; i++) {
+        uint8_t idx = (statHistoryHead + STAT_HISTORY_SIZE - statHistoryCount + i) % STAT_HISTORY_SIZE;   // oldest first
+        p.histDur[i]   = statHistory[idx].durationSec;
+        p.histCoins[i] = statHistory[idx].coinsUsed;
+    }
+    esp_now_send(BROADCAST_MAC, (uint8_t*)&p, sizeof(p));
+}
+
 // The settings pages (settings_hub.h) - included here because they use the objects and functions defined above.
 #include "settings_hub.h"
 
@@ -413,6 +435,10 @@ void loop() {
             hb.subIndex       = DEVICE_SERVER;
             esp_now_send(BROADCAST_MAC, (uint8_t*)&hb, sizeof(CommandPacket));
         }
+
+        // Revenue totals for the Online Server, every 10 seconds
+        static uint8_t statsTick = 0;
+        if (++statsTick >= 10) { statsTick = 0; broadcastHubStats(); }
 
         // Real-time status for the home page
         if (ws.count() > 0) {

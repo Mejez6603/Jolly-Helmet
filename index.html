@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jolly Helmet Online Monitor</title>
+<link rel="icon" href="img/logo.png">
+<link rel="stylesheet" href="css/style.css">
+<!--
+  JOLLY HELMET ONLINE MONITOR - read only.
+  This page only READS the Blynk datastream that the Online Server (ESP32-S3) writes. It never sends a command to a machine.
+
+  Files:   index.html (this markup)   css/style.css (look)   img/logo.png
+           js/config.js (token, server, refresh time - the file to edit)   js/util.js (small helpers)   js/names.js (step and board names)
+           js/api.js (talks to Blynk)   js/render.js (draws the cards)   js/demo.js (made-up data)   js/app.js (refresh loop, settings)
+  Try it without hardware:  index.html?demo   or   index.html?demo=alerts        Set-up and data format: README.txt, DATA_CONTRACT.md
+-->
+</head>
+<body>
+
+<header class="top"><div class="top-in">
+  <div class="brand"><img src="img/logo.png" alt=""><div><b>Jolly Helmet</b><small>Online monitor (read only)</small></div></div>
+  <div class="sp"></div>
+  <span id="pill" class="pill"><i></i><span id="pillT">CONNECTING</span></span>
+  <span id="agoText" class="ago"></span>
+  <button class="ibtn" id="themeBtn" title="Light / dark" aria-label="Light or dark theme">&#9680;</button>
+  <button class="ibtn" id="setBtn" title="Settings" aria-label="Settings">&#9881;<span class="lab"> Settings</span></button>
+</div></header>
+
+<main id="main">
+  <!-- first visit: ask for the token -->
+  <section class="center card" id="connect" hidden>
+    <h1>Connect to your machines</h1>
+    <p>This page shows what the Jolly Helmet Online Server sends to Blynk. Paste the <b>device Auth Token</b> of the Online Server's Blynk device (Blynk Console &rarr; Devices &rarr; your device &rarr; Device info). It stays in this browser only.</p>
+    <label for="tk0">Blynk device Auth Token</label>
+    <input id="tk0" type="password" autocomplete="off" spellcheck="false" placeholder="paste the token">
+    <button class="btn" id="go0">Connect</button><button class="btn alt" id="demo0">Try the demo</button>
+    <p class="fine">The page only reads. It never writes to Blynk and has no buttons that control a machine.</p>
+  </section>
+
+  <!-- the monitor -->
+  <div id="view" hidden>
+    <div id="banners" style="display:grid;gap:10px;margin-bottom:16px"></div>
+    <div id="data">
+      <h2>Analytics</h2>
+      <div class="grid kpis" id="kpis" style="margin-bottom:16px"></div>
+      <h2>Machines</h2>
+      <div class="grid g3" id="boxes" style="margin-bottom:16px"></div>
+      <h2>Refill stations (ACS)</h2>
+      <div class="grid g2" id="acs" style="margin-bottom:16px"></div>
+      <div class="grid g2" style="margin-bottom:16px">
+        <div><h2>Last 14 days</h2><div class="card" id="days"></div></div>
+        <div><h2>Last cycles</h2><div class="card" id="hist"></div></div>
+      </div>
+      <h2>Boards and Online Server</h2>
+      <div class="card" id="sys"></div>
+    </div>
+  </div>
+</main>
+<footer id="foot">Read-only monitor. Nothing on this page can switch, start or change a machine.</footer>
+
+<!-- settings window -->
+<dialog id="dlg">
+  <h3>Settings</h3>
+  <label for="tk1">Blynk device Auth Token</label>
+  <input id="tk1" type="password" autocomplete="off" spellcheck="false" placeholder="token (kept in this browser only)">
+  <label for="srv">Blynk server</label>
+  <select id="srv">
+    <option value="blynk.cloud">blynk.cloud (default)</option>
+    <option value="fra1.blynk.cloud">fra1.blynk.cloud (Frankfurt)</option>
+    <option value="lon1.blynk.cloud">lon1.blynk.cloud (London)</option>
+    <option value="ny3.blynk.cloud">ny3.blynk.cloud (New York)</option>
+    <option value="sgp1.blynk.cloud">sgp1.blynk.cloud (Singapore)</option>
+    <option value="blr1.blynk.cloud">blr1.blynk.cloud (Bangalore)</option>
+  </select>
+  <label for="poll">Refresh every</label>
+  <select id="poll"><option value="5">5 seconds</option><option value="10">10 seconds</option><option value="30">30 seconds</option><option value="60">1 minute</option></select>
+  <div style="margin-top:6px">
+    <button class="btn" id="save">Save</button><button class="btn alt" id="forget">Forget token</button><button class="btn alt" id="close">Close</button>
+  </div>
+  <p class="fine" id="cfgnote"></p>
+</dialog>
+
+<!-- order matters: each file uses what the ones above it define -->
+<script src="js/util.js"></script>
+<script src="js/config.js"></script>
+<script src="js/names.js"></script>
+<script src="js/api.js"></script>
+<script src="js/render.js"></script>
+<script src="js/demo.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
