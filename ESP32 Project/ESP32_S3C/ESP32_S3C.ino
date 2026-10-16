@@ -27,6 +27,9 @@
 //   subIndex 1  RULES : 4 rating bands (from,to,minutes) x4, minMinutes, coins, timeValue, unitMin(1/0), maxCoins, freeOn,
 //                       freeMinRating, freeMinutes                                                (20 numbers, same as S3A)
 //   subIndex 2  HEAT  : helmCm, coolDownSec                                                       (2 numbers)
+//   subIndex 7  BEEP  : OPEN A / OPEN B beep length ms, wait between beeps ms (0 = one beep at the start of the step)   (2 numbers) - 2026-10-13
+// Session records (2026-10-13): one per paid session in BoxStatusPacket - finished, or aborted (SESSION_CANCELLED_FLAG). Box 2's revenue is
+// unchanged (C1's own coin counter); the record only feeds the LocalServer's Finished / Cancelled statistics.
 // S3C re-broadcasts both as CMD_SET_CONFIG (target 0, state = 2) every 2 s so a dashboard always shows the live values.
 // Until LocalServer has its page, everything can be set from the USB serial console: type "help".
 // =====================================================================
@@ -85,7 +88,13 @@ uint16_t unlockHeldSec = 0, lockRestSec = 0;
 bool     lockResting   = false;
 bool     unlockForPause = false;  // PAUSED_SAFETY with the door shut and no helmet: let them back in
 uint16_t maintMask     = 0;       // MAINTENANCE: relays set by hand from the dashboard
-uint16_t maintHeaterSec = 0;      // how long the hand-set heater has been on; it switches itself off after MAINT_HEATER_MAX_SEC
+// MAINTENANCE safety: a relay switched on by hand switches itself off again after 2 s, so a forgotten tap cannot leave the heater, the fan, the UV lamp or a lock running.
+// Not while the dashboard's "Bypass Safety 2 Seconds Relay" box is ticked (the heater still has its own 5 minute limit below). Box 2 has no drain pump or coin power relay, so nothing is exempt.
+const uint16_t MAINT_AUTOOFF_MS = 2000;
+const uint16_t MAINT_LATCH_MASK = 0;
+bool     maintBypass   = false;   // the "Bypass Safety 2 Seconds Relay" tick box (sent with every relay command; off whenever maintenance starts or ends)
+uint32_t maintOnAtMs[16];         // when each hand-set relay was switched on
+uint16_t maintHeaterSec = 0;     // how long the hand-set heater has been on; it switches itself off after MAINT_HEATER_MAX_SEC
 const uint16_t MAINT_HEATER_MAX_SEC = 300;
 
 // session statistics for LocalServer (BoxStatusPacket)
@@ -93,7 +102,13 @@ uint32_t completedSessionSeq    = 0;
 uint32_t sessionStartMillis     = 0;
 uint32_t sessionCoinsAtStart    = 0;
 uint16_t lastSessionDurationSec = 0;
-uint16_t lastSessionCoins       = 0;
+uint16_t lastSessionCoins       = 0;      // coins of the session (low 15 bits) + SESSION_CANCELLED_FLAG when the customer aborted mid-cycle
+
+// OPEN A / OPEN B beep (added 2026-10-13): beep for beepLenMs, wait beepWaitMs, repeat until the step ends. beepWaitMs 0 = one beep when the step starts.
+// Set from the LocalServer (CMD_SET_CONFIG subIndex 7), kept in NVS.
+uint16_t beepLenMs  = 100;
+uint16_t beepWaitMs = 500;
+unsigned long lastBeepMs = 0;
 
 // ---------------------------------------------------------------------
 // Live data from the other nodes (written by the receive callback, snapshotted in loop())
@@ -227,6 +242,8 @@ void saveConfigToNVS() {
     prefs.putUShort("rf_on", refreshOnMask);
     prefs.putUShort("rf_off", refreshOffMask);
     prefs.putUShort("arf_sec", autoRefreshSec);
+    prefs.putUShort("beep_len", beepLenMs);
+    prefs.putUShort("beep_wait", beepWaitMs);
 }
 
 void loadConfigFromNVS() {
@@ -248,6 +265,8 @@ void loadConfigFromNVS() {
     refreshOnMask  = prefs.getUShort("rf_on", refreshOnMask);
     refreshOffMask = prefs.getUShort("rf_off", refreshOffMask);
     autoRefreshSec = prefs.getUShort("arf_sec", autoRefreshSec);
+    beepLenMs      = prefs.getUShort("beep_len", beepLenMs);
+    beepWaitMs     = prefs.getUShort("beep_wait", beepWaitMs);
     lastKnownPulsesC1 = prefs.getUInt("last_c1_pulses", 0);   // survives an S3C reboot mid-session
     recomputeDerived();
 }
@@ -343,6 +362,17 @@ bool applyAutoRefreshCsv(const char* s) {
     return true;
 }
 
+// OPEN A / OPEN B beep (subIndex 7): beep length ms, wait between beeps ms (0 = a single beep when the step starts).
+void beepToCsv(char* out, size_t n) { snprintf(out, n, "%u,%u", (unsigned)beepLenMs, (unsigned)beepWaitMs); }
+bool applyBeepCsv(const char* s) {
+    float v[2];
+    if (parseFloats(s, v, 2) != 2) return false;
+    if (v[0] < 20 || v[0] > 1000 || v[1] < 0 || v[1] > 10000) return false;
+    beepLenMs = (uint16_t)(v[0] + 0.5f);
+    beepWaitMs = (uint16_t)(v[1] + 0.5f);
+    return true;
+}
+
 void broadcastSettingsCsv() {
     char buf[200];
     rulesToCsv(buf, sizeof(buf));
@@ -354,6 +384,8 @@ void broadcastSettingsCsv() {
     refreshToCsv(buf, sizeof(buf));  sendCmd(0, CMD_SET_CONFIG, 5, 0, 2, buf);
     delay(2);
     autoRefreshToCsv(buf, sizeof(buf));  sendCmd(0, CMD_SET_CONFIG, 6, 0, 2, buf);
+    delay(2);
+    beepToCsv(buf, sizeof(buf));  sendCmd(0, CMD_SET_CONFIG, 7, 0, 2, buf);
 }
 
 // ---------------------------------------------------------------------
@@ -504,15 +536,19 @@ void applyDesiredMask() {
 // ---------------------------------------------------------------------
 void enterState(Box2State s);
 
-void recordCompletedSession() {
+// One record per paid session, for the LocalServer's Finished / Cancelled statistics: aborted = the customer pressed ABORT mid-cycle.
+// Coins = every coin this customer paid (the INSERT COIN ones and any added during the cycle). Box 2's revenue still comes from C1's own
+// coin counter - this record only feeds the statistics.
+void recordSession(bool aborted) {
     uint32_t durationSec = (millis() - sessionStartMillis) / 1000UL;
-    uint32_t coinsUsed = (lastKnownPulsesC1 >= sessionCoinsAtStart) ? (lastKnownPulsesC1 - sessionCoinsAtStart) : 0;
+    uint32_t coinsUsed = sessionCoins > 0x7FFFUL ? 0x7FFFUL : sessionCoins;
     lastSessionDurationSec = (durationSec > 65535UL) ? 65535 : (uint16_t)durationSec;
-    lastSessionCoins       = (coinsUsed  > 65535UL) ? 65535 : (uint16_t)coinsUsed;
+    lastSessionCoins       = (uint16_t)coinsUsed | (aborted ? SESSION_CANCELLED_FLAG : 0);
     completedSessionSeq++;
-    Serial.printf("[S3C STATS] Session #%u: %us, %u coins, rating before %u.\n",
-                  (unsigned)completedSessionSeq, (unsigned)lastSessionDurationSec, (unsigned)lastSessionCoins, ratingA);
+    Serial.printf("[S3C STATS] Session #%u %s: %us, %u coins, rating before %u.\n",
+                  (unsigned)completedSessionSeq, aborted ? "ABORTED (cancelled)" : "finished", (unsigned)lastSessionDurationSec, (unsigned)coinsUsed, ratingA);
 }
+void recordCompletedSession() { recordSession(false); }
 
 void enterState(Box2State s) {
     currentState = s;
@@ -536,7 +572,8 @@ void enterState(Box2State s) {
         case B2_STATE_INSTRUCTIONS:
         case B2_STATE_RETRIEVE:
             unlockHeldSec = 0; lockRestSec = 0; lockResting = false;
-            sendBuzzer(s == B2_STATE_RETRIEVE ? 500 : 250);
+            if (beepWaitMs > 0) { sendBuzzer(beepLenMs); lastBeepMs = millis(); }     // loop() repeats it until the step ends
+            else sendBuzzer(s == B2_STATE_RETRIEVE ? 500 : 250);
             break;
         case B2_STATE_PAUSED_SAFETY:
             unlockForPause = false; unlockHeldSec = 0; lockRestSec = 0; lockResting = false;
@@ -672,6 +709,7 @@ void handleTouch(const char* a, uint16_t v) {
     } else if (!strcmp(a, "ABORT_YES")) {
         if (st == B2_STATE_ABORT_CONFIRM) {
             Serial.println("[S3C] Heating aborted by the customer -> cool down first");
+            if (!heatFree) recordSession(true);            // a paid session that was cut short: recorded as Cancelled
             beginCoolDown();
         }
     } else if (!strcmp(a, "ABORT_NO")) {
@@ -687,12 +725,24 @@ void handleTouch(const char* a, uint16_t v) {
 
 void handleMaintenance(uint8_t on) {
     if (on) {
-        if (currentState == B2_STATE_TAPS || currentState == B2_STATE_OUT_OF_ORDER) { maintMask = 0; enterState(B2_STATE_MAINTENANCE); }
+        if (currentState == B2_STATE_TAPS || currentState == B2_STATE_OUT_OF_ORDER) { maintMask = 0; maintBypass = false; enterState(B2_STATE_MAINTENANCE); }
         else Serial.println("[S3C] Maintenance refused: only possible from the idle screen");
     } else if (currentState == B2_STATE_MAINTENANCE) {
-        maintMask = 0;
+        maintMask = 0; maintBypass = false;
         enterState(B2_STATE_TAPS);
     }
+}
+
+// Maintenance: switch a hand-set relay off again 2 s after it was switched on (see MAINT_AUTOOFF_MS)
+void maintAutoOffTick(unsigned long now) {
+    if (currentState != B2_STATE_MAINTENANCE || maintBypass) return;
+    uint16_t timed = (uint16_t)(maintMask & ~MAINT_LATCH_MASK);
+    if (!timed) return;
+    bool changed = false;
+    for (uint8_t b = 0; b < 16; b++) {
+        if ((timed & C2_BIT(b)) && (uint32_t)(now - maintOnAtMs[b]) >= MAINT_AUTOOFF_MS) { maintMask &= (uint16_t)(~C2_BIT(b)); changed = true; }
+    }
+    if (changed) { Serial.println("[S3C] Maintenance: a hand-set relay was on for 2 s - switched off (safety)"); applyDesiredMask(); }
 }
 
 // ---------------------------------------------------------------------
@@ -909,7 +959,13 @@ void handleQueuedCommand(const CommandPacket& cmd) {
     } else if (cmd.commandID == CMD_SET_MAINTENANCE) {
         handleMaintenance(cmd.state ? 1 : 0);
     } else if (cmd.commandID == CMD_SET_RELAY_MASK) {
-        if (currentState == B2_STATE_MAINTENANCE) { maintMask = cmd.param16 & C2_MASK_ALL; applyDesiredMask(); }
+        if (currentState == B2_STATE_MAINTENANCE) {
+            uint16_t nm = cmd.param16 & C2_MASK_ALL;
+            uint32_t t = millis();
+            for (uint8_t b = 0; b < 16; b++) if ((nm & C2_BIT(b)) && !(maintMask & C2_BIT(b))) maintOnAtMs[b] = t;   // newly switched on: the 2 s start now
+            maintBypass = (cmd.state & 1) != 0;       // the dashboard's "Bypass Safety 2 Seconds Relay" box (an old dashboard sends 0 = safety on)
+            maintMask = nm; applyDesiredMask();
+        }
     } else if (cmd.commandID == CMD_TFT_HARD_REFRESH) {
         // "Force refresh" from the dashboard: restart C1's touch screen and redraw the current page (cures a white or garbled screen)
         c1HardRefreshPending = true;
@@ -921,6 +977,7 @@ void handleQueuedCommand(const CommandPacket& cmd) {
         else if (cmd.subIndex == 2) ok = applyHeatCsv(cmd.payloadStr);
         else if (cmd.subIndex == 5) ok = applyRefreshCsv(cmd.payloadStr);
         else if (cmd.subIndex == 6) ok = applyAutoRefreshCsv(cmd.payloadStr);
+        else if (cmd.subIndex == 7) ok = applyBeepCsv(cmd.payloadStr);
         else {   // the old "helmCm,secPerCoin,minCoins[,maxCoins[,coolDownSec]]" line
             float v[5];
             int n = parseFloats(cmd.payloadStr, v, 5);
@@ -951,6 +1008,7 @@ void printConfig() {
     Serial.printf("LIVE  : helmet %.1f cm | door %s | relays now: enc %d pan %d bak %d heater %d uv %d fan %d\n",
                   (double)c2snap.usHelmetDistance, c2snap.doorEnclosure ? "OPEN" : "shut",
                   c2snap.relayStates[0], c2snap.relayStates[1], c2snap.relayStates[2], c2snap.relayStates[3], c2snap.relayStates[4], c2snap.relayStates[5]);
+    Serial.printf("beep  : OPEN A / OPEN B beep %u ms, then wait %u ms%s\n", (unsigned)beepLenMs, (unsigned)beepWaitMs, beepWaitMs ? ", repeating" : " (0 = a single beep)");
     Serial.printf("csv   : rules=%s\n        heat=%s\n", r, h);
 }
 
@@ -963,6 +1021,7 @@ void handleSerialLine(char* line) {
     if (!strcmp(cmd, "help")) {
         Serial.println("Commands:  cfg | reset | set <name> <value> | set bandN <from> <to> <minutes>  (N = 1..4)");
         Serial.println("Names:  helm (cm), cooldown (seconds, 5-900), minmin, coins, timevalue, unitmin 0/1, maxcoins, freeon 0/1, freerating, freemin");
+        Serial.println("        beeplen (ms), beepwait (ms, 0 = one beep only)   - the repeating beep of the OPEN A / OPEN B steps");
         return;
     }
     if (!strcmp(cmd, "cfg")) { printConfig(); return; }
@@ -985,6 +1044,8 @@ void handleSerialLine(char* line) {
         else if (!strcmp(a1, "freeon")) freeEnabled = v != 0;
         else if (!strcmp(a1, "freerating")) freeMinRating = (uint8_t)v;
         else if (!strcmp(a1, "freemin")) freeMinutes = (uint8_t)v;
+        else if (!strcmp(a1, "beeplen")) beepLenMs = (uint16_t)(v < 20 ? 20 : (v > 1000 ? 1000 : v));
+        else if (!strcmp(a1, "beepwait")) beepWaitMs = (uint16_t)(v < 0 ? 0 : (v > 10000 ? 10000 : v));
         else { Serial.printf("unknown setting '%s' - type help\n", a1); return; }
         recomputeDerived();
         saveConfigToNVS();
@@ -1144,6 +1205,14 @@ void loop() {
 
     processPulses();
     serialConsole();
+    maintAutoOffTick(now);
+
+    // OPEN A / OPEN B: keep beeping (beep length + wait) until the step ends. beepWaitMs 0 = only the one beep at the start of the step.
+    if (beepWaitMs > 0 && (currentState == B2_STATE_INSTRUCTIONS || currentState == B2_STATE_RETRIEVE) &&
+        now - lastBeepMs >= (unsigned long)beepLenMs + (unsigned long)beepWaitMs) {
+        lastBeepMs = now;
+        sendBuzzer(beepLenMs);
+    }
 
     // periodic hard refresh of C1 (setting "Auto hard refresh"): 0 = never; also not while another repaint is already pending
     if (autoRefreshSec > 0 && now - lastAutoRefreshMs >= (unsigned long)autoRefreshSec * 1000UL) {

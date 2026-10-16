@@ -27,7 +27,11 @@
 //                        maxCoins, freeOn, freeMinRating, freeMinutes                      (20 numbers)
 //   subIndex 2  LEVELS : checksOn, alcLowCm, alcHighCm, sctLowCm, sctHighCm, helmetCm, wsAlcEnter, wsAlcLeave,
 //                        wsSctEnter, wsSctLeave, wsWetHigher, refillTries, refillIntervalSec, acsRequests (14)
+//   subIndex 7  BEEP   : OPEN A / OPEN B beep length ms, wait between beeps ms (0 = one beep at the start of the step)   (2) - added 2026-10-13
 // S3A broadcasts both back as CMD_SET_CONFIG (target 0) every 2 s so a dashboard always shows the live values.
+// COINS FOR THE LOCALSERVER (2026-10-13): CoinBookPacket (running total of booked coins, every second) + one session record per paid session in
+// BoxStatusPacket (finished, or aborted = Cancelled flag). A coin is booked when the INSERT COIN payment completes (a cancel there books nothing)
+// or, if it is added during the cycle, at once. The raw pulses of A1 no longer decide the revenue.
 // Until LocalServer has its page, everything can be set from the USB serial console: type "help".
 // =====================================================================
 
@@ -124,13 +128,31 @@ uint16_t unlockHeldSec = 0, lockRestSec = 0;
 bool     lockResting   = false;
 bool     unlockForPause = false;    // PAUSED_SAFETY with the door shut and no helmet: let them back in
 uint16_t maintMask     = 0;         // MAINTENANCE: relays set by hand from the dashboard
+// MAINTENANCE safety: a relay switched on by hand switches itself off again after 2 s, so a forgotten tap cannot leave a UV lamp, a humidifier or a lock running.
+// Not for the drain pumps and the coin power (those must stay on until switched off) and not for anything while the dashboard's "Bypass Safety 2 Seconds Relay" box is ticked.
+const uint16_t MAINT_AUTOOFF_MS = 2000;
+const uint16_t MAINT_LATCH_MASK = (uint16_t)(A3_BIT(A3_RELAY_DRAIN_PUMP_1) | A3_BIT(A3_RELAY_DRAIN_PUMP_2) | A3_BIT(A3_RELAY_COIN_POWER));
+bool     maintBypass   = false;     // the "Bypass Safety 2 Seconds Relay" tick box (sent with every relay command; off whenever maintenance starts or ends)
+uint32_t maintOnAtMs[16];           // when each hand-set relay was switched on
 
 // session statistics for LocalServer (BoxStatusPacket)
 uint32_t completedSessionSeq    = 0;
 uint32_t sessionStartMillis     = 0;
 uint32_t sessionCoinsAtStart    = 0;
 uint16_t lastSessionDurationSec = 0;
-uint16_t lastSessionCoins       = 0;
+uint16_t lastSessionCoins       = 0;      // coins of the session (low 15 bits) + SESSION_CANCELLED_FLAG when the customer aborted mid-cycle
+
+// Coins booked for the LocalServer's revenue (CoinBookPacket, added 2026-10-13). The coins of the INSERT COIN screen are booked when the payment is
+// complete (a cancel there books nothing); coins added during the cycle are booked one by one. Cumulative, kept in NVS, sent every second.
+uint32_t bookedCoins = 0;
+uint16_t bookSeq     = 0;
+bool     sessionPaid = false;             // the INSERT COIN payment of this customer is complete
+
+// OPEN A / OPEN B beep (added 2026-10-13): beep for beepLenMs, wait beepWaitMs, repeat until the step ends. beepWaitMs 0 = one beep when the step starts.
+// Set from the LocalServer (CMD_SET_CONFIG subIndex 7), kept in NVS.
+uint16_t beepLenMs  = 100;
+uint16_t beepWaitMs = 500;
+unsigned long lastBeepMs = 0;
 
 // ---------------------------------------------------------------------
 // Live data from the other nodes (written by the receive callback, snapshotted in loop())
@@ -290,6 +312,8 @@ void saveConfigToNVS() {
     prefs.putUShort("rf_on", refreshOnMask);
     prefs.putUShort("rf_off", refreshOffMask);
     prefs.putUShort("arf_sec", autoRefreshSec);
+    prefs.putUShort("beep_len", beepLenMs);
+    prefs.putUShort("beep_wait", beepWaitMs);
 }
 
 void loadConfigFromNVS() {
@@ -331,6 +355,9 @@ void loadConfigFromNVS() {
     refreshOnMask  = prefs.getUShort("rf_on", refreshOnMask);
     refreshOffMask = prefs.getUShort("rf_off", refreshOffMask);
     autoRefreshSec = prefs.getUShort("arf_sec", autoRefreshSec);
+    beepLenMs      = prefs.getUShort("beep_len", beepLenMs);
+    beepWaitMs     = prefs.getUShort("beep_wait", beepWaitMs);
+    bookedCoins    = prefs.getUInt("booked", 0);              // survives a reboot: the LocalServer books the difference to what it last saw
     refillBypass   = prefs.getBool("bypass", false);          // survives a reboot: stay out of order until the levels recover
     lastKnownPulsesA1 = prefs.getUInt("last_a1_pulses", 0);   // survives an S3A reboot mid-session
     recomputeDerived();
@@ -442,6 +469,17 @@ bool applyRefreshCsv(const char* s) {
     return true;
 }
 
+// OPEN A / OPEN B beep (subIndex 7): beep length ms, wait between beeps ms (0 = a single beep when the step starts).
+void beepToCsv(char* out, size_t n) { snprintf(out, n, "%u,%u", (unsigned)beepLenMs, (unsigned)beepWaitMs); }
+bool applyBeepCsv(const char* s) {
+    float v[2];
+    if (parseFloats(s, v, 2) != 2) return false;
+    if (v[0] < 20 || v[0] > 1000 || v[1] < 0 || v[1] > 10000) return false;
+    beepLenMs = (uint16_t)(v[0] + 0.5f);
+    beepWaitMs = (uint16_t)(v[1] + 0.5f);
+    return true;
+}
+
 // Auto hard refresh (subIndex 6): one number, seconds between refreshes (0 = never, 60 = max).
 void autoRefreshToCsv(char* out, size_t n) { snprintf(out, n, "%u", (unsigned)autoRefreshSec); }
 bool applyAutoRefreshCsv(const char* s) {
@@ -467,6 +505,8 @@ void broadcastSettingsCsv() {
     refreshToCsv(buf, sizeof(buf));  sendCmd(0, CMD_SET_CONFIG, 5, 0, 0, buf);
     delay(2);
     autoRefreshToCsv(buf, sizeof(buf));  sendCmd(0, CMD_SET_CONFIG, 6, 0, 0, buf);
+    delay(2);
+    beepToCsv(buf, sizeof(buf));  sendCmd(0, CMD_SET_CONFIG, 7, 0, 0, buf);
 }
 
 // ---------------------------------------------------------------------
@@ -698,15 +738,32 @@ void goOutOfOrder(const char* why) {
     enterState(STATE_OUT_OF_ORDER);
 }
 
-void recordCompletedSession() {
-    uint32_t durationSec = (millis() - sessionStartMillis) / 1000UL;
-    uint32_t coinsUsed = (lastKnownPulsesA1 >= sessionCoinsAtStart) ? (lastKnownPulsesA1 - sessionCoinsAtStart) : 0;
-    lastSessionDurationSec = (durationSec > 65535UL) ? 65535 : (uint16_t)durationSec;
-    lastSessionCoins       = (coinsUsed  > 65535UL) ? 65535 : (uint16_t)coinsUsed;
-    completedSessionSeq++;
-    Serial.printf("[S3A STATS] Session #%u: %us, %u coins, mist %u, rating before %u.\n",
-                  (unsigned)completedSessionSeq, (unsigned)lastSessionDurationSec, (unsigned)lastSessionCoins, mistMode, ratingA);
+// Adds coins to the running total the LocalServer books revenue from (kept in NVS, sent every second as a CoinBookPacket).
+void bookCoins(uint32_t n) {
+    if (n == 0) return;
+    bookedCoins += n;
+    prefs.putUInt("booked", bookedCoins);
 }
+
+// The INSERT COIN payment is complete: from now on this customer's coins count as revenue. (A cancel on that screen never gets here.)
+void commitPayment() {
+    sessionPaid = true;
+    bookCoins(sessionCoins);
+    Serial.printf("[S3A COIN] Payment complete: %lu coin(s) booked, running total %lu\n", (unsigned long)sessionCoins, (unsigned long)bookedCoins);
+}
+
+// One record per paid session, for the LocalServer's Finished / Cancelled statistics: aborted = the customer pressed ABORT mid-cycle.
+// Coins = every coin this customer paid (the INSERT COIN ones and any added during the cycle).
+void recordSession(bool aborted) {
+    uint32_t durationSec = (millis() - sessionStartMillis) / 1000UL;
+    uint32_t coinsUsed = sessionCoins > 0x7FFFUL ? 0x7FFFUL : sessionCoins;
+    lastSessionDurationSec = (durationSec > 65535UL) ? 65535 : (uint16_t)durationSec;
+    lastSessionCoins       = (uint16_t)coinsUsed | (aborted ? SESSION_CANCELLED_FLAG : 0);
+    completedSessionSeq++;
+    Serial.printf("[S3A STATS] Session #%u %s: %us, %u coins, mist %u, rating before %u.\n",
+                  (unsigned)completedSessionSeq, aborted ? "ABORTED (cancelled)" : "finished", (unsigned)lastSessionDurationSec, (unsigned)coinsUsed, mistMode, ratingA);
+}
+void recordCompletedSession() { recordSession(false); }
 
 void enterState(MachineState s) {
     currentMachineState = s;
@@ -720,6 +777,7 @@ void enterState(MachineState s) {
             cleanFree = false;
             ratingA = ratingB = 0;
             sessionCoins = 0;
+            sessionPaid = false;
             cleanTotalSec = 0;
             unlockForPause = false;
             clearStatus();
@@ -739,7 +797,8 @@ void enterState(MachineState s) {
         case STATE_INSTRUCTIONS:
         case STATE_RETRIEVE:
             unlockHeldSec = 0; lockRestSec = 0; lockResting = false;
-            sendBuzzer(s == STATE_RETRIEVE ? 500 : 250);
+            if (beepWaitMs > 0) { sendBuzzer(beepLenMs); lastBeepMs = millis(); }     // loop() repeats it until the step ends
+            else sendBuzzer(s == STATE_RETRIEVE ? 500 : 250);
             break;
         case STATE_PAUSED_SAFETY:
             unlockForPause = false; unlockHeldSec = 0; lockRestSec = 0; lockResting = false;
@@ -762,7 +821,7 @@ void enterState(MachineState s) {
 
 // A customer has tapped the TAPS screen.
 void beginSession() {
-    mistMode = MIST_NONE; retryUsed = false; cleanFree = false; ratingA = ratingB = 0; sessionCoins = 0;
+    mistMode = MIST_NONE; retryUsed = false; cleanFree = false; ratingA = ratingB = 0; sessionCoins = 0; sessionPaid = false;
     enterState(STATE_CHECKING);
 }
 
@@ -883,6 +942,7 @@ void handleTouch(const char* a, uint16_t v) {
     } else if (!strcmp(a, "ABORT_YES")) {
         if (st == STATE_ABORT_CONFIRM) {
             Serial.println("[S3A] Cleaning aborted by the customer");
+            if (!cleanFree) recordSession(true);           // a paid session that was cut short: recorded as Cancelled, its coins stay booked
             activeTimer = 0;
             enterState(STATE_RETRIEVE);
         }
@@ -899,12 +959,24 @@ void handleTouch(const char* a, uint16_t v) {
 
 void handleMaintenance(uint8_t on) {
     if (on) {
-        if (currentMachineState == STATE_TAPS || currentMachineState == STATE_OUT_OF_ORDER) { maintMask = 0; enterState(STATE_MAINTENANCE); }
+        if (currentMachineState == STATE_TAPS || currentMachineState == STATE_OUT_OF_ORDER) { maintMask = 0; maintBypass = false; enterState(STATE_MAINTENANCE); }
         else Serial.println("[S3A] Maintenance refused: only possible from the idle screen");
     } else if (currentMachineState == STATE_MAINTENANCE) {
-        maintMask = 0;
+        maintMask = 0; maintBypass = false;
         enterState(STATE_TAPS);
     }
+}
+
+// Maintenance: switch a hand-set relay off again 2 s after it was switched on (see MAINT_AUTOOFF_MS)
+void maintAutoOffTick(unsigned long now) {
+    if (currentMachineState != STATE_MAINTENANCE || maintBypass) return;
+    uint16_t timed = (uint16_t)(maintMask & ~MAINT_LATCH_MASK);
+    if (!timed) return;
+    bool changed = false;
+    for (uint8_t b = 0; b < 16; b++) {
+        if ((timed & A3_BIT(b)) && (uint32_t)(now - maintOnAtMs[b]) >= MAINT_AUTOOFF_MS) { maintMask &= (uint16_t)(~A3_BIT(b)); changed = true; }
+    }
+    if (changed) { Serial.println("[S3A] Maintenance: a hand-set relay was on for 2 s - switched off (safety)"); applyDesiredMask(); }
 }
 
 // ---------------------------------------------------------------------
@@ -951,6 +1023,7 @@ void tickState() {
         case STATE_INSERT_COIN:
             if (activeTimer >= requiredCoinsForSession * secondsPerCoin) {
                 activeTimer = requiredCoinsForSession * secondsPerCoin;   // anything beyond the price is discarded
+                commitPayment();                                          // the coins are revenue from here on
                 enterState(STATE_INSTRUCTIONS);
             }
             break;
@@ -1083,6 +1156,7 @@ void processPulses() {
             uint32_t added = newPulses * secondsPerCoin;
             activeTimer += added;
             sessionCoins += newPulses;
+            if (sessionPaid) bookCoins(newPulses);     // a coin added during the cycle is revenue at once (the INSERT COIN ones are booked when the payment completes)
             if (currentMachineState == STATE_CLEANING) {
                 cleanTotalSec = (cleanTotalSec + added > 9999UL) ? 9999UL : cleanTotalSec + added;
                 needScreenRedraw = true;               // the bar's total grew
@@ -1154,7 +1228,13 @@ void handleQueuedCommand(const CommandPacket& cmd) {
     } else if (cmd.commandID == CMD_SET_MAINTENANCE) {
         handleMaintenance(cmd.state ? 1 : 0);
     } else if (cmd.commandID == CMD_SET_RELAY_MASK) {
-        if (currentMachineState == STATE_MAINTENANCE) { maintMask = cmd.param16 & A3_MASK_ALL; applyDesiredMask(); }
+        if (currentMachineState == STATE_MAINTENANCE) {
+            uint16_t nm = cmd.param16 & A3_MASK_ALL;
+            uint32_t t = millis();
+            for (uint8_t b = 0; b < 16; b++) if ((nm & A3_BIT(b)) && !(maintMask & A3_BIT(b))) maintOnAtMs[b] = t;   // newly switched on: the 2 s start now
+            maintBypass = (cmd.state & 1) != 0;       // the dashboard's "Bypass Safety 2 Seconds Relay" box (an old dashboard sends 0 = safety on)
+            maintMask = nm; applyDesiredMask();
+        }
     } else if (cmd.commandID == CMD_TFT_HARD_REFRESH) {
         // "Force refresh" from the dashboard: restart A1's touch screen and redraw the current page (cures a white or garbled screen)
         a1HardRefreshPending = true;
@@ -1167,6 +1247,7 @@ void handleQueuedCommand(const CommandPacket& cmd) {
         else if (cmd.subIndex == 3) ok = applyPhasesCsv(cmd.payloadStr);
         else if (cmd.subIndex == 5) ok = applyRefreshCsv(cmd.payloadStr);
         else if (cmd.subIndex == 6) ok = applyAutoRefreshCsv(cmd.payloadStr);
+        else if (cmd.subIndex == 7) ok = applyBeepCsv(cmd.payloadStr);
         else {   // the old "helmCm,lowPct,highPct,secPerCoin,minCoins[,maxCoins]" line: only the helmet distance and max coins still mean anything
             float v[6];
             int n = parseFloats(cmd.payloadStr, v, 6);
@@ -1199,6 +1280,8 @@ void printConfig() {
     Serial.printf("LIVE  : helmet %.1f cm | MC alcohol %.1f cm | MC scented %.1f cm | water raw %u / %u -> %s / %s | door %s\n",
                   (double)a2snap.usHelmetCm, (double)a2snap.usMcAlsCm, (double)a2snap.usMcSlsCm, a2snap.wsAlsRaw, a2snap.wsSlsRaw,
                   wsWet[0] ? "WET" : "dry", wsWet[1] ? "WET" : "dry", a2snap.doorEnclosure ? "OPEN" : "shut");
+    Serial.printf("beep  : OPEN A / OPEN B beep %u ms, then wait %u ms%s | booked coins %lu (running total sent to the LocalServer)\n",
+                  (unsigned)beepLenMs, (unsigned)beepWaitMs, beepWaitMs ? ", repeating" : " (0 = a single beep)", (unsigned long)bookedCoins);
     Serial.printf("csv   : rules=%s\n        levels=%s\n", r, l);
 }
 
@@ -1211,7 +1294,8 @@ void handleSerialLine(char* line) {
     if (!strcmp(cmd, "help")) {
         Serial.println("Commands:  cfg | reset | bypass 0/1 | set <name> <value> | set bandN <from> <to> <minutes>  (N = 1..4)");
         Serial.println("Names:  checks 0/1, alclow, alchigh, sctlow, scthigh (cm), helm (cm), wsa_in, wsa_out, wss_in, wss_out (raw), wshigher 0/1,");
-        Serial.println("        tries, interval (s), acs 0/1, minmin, coins, timevalue, unitmin 0/1, maxcoins, freeon 0/1, freerating, freemin");
+        Serial.println("        tries, interval (s), acs 0/1, minmin, coins, timevalue, unitmin 0/1, maxcoins, freeon 0/1, freerating, freemin,");
+        Serial.println("        beeplen (ms), beepwait (ms, 0 = one beep only)   - the repeating beep of the OPEN A / OPEN B steps");
         Serial.println("Cleaning phases:  set phasepaid 0/1 | set phasefree 0/1 | set phasestart <value> <pct|sec|min> | set phaseend <value> <pct|sec|min>");
         Serial.println("        set phasepat <hum1> <hum2> <hum3> <uv1> <uv2>   (each 0-7: 1 = start, 2 = middle, 4 = end, added together; default 2 2 2 5 5)");
         return;
@@ -1264,6 +1348,8 @@ void handleSerialLine(char* line) {
         else if (!strcmp(a1, "freeon")) freeEnabled = v != 0;
         else if (!strcmp(a1, "freerating")) freeMinRating = (uint8_t)v;
         else if (!strcmp(a1, "freemin")) freeMinutes = (uint8_t)v;
+        else if (!strcmp(a1, "beeplen")) beepLenMs = (uint16_t)(v < 20 ? 20 : (v > 1000 ? 1000 : v));
+        else if (!strcmp(a1, "beepwait")) beepWaitMs = (uint16_t)(v < 0 ? 0 : (v > 10000 ? 10000 : v));
         else { Serial.printf("unknown setting '%s' - type help\n", a1); return; }
         recomputeDerived();
         saveConfigToNVS();
@@ -1300,6 +1386,17 @@ void broadcastStatus() {
     packet.lastSessionDurationSec = lastSessionDurationSec;
     packet.lastSessionCoins       = lastSessionCoins;
     esp_now_send(BROADCAST_MAC, (uint8_t*)&packet, sizeof(BoxStatusPacket));
+}
+
+// The running total of booked coins, once a second (the LocalServer books the difference to what it saw last).
+void broadcastBooked() {
+    CoinBookPacket p;
+    memset(&p, 0, sizeof(p));
+    p.deviceID    = DEVICE_S3A;
+    p.magic       = COINBOOK_MAGIC;
+    p.bookedCoins = bookedCoins;
+    p.seq         = ++bookSeq;
+    esp_now_send(BROADCAST_MAC, (uint8_t*)&p, sizeof(p));
 }
 
 void oneSecondTick() {
@@ -1345,6 +1442,8 @@ void oneSecondTick() {
     broadcastConfig();
     delay(2);
     broadcastStatus();
+    delay(2);
+    broadcastBooked();
     delay(2);
 
     if (now - lastMaskSentMs >= MASK_REASSERT_MS) { sendMask(); delay(2); }
@@ -1417,6 +1516,14 @@ void loop() {
 
     processPulses();
     serialConsole();
+    maintAutoOffTick(now);
+
+    // OPEN A / OPEN B: keep beeping (beep length + wait) until the step ends. beepWaitMs 0 = only the one beep at the start of the step.
+    if (beepWaitMs > 0 && (currentMachineState == STATE_INSTRUCTIONS || currentMachineState == STATE_RETRIEVE) &&
+        now - lastBeepMs >= (unsigned long)beepLenMs + (unsigned long)beepWaitMs) {
+        lastBeepMs = now;
+        sendBuzzer(beepLenMs);
+    }
 
     // periodic hard refresh of A1 (setting "Auto hard refresh"): 0 = never; also not while another repaint is already pending
     if (autoRefreshSec > 0 && now - lastAutoRefreshMs >= (unsigned long)autoRefreshSec * 1000UL) {

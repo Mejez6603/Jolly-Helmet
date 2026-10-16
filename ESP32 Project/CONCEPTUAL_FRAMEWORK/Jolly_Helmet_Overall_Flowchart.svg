@@ -1,0 +1,302 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2650 2240" width="2650" height="2240" font-family="Arial, Helvetica, sans-serif">
+<defs><marker id="ah" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L12,6 L0,12 z" fill="#000"/></marker></defs>
+<rect width="2650" height="2240" fill="#fff"/>
+<text x="1325" y="46" text-anchor="middle" font-size="32" font-weight="700">JOLLY HELMET: OVERALL FLOWCHART</text>
+<text x="1325" y="76" text-anchor="middle" font-size="18">One customer visit at Box 1 (cleaning), Box 2 (drying) or Box 3 (cleaning and drying), and everything behind the screens</text>
+<rect x="1255" y="182" width="1375" height="1850" fill="#f4f4f4" stroke="#000" stroke-width="2.5"/>
+<text x="1942" y="210" text-anchor="middle" font-size="19" font-weight="700">BEHIND THE SCREENS: THE WHOLE SYSTEM</text>
+<text x="640" y="98" text-anchor="middle" font-size="19" font-weight="700">CUSTOMER JOURNEY</text>
+<text x="1275" y="240" font-size="14" font-weight="700" fill="#444">MACHINES</text>
+<text x="1275" y="595" font-size="14" font-weight="700" fill="#444">LOCAL NETWORK</text>
+<text x="1275" y="905" font-size="14" font-weight="700" fill="#444">ONLINE</text>
+<text x="1275" y="1310" font-size="14" font-weight="700" fill="#444">PEOPLE</text>
+<rect x="1290" y="1650" width="1305" height="330" fill="#fff" stroke="#000" stroke-width="2"/>
+<text x="1310" y="1678" font-size="17" font-weight="700">HOW THE PIECES TALK</text>
+<text x="1310" y="1708" font-size="14.5">&#8226; Boxes: the boards of each box (A1, A2, A3 / C1, C2 / B1, B2, B3) and its sub-server (S3A / S3C / S3B) use the ESP-NOW radio, channel 1; no router is needed.</text>
+<text x="1310" y="1744" font-size="14.5">&#8226; ACS 1 and ACS 2: talk to the sub-server of Box 1 and Box 3 over ESP-NOW (refill request, level, done).</text>
+<text x="1310" y="1780" font-size="14.5">&#8226; LocalServer: the hub of the radio and its own Wi-Fi 'ESP32_LOCAL'; the Control Center opens in any phone or PC browser. All commands and settings go through it.</text>
+<text x="1310" y="1816" font-size="14.5">&#8226; Online Server: only listens to the radio and never sends a command; it joins a Wi-Fi chosen in its setup page to reach the internet.</text>
+<text x="1310" y="1852" font-size="14.5">&#8226; Online Server to Blynk: HTTPS update of one datastream (V0) about every minute; a second, public Blynk device carries only the customer status.</text>
+<text x="1310" y="1888" font-size="14.5">&#8226; Web page: static files kept in GitHub and published by Vercel; the page reads Blynk over HTTPS and sends nothing back (read-only).</text>
+<text x="1310" y="1924" font-size="14.5">&#8226; People: the admin changes things in the Control Center; the owner watches the Control Center and the web page; the customer uses the touch screen and the status page.</text>
+<path d="M620.0 182.0 L620.0 220.0" fill="none" stroke="#000" stroke-width="2" marker-end="url(#ah)"/>
+<path d="M620.0 370.0 L620.0 429.0" fill="none" stroke="#000" stroke-width="2" marker-end="url(#ah)"/>
+<path d="M820.0 295.0 L870.0 295.0" fill="none" stroke="#000" stroke-width="2" marker-end="url(#ah)"/>
+<path d="M1020.0 337.0 L1020.0 385.0" fill="none" stroke="#000" stroke-width="2" marker-end="url(#ah)"/>
+<path d="M1020.0 485.0 L1020.0 528.0" fill="none" stroke="#000" stroke-width="2" stroke-dasharray="7 6"/>
+<path d="M620.0 491.0 L620.0 539.0" fill="none" stroke="#000" stroke-width="2" marker-end="url(#ah)"/>
+<path d="M620.0 601.0 L620.0 645.0" fill="none" stroke="#000" stroke-width="2" marker-end="url(#ah)"/>
+<path d="M620.0 725.0 L620.0 760.0" fill="none" stroke="#000" stroke-width="2" marker-end="url(#ah)"/>
+<path d="M620.0 840.0 L620.0 879.0" fill="none" stroke="#000" stroke-width="2" marker-end="url(#ah)"/>
+<path d="M620.0 941.0 L620.0 985.0" fill="none" stroke="#000" stroke-width="2" marker-end="url(#ah)"/>
+<path d="M785.0 910.0 L870.0 910.0" fill="none" stroke="#000" stroke-width="2" stroke-dasharray="7 6"/>
+<path d="M445.0 1025.0 L360.0 1025.0" fill="none" stroke="#000" stroke-width="2" marker-end="url(#ah)"/>
+<path d="M795.0 1025.0 L870.0 1025.0" fill="none" stroke="#000" stroke-width="2" stroke-dasharray="7 6"/>
+<path d="M620.0 1065.0 L620.0 1108.0" fill="none" stroke="#000" stroke-width="2" marker-end="url(#ah)"/>
+<path d="M620.0 1192.0 L620.0 1249.0" fill="none" stroke="#000" stroke-width="2" marker-end="url(#ah)"/>
+<path d="M420.0 1305.0 L360.0 1305.0" fill="none" stroke="#000" stroke-width="2" marker-end="url(#ah)"/>
+<path d="M820.0 1305.0 L870.0 1305.0" fill="none" stroke="#000" stroke-width="2" marker-end="url(#ah)" marker-start="url(#ah)"/>
+<path d="M620.0 1361.0 L620.0 1400.0" fill="none" stroke="#000" stroke-width="2" marker-end="url(#ah)"/>
+<path d="M810.0 1460.0 L870.0 1460.0" fill="none" stroke="#000" stroke-width="2" marker-end="url(#ah)"/>
+<path d="M620.0 1520.0 L620.0 1570.0" fill="none" stroke="#000" stroke-width="2" marker-end="url(#ah)"/>
+<path d="M1020.0 1505.0 L1020.0 1605.0 L810.0 1605.0" fill="none" stroke="#000" stroke-width="2" marker-end="url(#ah)"/>
+<path d="M225.0 1350.0 L225.0 1605.0 L430.0 1605.0" fill="none" stroke="#000" stroke-width="2" marker-end="url(#ah)"/>
+<path d="M620.0 1640.0 L620.0 1675.0" fill="none" stroke="#000" stroke-width="2" marker-end="url(#ah)"/>
+<path d="M620.0 1755.0 L620.0 1795.0" fill="none" stroke="#000" stroke-width="2" marker-end="url(#ah)"/>
+<path d="M420.0 1855.0 L360.0 1855.0" fill="none" stroke="#000" stroke-width="2" marker-end="url(#ah)"/>
+<path d="M620.0 1915.0 L620.0 1962.0" fill="none" stroke="#000" stroke-width="2" marker-end="url(#ah)"/>
+<path d="M90.0 1855.0 L60.0 1855.0 L60.0 1150.0 L430.0 1150.0" fill="none" stroke="#000" stroke-width="2" marker-end="url(#ah)"/>
+<path d="M790.0 1995.0 L1195.0 1995.0 L1195.0 150.0 L770.0 150.0" fill="none" stroke="#000" stroke-width="2" marker-end="url(#ah)"/>
+<path d="M90.0 1025.0 L30.0 1025.0 L30.0 150.0 L470.0 150.0" fill="none" stroke="#000" stroke-width="2" marker-end="url(#ah)"/>
+<path d="M1170.0 295.0 L1292.5 295.0" fill="none" stroke="#000" stroke-width="2" stroke-dasharray="7 6" marker-end="url(#ah)"/>
+<path d="M1527.5 340.0 L1557.5 340.0" fill="none" stroke="#000" stroke-width="2" stroke-dasharray="7 6" marker-end="url(#ah)" marker-start="url(#ah)"/>
+<path d="M2322.5 340.0 L2352.5 340.0" fill="none" stroke="#000" stroke-width="2" stroke-dasharray="7 6" marker-end="url(#ah)" marker-start="url(#ah)"/>
+<path d="M1410.0 425.0 L1410.0 490.0" fill="none" stroke="#000" stroke-width="2" stroke-dasharray="7 6"/>
+<path d="M1675.0 425.0 L1675.0 490.0" fill="none" stroke="#000" stroke-width="2" stroke-dasharray="7 6"/>
+<path d="M1940.0 425.0 L1940.0 490.0" fill="none" stroke="#000" stroke-width="2" stroke-dasharray="7 6"/>
+<path d="M2205.0 425.0 L2205.0 490.0" fill="none" stroke="#000" stroke-width="2" stroke-dasharray="7 6"/>
+<path d="M2470.0 425.0 L2470.0 490.0" fill="none" stroke="#000" stroke-width="2" stroke-dasharray="7 6"/>
+<path d="M1410.0 490.0 L2470.0 490.0" fill="none" stroke="#000" stroke-width="2" stroke-dasharray="7 6"/>
+<path d="M1675.0 490.0 L1675.0 655.0" fill="none" stroke="#000" stroke-width="2" stroke-dasharray="7 6" marker-end="url(#ah)" marker-start="url(#ah)"/>
+<path d="M1400.0 765.0 L1410.0 950.0" fill="none" stroke="#000" stroke-width="2" stroke-dasharray="7 6" marker-end="url(#ah)"/>
+<path d="M1527.5 1030.0 L1557.5 1030.0" fill="none" stroke="#000" stroke-width="2" stroke-dasharray="7 6" marker-end="url(#ah)"/>
+<path d="M1792.5 1030.0 L1822.5 1030.0" fill="none" stroke="#000" stroke-width="2" stroke-dasharray="7 6" marker-end="url(#ah)"/>
+<path d="M2087.5 1030.0 L2057.5 1030.0" fill="none" stroke="#000" stroke-width="2" stroke-dasharray="7 6" marker-end="url(#ah)"/>
+<path d="M2352.5 1030.0 L2322.5 1030.0" fill="none" stroke="#000" stroke-width="2" stroke-dasharray="7 6" marker-end="url(#ah)"/>
+<path d="M2057.5 710.0 L2087.0 710.0" fill="none" stroke="#000" stroke-width="2" stroke-dasharray="7 6" marker-end="url(#ah)" marker-start="url(#ah)"/>
+<path d="M1940.0 1110.0 L1940.0 1350.0" fill="none" stroke="#000" stroke-width="2" stroke-dasharray="7 6" marker-end="url(#ah)"/>
+<path d="M2030.0 1110.0 L2030.0 1220.0 L2330.0 1220.0 L2330.0 1350.0" fill="none" stroke="#000" stroke-width="2" stroke-dasharray="7 6" marker-end="url(#ah)"/>
+<rect x="870" y="975" width="300" height="100" rx="8" fill="#fff" stroke="#000" stroke-width="1.6" stroke-dasharray="6 5"/>
+<text x="1020" y="994" text-anchor="middle" font-size="15" font-weight="bold" fill="#000">While a paid run goes on,</text>
+<text x="1020" y="1012" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">more coins add time (slot</text>
+<text x="1020" y="1030" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">open, up to the maximum)</text>
+<text x="1020" y="1048" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">a coin at any other time</text>
+<text x="1020" y="1066" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">is not credited</text>
+<rect x="445" y="985" width="350" height="80" rx="8" fill="#fff" stroke="#000" stroke-width="2"/>
+<text x="620" y="1012" text-anchor="middle" font-size="15" font-weight="bold" fill="#000">INSERT COIN</text>
+<text x="620" y="1030" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">coins count up;</text>
+<text x="620" y="1048" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">the price follows the time</text>
+<rect x="870" y="528" width="300" height="84" rx="8" fill="#fff" stroke="#000" stroke-width="1.6" stroke-dasharray="6 5"/>
+<text x="1020" y="557" text-anchor="middle" font-size="15" font-weight="bold" fill="#000">Box 3, refill gave up:</text>
+<text x="1020" y="575" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">CLEANING is greyed,</text>
+<text x="1020" y="593" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">DRYING still works</text>
+<rect x="450" y="1962" width="340" height="66" rx="30" fill="#000" stroke="#000" stroke-width="2"/>
+<text x="620" y="1991" text-anchor="middle" font-size="15" font-weight="bold" fill="#fff">FINISH</text>
+<text x="620" y="2009" text-anchor="middle" font-size="15" font-weight="normal" fill="#fff">thank you, back to TAPS</text>
+<rect x="1822.5" y="255" width="235" height="170" rx="8" fill="#fff" stroke="#000" stroke-width="2"/>
+<text x="1940" y="291" text-anchor="middle" font-size="15" font-weight="bold" fill="#000">BOX 2 (drying)</text>
+<text x="1940" y="309" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">C1 screen + coin slot</text>
+<text x="1940" y="327" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">C2 sensors + relays:</text>
+<text x="1940" y="345" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">heater, UV, fan, lock</text>
+<text x="1940" y="363" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">SUB-SERVER S3C</text>
+<text x="1940" y="381" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">(the box's brain)</text>
+<text x="1940" y="399" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">no refill station</text>
+<rect x="90" y="1820" width="270" height="70" rx="26" fill="#fff" stroke="#000" stroke-width="1.6"/>
+<text x="225" y="1851" text-anchor="middle" font-size="15" font-weight="bold" fill="#000">yes: FREE run (2 min),</text>
+<text x="225" y="1869" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">then back to OPEN A</text>
+<rect x="870" y="868" width="300" height="84" rx="8" fill="#fff" stroke="#000" stroke-width="1.6" stroke-dasharray="6 5"/>
+<text x="1020" y="897" text-anchor="middle" font-size="15" font-weight="bold" fill="#000">Under the minimum or</text>
+<text x="1020" y="915" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">over the maximum coins:</text>
+<text x="1020" y="933" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">it asks again</text>
+<rect x="2087.5" y="255" width="235" height="170" rx="8" fill="#fff" stroke="#000" stroke-width="2"/>
+<text x="2205" y="291" text-anchor="middle" font-size="15" font-weight="bold" fill="#000">BOX 3 (clean + dry)</text>
+<text x="2205" y="309" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">B1 screen + coin slot</text>
+<text x="2205" y="327" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">B2 sensors</text>
+<text x="2205" y="345" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">B3 relays: UV, mist,</text>
+<text x="2205" y="363" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">heater, fan, lock</text>
+<text x="2205" y="381" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">SUB-SERVER S3B</text>
+<text x="2205" y="399" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">(the box's brain)</text>
+<rect x="1292.5" y="255" width="235" height="170" rx="8" fill="#fff" stroke="#000" stroke-width="2"/>
+<text x="1410" y="300" text-anchor="middle" font-size="15" font-weight="bold" fill="#000">ACS 1</text>
+<text x="1410" y="318" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">refill station</text>
+<text x="1410" y="336" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">for Box 1</text>
+<text x="1410" y="354" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">alcohol and scented</text>
+<text x="1410" y="372" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">mixer containers,</text>
+<text x="1410" y="390" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">pumps, level sensors</text>
+<rect x="90" y="1260" width="270" height="90" rx="8" fill="#fff" stroke="#000" stroke-width="2"/>
+<text x="225" y="1292" text-anchor="middle" font-size="15" font-weight="bold" fill="#000">CANCEL, CONFIRM:</text>
+<text x="225" y="1310" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">stops early,</text>
+<text x="225" y="1328" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">coins are not refunded</text>
+<rect x="2087.5" y="950" width="235" height="160" rx="8" fill="#fff" stroke="#000" stroke-width="2"/>
+<text x="2205" y="990" text-anchor="middle" font-size="15" font-weight="bold" fill="#000">VERCEL</text>
+<text x="2205" y="1008" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">builds and hosts</text>
+<text x="2205" y="1026" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">the web page</text>
+<text x="2205" y="1044" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">(public address,</text>
+<text x="2205" y="1062" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">QR code on the</text>
+<text x="2205" y="1080" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">machines)</text>
+<rect x="440" y="645" width="360" height="80" rx="8" fill="#fff" stroke="#000" stroke-width="2"/>
+<text x="620" y="672" text-anchor="middle" font-size="15" font-weight="bold" fill="#000">RATE A</text>
+<text x="620" y="690" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">odor (cleaning) or how wet</text>
+<text x="620" y="708" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">(drying), 1 to 10, CONFIRM</text>
+<rect x="430" y="1675" width="380" height="80" rx="8" fill="#fff" stroke="#000" stroke-width="2"/>
+<text x="620" y="1702" text-anchor="middle" font-size="15" font-weight="bold" fill="#000">RATE B</text>
+<text x="620" y="1720" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">how clean or how dry now,</text>
+<text x="620" y="1738" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">1 to 10, CONFIRM</text>
+<path d="M620 1400 L810 1460 L620 1520 L430 1460 Z" fill="#fff" stroke="#000" stroke-width="2"/>
+<text x="620" y="1456" text-anchor="middle" font-size="15" font-weight="bold" fill="#000">HEATED RUN?</text>
+<text x="620" y="1474" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">Box 2, Box 3 drying</text>
+<rect x="870" y="385" width="300" height="100" rx="8" fill="#fff" stroke="#000" stroke-width="2"/>
+<rect x="874" y="389" width="292" height="92" rx="5" fill="none" stroke="#000" stroke-width="1.2"/>
+<text x="1020" y="413" text-anchor="middle" font-size="15" font-weight="bold" fill="#000">OUT OF ORDER</text>
+<text x="1020" y="431" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">refill gave up (Box 1) or</text>
+<text x="1020" y="449" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">board C2 silent (Box 2):</text>
+<text x="1020" y="467" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">use another station</text>
+<path d="M620 220 L820 295 L620 370 L420 295 Z" fill="#fff" stroke="#000" stroke-width="2"/>
+<text x="620" y="282" text-anchor="middle" font-size="15" font-weight="bold" fill="#000">STATION READY?</text>
+<text x="620" y="300" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">containers enough,</text>
+<text x="620" y="318" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">boards answering?</text>
+<path d="M620 1795 L820 1855 L620 1915 L420 1855 Z" fill="#fff" stroke="#000" stroke-width="2"/>
+<text x="620" y="1851" text-anchor="middle" font-size="15" font-weight="bold" fill="#000">FREE RETRY</text>
+<text x="620" y="1869" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">offered?</text>
+<rect x="1292.5" y="950" width="235" height="160" rx="8" fill="#fff" stroke="#000" stroke-width="2"/>
+<text x="1410" y="990" text-anchor="middle" font-size="15" font-weight="bold" fill="#000">ONLINE SERVER</text>
+<text x="1410" y="1008" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">ESP32-S3, only listens</text>
+<text x="1410" y="1026" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">to the radio, counts per</text>
+<text x="1410" y="1044" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">box and hour, uploads</text>
+<text x="1410" y="1062" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">over Wi-Fi (HTTPS)</text>
+<text x="1410" y="1080" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">about every minute</text>
+<rect x="1292.5" y="655" width="765" height="110" rx="8" fill="#fff" stroke="#000" stroke-width="2"/>
+<text x="1675" y="688" text-anchor="middle" font-size="15" font-weight="bold" fill="#000">LOCALSERVER (the hub: ESP32 + its own Wi-Fi 'ESP32_LOCAL')</text>
+<text x="1675" y="706" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">hears every board and sub-server over ESP-NOW; keeps customers, coins and revenue;</text>
+<text x="1675" y="724" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">sends prices, times and rules to every board; shows the live state (Control Center);</text>
+<text x="1675" y="742" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">broadcasts its totals every 10 seconds</text>
+<rect x="1557.5" y="255" width="235" height="170" rx="8" fill="#fff" stroke="#000" stroke-width="2"/>
+<text x="1675" y="291" text-anchor="middle" font-size="15" font-weight="bold" fill="#000">BOX 1 (cleaning)</text>
+<text x="1675" y="309" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">A1 screen + coin slot</text>
+<text x="1675" y="327" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">A2 sensors</text>
+<text x="1675" y="345" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">A3 relays: UV, mist,</text>
+<text x="1675" y="363" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">door lock</text>
+<text x="1675" y="381" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">SUB-SERVER S3A</text>
+<text x="1675" y="399" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">(the box's brain)</text>
+<rect x="450" y="539" width="340" height="62" rx="8" fill="#fff" stroke="#000" stroke-width="2"/>
+<text x="620" y="566" text-anchor="middle" font-size="15" font-weight="bold" fill="#000">SELECT MODE (Box 3 only)</text>
+<text x="620" y="584" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">CLEANING or DRYING</text>
+<rect x="470" y="118" width="300" height="64" rx="30" fill="#000" stroke="#000" stroke-width="2"/>
+<text x="620" y="146" text-anchor="middle" font-size="15" font-weight="bold" fill="#fff">TAPS</text>
+<text x="620" y="164" text-anchor="middle" font-size="15" font-weight="normal" fill="#fff">tap anywhere on the screen</text>
+<rect x="870" y="1260" width="300" height="90" rx="8" fill="#fff" stroke="#000" stroke-width="2"/>
+<text x="1020" y="1292" text-anchor="middle" font-size="15" font-weight="bold" fill="#000">Door opened:</text>
+<text x="1020" y="1310" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">SAFETY PAUSE,</text>
+<text x="1020" y="1328" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">then it carries on</text>
+<rect x="1390" y="1350" width="620" height="140" rx="8" fill="#fff" stroke="#000" stroke-width="2"/>
+<text x="1700" y="1389" text-anchor="middle" font-size="15" font-weight="bold" fill="#000">MONITORING</text>
+<text x="1700" y="1407" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">Control Center Home: live boxes, ACS levels, statistics, alerts</text>
+<text x="1700" y="1425" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">Online web page: live boxes and gauges, analytics, alerts with sound,</text>
+<text x="1700" y="1443" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">reports (CSV, print), checklist, fix-it wizard, manual</text>
+<text x="1700" y="1461" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">Blynk app: alerts when the page is closed</text>
+<rect x="2352.5" y="255" width="235" height="170" rx="8" fill="#fff" stroke="#000" stroke-width="2"/>
+<text x="2470" y="300" text-anchor="middle" font-size="15" font-weight="bold" fill="#000">ACS 2</text>
+<text x="2470" y="318" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">refill station</text>
+<text x="2470" y="336" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">for Box 3</text>
+<text x="2470" y="354" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">alcohol and scented</text>
+<text x="2470" y="372" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">mixer containers,</text>
+<text x="2470" y="390" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">pumps, level sensors</text>
+<rect x="870" y="253" width="300" height="84" rx="8" fill="#fff" stroke="#000" stroke-width="2"/>
+<text x="1020" y="282" text-anchor="middle" font-size="15" font-weight="bold" fill="#000">REFILL (Box 1, Box 3)</text>
+<text x="1020" y="300" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">the ACS fills the container,</text>
+<text x="1020" y="318" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">then it checks again</text>
+<rect x="870" y="1415" width="300" height="90" rx="8" fill="#fff" stroke="#000" stroke-width="5"/>
+<text x="1020" y="1447" text-anchor="middle" font-size="15" font-weight="bold" fill="#000">COOL DOWN</text>
+<text x="1020" y="1465" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">only the fan runs</text>
+<text x="1020" y="1483" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">(default 60 s)</text>
+<rect x="420" y="1249" width="400" height="112" rx="8" fill="#fff" stroke="#000" stroke-width="5"/>
+<text x="620" y="1283" text-anchor="middle" font-size="15" font-weight="bold" fill="#000">RUNNING</text>
+<text x="620" y="1301" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">Box 1 CLEANING: UV and mist</text>
+<text x="620" y="1319" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">Box 2 HEATING: heater, UV, fan</text>
+<text x="620" y="1337" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">Box 3 CLEANING or DRYING</text>
+<rect x="90" y="995" width="270" height="60" rx="26" fill="#fff" stroke="#000" stroke-width="1.6"/>
+<text x="225" y="1021" text-anchor="middle" font-size="15" font-weight="bold" fill="#000">CANCEL, YES:</text>
+<text x="225" y="1039" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">back to TAPS</text>
+<rect x="1822.5" y="950" width="235" height="160" rx="8" fill="#fff" stroke="#000" stroke-width="2"/>
+<text x="1940" y="990" text-anchor="middle" font-size="15" font-weight="bold" fill="#000">WEB PAGE</text>
+<text x="1940" y="1008" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">static site: Monitor,</text>
+<text x="1940" y="1026" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">Alerts, Reports,</text>
+<text x="1940" y="1044" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">Checklist, Fix it,</text>
+<text x="1940" y="1062" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">Manual, status page</text>
+<text x="1940" y="1080" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">read-only, no commands</text>
+<rect x="2050" y="1350" width="560" height="140" rx="8" fill="#fff" stroke="#000" stroke-width="2"/>
+<text x="2330" y="1389" text-anchor="middle" font-size="15" font-weight="bold" fill="#000">CUSTOMER VIEW</text>
+<text x="2330" y="1407" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">touch screen of the box: the customer journey (left)</text>
+<text x="2330" y="1425" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">QR code on the machine opens the status page:</text>
+<text x="2330" y="1443" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">Box 1, 2, 3 free, in use (minutes left) or out of order,</text>
+<text x="2330" y="1461" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">prices, English and Filipino</text>
+<rect x="430" y="1570" width="380" height="70" rx="8" fill="#fff" stroke="#000" stroke-width="2"/>
+<text x="620" y="1601" text-anchor="middle" font-size="15" font-weight="bold" fill="#000">OPEN B, SENSORS B</text>
+<text x="620" y="1619" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">take the helmet, close the door</text>
+<rect x="2352.5" y="950" width="235" height="160" rx="8" fill="#fff" stroke="#000" stroke-width="2"/>
+<text x="2470" y="999" text-anchor="middle" font-size="15" font-weight="bold" fill="#000">GITHUB</text>
+<text x="2470" y="1017" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">repository of the</text>
+<text x="2470" y="1035" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">web page files;</text>
+<text x="2470" y="1053" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">a push updates</text>
+<text x="2470" y="1071" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">the site on Vercel</text>
+<rect x="430" y="1108" width="380" height="84" rx="8" fill="#fff" stroke="#000" stroke-width="2"/>
+<text x="620" y="1128" text-anchor="middle" font-size="15" font-weight="bold" fill="#000">OPEN A, SENSORS A, CLOSE DOOR A</text>
+<text x="620" y="1146" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">door unlocks, helmet goes in,</text>
+<text x="620" y="1164" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">door shut (no helmet seen:</text>
+<text x="620" y="1182" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">open the door again)</text>
+<rect x="2087" y="625" width="500" height="170" rx="8" fill="#fff" stroke="#000" stroke-width="2"/>
+<text x="2337" y="661" text-anchor="middle" font-size="15" font-weight="bold" fill="#000">ADMIN CONTROLS</text>
+<text x="2337" y="679" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">Control Center (join Wi-Fi ESP32_LOCAL): Box 1, 2, 3</text>
+<text x="2337" y="697" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">and ACS pages: rules, prices, coins = minutes, levels,</text>
+<text x="2337" y="715" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">phases, calibration, Maintenance (hand control of relays</text>
+<text x="2337" y="733" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">and pumps), coin value, reset statistics</text>
+<text x="2337" y="751" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">Online Server setup page: Wi-Fi, Blynk tokens, interval</text>
+<text x="2337" y="769" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">Blynk Console: template, devices, alerts</text>
+<rect x="440" y="760" width="360" height="80" rx="8" fill="#fff" stroke="#000" stroke-width="2"/>
+<text x="620" y="787" text-anchor="middle" font-size="15" font-weight="bold" fill="#000">METHOD (cleaning: Box 1, Box 3)</text>
+<text x="620" y="805" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">balanced, alcohol or</text>
+<text x="620" y="823" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">scented mist</text>
+<rect x="870" y="167" width="300" height="70" rx="8" fill="#fff" stroke="#000" stroke-width="1.6" stroke-dasharray="6 5"/>
+<text x="1020" y="189" text-anchor="middle" font-size="15" font-weight="bold" fill="#000">Every step is run by the box's</text>
+<text x="1020" y="207" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">sub-server (S3A, S3C or S3B) and</text>
+<text x="1020" y="225" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">shown on its touch screen</text>
+<rect x="455" y="879" width="330" height="62" rx="8" fill="#fff" stroke="#000" stroke-width="2"/>
+<text x="620" y="906" text-anchor="middle" font-size="15" font-weight="bold" fill="#000">TIME ALLOT</text>
+<text x="620" y="924" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">type the time, OK</text>
+<rect x="1557.5" y="950" width="235" height="160" rx="8" fill="#fff" stroke="#000" stroke-width="2"/>
+<text x="1675" y="990" text-anchor="middle" font-size="15" font-weight="bold" fill="#000">BLYNK CLOUD</text>
+<text x="1675" y="1008" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">private device:</text>
+<text x="1675" y="1026" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">all figures and alerts</text>
+<text x="1675" y="1044" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">(datastream V0)</text>
+<text x="1675" y="1062" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">public device: only</text>
+<text x="1675" y="1080" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">free / in use / out</text>
+<rect x="470" y="429" width="300" height="62" rx="8" fill="#fff" stroke="#000" stroke-width="2"/>
+<text x="620" y="456" text-anchor="middle" font-size="15" font-weight="bold" fill="#000">WELCOME</text>
+<text x="620" y="474" text-anchor="middle" font-size="15" font-weight="normal" fill="#000">Tap to START</text>
+<text x="642" y="386" text-anchor="middle" font-size="13" font-weight="700" fill="#000" stroke="#fff" stroke-width="4" paint-order="stroke">yes</text>
+<text x="835" y="287" text-anchor="middle" font-size="13" font-weight="700" fill="#000" stroke="#fff" stroke-width="4" paint-order="stroke">no</text>
+<text x="1054" y="373" text-anchor="middle" font-size="13" font-weight="700" fill="#000" stroke="#fff" stroke-width="4" paint-order="stroke">gave up</text>
+<text x="1072" y="507" text-anchor="middle" font-size="13" font-weight="700" fill="#000" stroke="#fff" stroke-width="4" paint-order="stroke">Box 3 instead</text>
+<text x="402" y="1018" text-anchor="middle" font-size="13" font-weight="700" fill="#000" stroke="#fff" stroke-width="4" paint-order="stroke">cancel</text>
+<text x="390" y="1298" text-anchor="middle" font-size="13" font-weight="700" fill="#000" stroke="#fff" stroke-width="4" paint-order="stroke">cancel</text>
+<text x="845" y="1298" text-anchor="middle" font-size="13" font-weight="700" fill="#000" stroke="#fff" stroke-width="4" paint-order="stroke">door</text>
+<text x="656" y="1400" text-anchor="middle" font-size="13" font-weight="700" fill="#000" stroke="#fff" stroke-width="4" paint-order="stroke">time up</text>
+<text x="840" y="1453" text-anchor="middle" font-size="13" font-weight="700" fill="#000" stroke="#fff" stroke-width="4" paint-order="stroke">yes</text>
+<text x="640" y="1545" text-anchor="middle" font-size="13" font-weight="700" fill="#000" stroke="#fff" stroke-width="4" paint-order="stroke">no</text>
+<text x="390" y="1848" text-anchor="middle" font-size="13" font-weight="700" fill="#000" stroke="#fff" stroke-width="4" paint-order="stroke">yes</text>
+<text x="640" y="1940" text-anchor="middle" font-size="13" font-weight="700" fill="#000" stroke="#fff" stroke-width="4" paint-order="stroke">no</text>
+<text x="112" y="1695" text-anchor="middle" font-size="13" font-weight="700" fill="#000" stroke="#fff" stroke-width="4" paint-order="stroke">back to OPEN A</text>
+<text x="1195" y="1983" text-anchor="middle" font-size="13" font-weight="700" fill="#000" stroke="#fff" stroke-width="4" paint-order="stroke">next customer</text>
+<text x="1232" y="285" text-anchor="middle" font-size="13" font-weight="700" fill="#000" stroke="#fff" stroke-width="4" paint-order="stroke">refill request</text>
+<text x="2060" y="478" text-anchor="middle" font-size="13" font-weight="700" fill="#000" stroke="#fff" stroke-width="4" paint-order="stroke">ESP-NOW radio (channel 1): boards, sub-servers and ACS, both ways</text>
+<text x="1520" y="862" text-anchor="middle" font-size="13" font-weight="700" fill="#000" stroke="#fff" stroke-width="4" paint-order="stroke">totals every 10 s (ESP-NOW)</text>
+<text x="1972" y="1232" text-anchor="middle" font-size="13" font-weight="700" fill="#000" stroke="#fff" stroke-width="4" paint-order="stroke">reads</text>
+<text x="2180" y="1212" text-anchor="middle" font-size="13" font-weight="700" fill="#000" stroke="#fff" stroke-width="4" paint-order="stroke">status page</text>
+<rect x="60" y="2110" width="1120" height="74" fill="#fff" stroke="#000" stroke-width="1.5"/>
+<text x="76" y="2132" font-size="15" font-weight="700">HOW TO READ</text>
+<rect x="76" y="2146" width="36" height="22" rx="11" fill="#000"/>
+<text x="120" y="2162" font-size="14">start / end</text>
+<rect x="236" y="2146" width="36" height="22" rx="4" fill="#fff" stroke="#000" stroke-width="2"/>
+<text x="280" y="2162" font-size="14">screen or step</text>
+<rect x="396" y="2146" width="36" height="22" rx="4" fill="#fff" stroke="#000" stroke-width="5"/>
+<text x="440" y="2162" font-size="14">machine running</text>
+<rect x="556" y="2146" width="36" height="22" rx="4" fill="#fff" stroke="#000" stroke-width="2"/><rect x="559" y="2149" width="30" height="16" rx="3" fill="none" stroke="#000" stroke-width="1.1"/>
+<text x="600" y="2162" font-size="14">fault</text>
+<path d="M734 2146 L752 2157 L734 2168 L716 2157 Z" fill="#fff" stroke="#000" stroke-width="2"/>
+<text x="760" y="2162" font-size="14">decision</text>
+<rect x="876" y="2146" width="36" height="22" rx="4" fill="#fff" stroke="#000" stroke-width="1.6" stroke-dasharray="5 4"/>
+<text x="920" y="2162" font-size="14">note</text>
+<path d="M1036 2157 L1074 2157" stroke="#000" stroke-width="2" stroke-dasharray="7 5" marker-end="url(#ah)"/>
+<text x="1080" y="2162" font-size="14">radio / data link</text>
+<text x="1325" y="2220" text-anchor="middle" font-size="16">Figure 2. Overall flowchart of the Jolly Helmet system: customer journey, Box 1, 2, 3, ACS 1 and 2, sub-servers, LocalServer, Online Server, Blynk, GitHub, Vercel, web page, admin controls, monitoring and customer view</text>
+</svg>

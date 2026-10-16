@@ -1,0 +1,216 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Manual v9 - new Dashboard, Settings, safety, ENTRY</title></head><body>
+<!--
+  Source of revision 9 (2026-10-16). Read by patch_docx.html?src=home_update.src.html, applied to a COPY of the saved v8.
+  Everything the user typed in Word stays; only the places named here are changed.
+-->
+
+<!-- ================================================================= Admin guide: after the Home page bullets, before "Box settings" -->
+<div class="ins" data-anchor="Heading2:Box settings (rules, levels, phases)">
+<h3>Navigation bar and the Devices line</h3>
+<p>The same <b>navigation bar</b> sits at the top of every page: <b>Dashboard</b>, <b>Settings</b>, <b>Box 1</b>, <b>Box 2</b>, <b>Box 3</b> and <b>ACS 1 / 2</b>. Tap a name to go there; the page you are on is highlighted. Below it the <b>Devices</b> line tells you how many boards answer (for example 13 of 13 online). Tap it to open the list with an ONLINE or OFFLINE badge for every board.</p>
+<figure data-w="5.6"><img src="images/v9/cc_devices.png" alt="The navigation bar and the Devices list"><figcaption>The navigation bar and the Devices list (tap the Devices line to open it)</figcaption></figure>
+
+<h3>Daily usage and the day viewer</h3>
+<p>The chart shows how many customers came each day (<b>Daily</b>, the last 7 days) or each week (<b>Weekly</b>). Orange is the part that was cancelled. A lighter shade is the <b>previous data collected by the team after the upgrade</b> (see the Settings tab below).</p>
+<ul>
+<li>Tap a bar of the Daily chart, or pick a date and tap <b>Show the customers</b>, to open that day customer by customer: time, box, coins, pesos, Finished or Cancelled, and minutes.</li>
+<li>The two tabs <b>Machine</b> and <b>JSON</b> only tell you where each row came from: Machine is what the machines recorded, JSON is what the team added from its own records. Both are real customers.</li>
+<li><b>Sessions without a date</b> finished before a phone set the clock. They get their date as soon as the clock is set.</li>
+</ul>
+<figure data-w="5.2"><img src="images/v9/cc_stats.png" alt="Statistics and the usage chart"><figcaption>Statistics and the usage chart (lighter bars = previous data)</figcaption></figure>
+
+<h3>Finished and cancelled sessions</h3>
+<p>This card is the <b>whole tally from the first day</b> in one table: users served, coins, revenue and average time, for Finished and for Cancelled. <b>Finished</b> means the cycle ran to the end. <b>Cancelled</b> means the customer aborted in the middle; the coins that were paid still count as revenue. The line under the table says how much of the numbers came from the JSON file and how much the machines counted themselves, so nobody has to add two tables together.</p>
+<div class="tip">A payment that is cancelled on the INSERT COIN screen is not counted as a session.</div>
+<figure data-w="5.2"><img src="images/v9/cc_day.png" alt="A day opened customer by customer, and the Finished and cancelled tally"><figcaption>One day opened customer by customer (Machine tab), and the Finished and cancelled tally below it</figcaption></figure>
+
+<h3>Settings tab: clock, session log, backup and previous data</h3>
+<p>The <b>Settings</b> tab holds what you set once and rarely touch.</p>
+<ul>
+<li><b>Clock:</b> the LocalServer has no clock of its own. A phone sets it when the Control Center is opened after a power-on, or you type the date and time. A power cut loses it.</li>
+<li><b>Session log:</b> every session the machines report is saved with its date and time (never a name). The bar shows how much storage is used. Entries older than a year are dropped by themselves.</li>
+<li><b>Download log (CSV):</b> this is the backup. Download it now and then and keep the file.</li>
+<li><b>Restore from backup CSV:</b> if the log is ever lost (a power cut damaged the storage, or Reset Stats was tapped by mistake), choose the CSV here and tap the button. Only an <b>unchanged download</b> is accepted: the last line of the file is a check that is refused if anything was edited or the file was saved again in a spreadsheet. Sessions already on the board stay, nothing is added twice, and the totals are raised to at least the log's tally.</li>
+<li><b>Previous data (history.json):</b> customers from before the log existed. The team builds the file with the ENTRY board (see below) or on a PC and uploads it here. The chart draws it lighter and the Finished and cancelled card adds it. It never changes the machine log, the totals or the CSV.</li>
+<li><b>Coin value</b> (pesos per pulse) and <b>Reset Stats:</b> Reset Stats empties the counters and the machine log, so download the CSV first. The history file stays.</li>
+</ul>
+<figure data-w="5.2"><img src="images/v9/cc_settings_log.png" alt="Settings: clock, session log, restore from backup, previous data"><figcaption>Settings: clock, session log, restore from a backup CSV and the previous data</figcaption></figure>
+<div class="warn">The check line of the CSV stops mistakes and casual edits. It is not a lock. A correction to the data does not go into the machine log: it belongs in the JSON file, which is labelled as the team's own records.</div>
+
+<h3>Warnings and crash reports</h3>
+<p>Two red notes can appear on top of the Dashboard. The first says the board <b>found damage in its memory</b>. The second says the <b>log storage was damaged</b> and was re-created empty at the last start: open Settings, restore your last backup CSV, and send the history file again from the ENTRY board if you use it.</p>
+<figure data-w="5.4"><img src="images/v9/cc_alerts.png" alt="The two red notes on the Dashboard"><figcaption>The two red notes on the Dashboard</figcaption></figure>
+<p>If the unit ever restarts by itself you do not need a laptop. Open <b>Settings</b> and look at <b>This board</b>. The last restarts are kept in the board's own flash (a power cut does not erase them). Tap <b>Crash reports kept on this board</b>, take a screenshot and send it to the developer. <b>Delete these reports</b> clears the list.</p>
+<figure data-w="5.2"><img src="images/v9/cc_settings_board.png" alt="Settings, This board: the stored crash reports"><figcaption>Settings, This board: the stored crash reports</figcaption></figure>
+
+<h3>ENTRY board (spare board for past customers)</h3>
+<p>The <b>ENTRY board</b> is a spare ESP32 with a simple form. With it the team types in the customers of the days before the LocalServer kept dates, from the team's own records (survey forms, photos, videos and so on), and sends them to the LocalServer as the previous-data file. It is not one of the 15 boards of the machines and nothing in a box needs it.</p>
+<figure data-w="4.4"><img src="images/v9/cc_entry.png" alt="The ENTRY form: rates and customer cards"><figcaption>The ENTRY form: the rates box and customer cards (a shaded number was worked out by the page)</figcaption></figure>
+<ol>
+<li>Power the ENTRY board and the LocalServer.</li>
+<li>On a phone, join the Wi-Fi <b>JollyHelmet-Entry</b> (password 12345678). The form opens by itself. If it does not, open a browser and go to <b>http://192.168.5.1</b>.</li>
+<li>Pick a day, then tap <b>Add a customer on this day</b>. Each customer is one card: time, box, coins, Finished or Cancelled, minutes.</li>
+<li>Type the <b>coins</b> and the page works out the <b>minutes</b>, or type the minutes and it works out the coins. The rates start with the LocalServer's values (Box 1 and Box 3: 15 coins = 5 minutes; Box 2: 10 coins = 3 minutes). The number the page worked out is shaded: type over it if the form says something else.</li>
+<li><b>Copy this customer</b> repeats a card and sets the new time to the first time plus its minutes.</li>
+<li>Tap <b>Push to the LocalServer</b>. The board joins JollyHelmet-Local by itself and sends the file. The LocalServer checks every row first and keeps its old file if anything is wrong.</li>
+</ol>
+<div class="tip">A push replaces the previous data on the LocalServer with what is on the form. Tap <b>What is on the LocalServer now</b> first before you add more. Never type a name. If the LocalServer's Wi-Fi name or password is changed in its firmware, change LS_SSID and LS_PASS at the top of ESP32_ENTRY.ino too.</div>
+</div>
+
+<!-- ================================================================= Admin guide: OPEN A / OPEN B beep (before "Maintenance mode") -->
+<div class="ins" data-anchor="Heading3:Maintenance mode">
+<h3>OPEN A / OPEN B beep</h3>
+<p>While a box waits at <b>OPEN A</b> or <b>OPEN B</b> for the door to be opened, it beeps again and again (beep, wait, beep, wait) until the door opens. You set the length of the beep and of the wait on each box page, in the section <b>OPEN A / OPEN B beep</b>.</p>
+<ul>
+<li><b>Beep for</b> 20 to 1000 ms, <b>then wait</b> 0 to 10000 ms. A wait of 0 gives one beep only.</li>
+<li>Tap <b>Send</b>. The box keeps the values in its own memory. The default is a beep of 100 ms and a wait of 500 ms.</li>
+</ul>
+<figure data-w="5.0"><img src="images/v9/cc_beep.png" alt="The OPEN A / OPEN B beep section"><figcaption>The OPEN A / OPEN B beep section of a box page</figcaption></figure>
+</div>
+
+<!-- ================================================================= Admin guide: the 2-second safety (after the Maintenance mode callout) -->
+<div class="ins" data-anchor="Heading2:Refill station (ACS)">
+<h4>The 2-second safety and the drain pump warning</h4>
+<p>So that a forgotten tap cannot leave a lamp, a humidifier, the heater or a lock running, every relay you switch on in Maintenance switches itself off again after <b>2 seconds</b>. The box does this by itself, so it also works if the phone or the page disconnects.</p>
+<ul>
+<li><b>Bypass Safety 2 Seconds Relay:</b> tick it when a relay must stay on, for example to watch a humidifier make mist. The safety is then off for every relay until you untick the box or leave Maintenance. The heater still turns itself off after 5 minutes (Box 2 and Box 3) and the enclosure lock rests after 60 seconds.</li>
+<li><b>Drain pumps and coin power</b> are not part of the 2-second safety (Box 1 and Box 3). They stay on until you switch them off.</li>
+<li><b>Drain pump warning:</b> tapping a drain pump first shows a WARNING window ("You are now toggling Drain Pump 1 ON"). Tap <b>Yes, turn it ON</b> only when the drain tube is connected and the container can take the liquid. <b>No, cancel</b> (or Esc, or a tap outside the window) does nothing, and No is the default.</li>
+</ul>
+<figure data-w="5.0"><img src="images/v9/cc_drain.png" alt="The drain pump warning"><figcaption>The drain pump warning in Maintenance (No is the default answer)</figcaption></figure>
+<div class="warn">Check the drain tube and the container before you tap Yes. A drain pump that is left on keeps pumping until you switch it off.</div>
+</div>
+
+<!-- ================================================================= Technician guide: customer names (Online chapter) -->
+<div class="ins" data-anchor="Heading3:Alerts when the page is closed (Blynk app)">
+<h3>Optional customer names (Blynk V5)</h3>
+<p>A customer can type a <b>nickname</b> (12 characters at most) on the card of the machine that is running his or her cycle. Everybody who opens the customer page sees it ("Maria's helmet"), the customer's own phone says the helmet is done at the end, and the name clears by itself when the cycle ends. It is optional: no name, nothing shown.</p>
+<ul>
+<li><b>One extra datastream, once:</b> in the Blynk Console, open the template of the <b>public</b> device, Datastreams, New, Virtual Pin <b>V5</b>, name <b>names</b>, data type <b>String</b>. Without it the page works as before and a customer who tries to add a name is told that names are not switched on yet.</li>
+<li>A name can be added only <b>after the coins are in</b>, so a payment that is cancelled never leaves a name behind. The phone that typed it can edit or remove it; other phones can only see it.</li>
+<li>The name is shown only while the box is looking after a helmet (OPEN A to ABORT) and only for that cycle. Flash the Online Server firmware of 2026-10-14 or later so it adds each box's session counter to the public value.</li>
+<li>Whatever sits in V5 is treated as untrusted text: the page strips &lt; and &gt; and control characters and shows it only as plain text. The page tells the customer to use a nickname, because the name is public to everybody who opens the page.</li>
+<li>Cost: a few Blynk messages for each customer who adds a name, nothing for the others. In <b>js/config.js</b>, <b>names: false</b> hides the feature and <b>namesPin</b> chooses the datastream.</li>
+</ul>
+</div>
+
+<!-- ================================================================= small text changes -->
+<div class="op" data-op="bullet-before" data-before="Alert banner"><ul><li><b>Dashboard</b> (older pages and the flowcharts call it Home): the first tab of the Control Center. The bar at the top takes you to every other page.</li></ul></div>
+
+<div class="op" data-op="replace-para" data-startswith="The Home page appears."><p>The <b>Dashboard</b> appears. The bar at the top (Dashboard, Settings, Box 1, Box 2, Box 3, ACS 1 / 2) takes you to every page; the same bar is at the top of every settings page.</p></div>
+<div class="op" data-op="replace-para" data-startswith="Open a browser and go to"><p>Open a browser and go to <b>http://192.168.4.1</b>. On most phones the page opens by itself (a captive portal); if it does not, type the address.</p></div>
+<div class="op" data-op="replace-para" data-startswith="Alert banner"><p><b>Alert banners</b> (red): empty supplies, low mixers, a station out of order, and the two memory and log-storage notes (see Warnings and crash reports).</p></div>
+<div class="op" data-op="replace-para" data-startswith="Configure and calibrate:"><p><b>Navigation bar:</b> Dashboard, Settings, Box 1, Box 2, Box 3 and ACS 1 / 2 (the same bar is on every page).</p></div>
+<div class="op" data-op="replace-para" data-startswith="Statistics: users served"><p><b>Statistics:</b> users served, total revenue, average cycle time and coins, the Daily and Weekly usage chart, the day viewer and the Finished and cancelled tally.</p></div>
+<div class="op" data-op="replace-para" data-startswith="Menu list:"><p><b>Devices line:</b> how many boards are online. Tap it for the online or offline badge of every board.</p></div>
+
+<div class="op" data-op="replace-para" data-startswith="Tap a relay button to switch it on or off by hand."><p>Tap a relay button to switch it on by hand. Green = on. With the safety on it switches itself off again after 2 seconds (see below); tap it again to repeat.</p></div>
+<div class="op" data-op="replace-para" data-startswith="The hand-set heater turns itself off"><p>With the safety on, a relay you switch on by hand goes off by itself after 2 seconds. With the bypass ticked the heater turns itself off after 5 minutes and the lock after 60 seconds. Keep the door shut and clear when testing the heater.</p></div>
+<div class="op" data-op="replace-para" data-startswith="Hand-set relays in Maintenance switch themselves off"><p>Hand-set relays in Maintenance switch themselves off after 2 seconds (the box does it by itself; the drain pumps and the coin power are exempt, and the tick box Bypass Safety 2 Seconds Relay turns it off). With the bypass the heater still goes off after 5 minutes and the enclosure lock after 60 seconds; ACS pumps after 60 seconds.</p></div>
+
+<!-- Home -> Dashboard in the other places -->
+<div class="op" data-op="replace-para" data-startswith="Check its power and wiring, then watch its badge on Home"><p>Check its power and wiring, then watch its badge in the Devices list on the Dashboard.</p></div>
+<div class="op" data-op="replace-para" data-startswith="Home says last restart BROWNOUT"><p>Settings, This board, says last restart BROWNOUT</p></div>
+<div class="op" data-op="replace-para" data-startswith="Home page: every badge ONLINE, no red banner."><p>Dashboard: the Devices line says every board is online, no red banner.</p></div>
+<div class="op" data-op="replace-para" data-startswith="Watch its badge turn ONLINE on Home"><p>Watch its badge turn ONLINE in the Devices list on the Dashboard, then re-enter that box's settings if they were lost.</p></div>
+<div class="op" data-op="replace-para" data-startswith="Look at the ACS tanks and the Home page."><p>Look at the ACS tanks and the Dashboard. Use Fix it.</p></div>
+<div class="op" data-op="replace-para" data-startswith="Watch the board's badge turn ONLINE on the Control Center Home page."><p>Watch the board's badge turn ONLINE in the Devices list on the Control Center Dashboard.</p></div>
+<div class="op" data-op="replace-para" data-startswith="Home page: every badge ONLINE and no red banner."><p>Dashboard: the Devices line says every board is online and there is no red banner. The online web page says LIVE. Look at the 3 supply tanks in each ACS and the 2 main containers. Wipe the touch screens. Collect the coins and note the revenue.</p></div>
+<div class="op" data-op="replace-para" data-startswith="Supply dip (Home page says BROWNOUT)"><p>Supply dip (Settings, This board, says BROWNOUT)</p></div>
+<div class="op" data-op="replace-para" data-startswith="Check that the machine has power. After a power cut"><p>Check that the machine has power. After a power cut, wait until the Devices line on the Control Center Dashboard shows the boards online again.</p></div>
+<div class="op" data-op="replace-para" data-startswith="A board is OFFLINE on the Home page"><p>A board is OFFLINE in the Devices list</p></div>
+<div class="op" data-op="replace-para" data-startswith="The pages of the LocalServer (Home"><p>The pages of the LocalServer (Dashboard, Settings, Box 1, Box 2, Box 3, ACS) where settings, calibration and Maintenance are done.</p></div>
+
+<!-- customer guide: nickname -->
+<div class="op" data-op="append-para" data-startswith="Look for the QR sticker"><p>When a machine is running your cycle you may also tap <b>Add your name</b> on its card and type a nickname (12 letters at most). Everybody who opens the page sees it, so use a nickname, not your full name. It disappears by itself when your cycle ends.</p></div>
+
+<!-- technician: pin of C1 and the free pins -->
+<div class="op" data-op="replace-para" data-startswith="Identical wiring on all three boards"><p>Identical wiring on A1, B1 and C1, with one difference: the coin signal of <b>C1</b> is on <b>GPIO 32</b> (A1 and B1 use GPIO 23).</p></div>
+<div class="op" data-op="cell-set" data-after="Heading3:A1, B1, C1 - screen, coin slot, buzzer" data-row="23" data-col="0" data-bold="no">23 (C1: 32)</div>
+<div class="op" data-op="replace-para" data-startswith="Free pins: 5, 16, 17, 18, 19, 22, 25, 26, 32, 33."><p>Free pins on A1 and B1: 5, 16, 17, 18, 19, 22, 25, 26, 32, 33. Free pins on C1: 5, 16, 17, 18, 19, 22, 23, 25, 26, 33.</p></div>
+
+<!-- policies -->
+<div class="op" data-op="replace-para" data-startswith="No names, no phone numbers and no payment cards are stored."><p>The machines and the LocalServer store no names, no phone numbers and no payment cards. Payment is coins only. The one exception is the optional nickname a customer can type on the customer status page: it is public to everybody who opens the page, it lives only in the public Blynk device while the cycle runs, and it clears when the cycle ends.</p></div>
+<div class="op" data-op="bullet-after" data-after="The machines and the LocalServer store no names"><ul><li>The backup log (CSV) and the previous-data file (history.json) hold only dates, times, boxes, coins, minutes and Finished or Cancelled. Keep them like any other record of the business. The CSV ends with a check line, so a copy that was edited is refused by the LocalServer.</li></ul></div>
+
+<!-- glossary -->
+<div class="op" data-op="glossary">
+<table>
+<tr><td>2-second safety</td><td>In Maintenance a relay you switch on by hand switches itself off after 2 seconds, done by the box itself. Drain pumps and coin power are exempt. See Bypass Safety 2 Seconds Relay.</td></tr>
+<tr><td>Backup log (CSV)</td><td>The file that Download log (CSV) gives you: every session the machines recorded, with date, time, box, coins and minutes. Keep copies: Restore from backup CSV reads it.</td></tr>
+<tr><td>Bypass Safety 2 Seconds Relay</td><td>The Maintenance tick box that turns the 2-second safety off, so hand-set relays stay on until you switch them off.</td></tr>
+<tr><td>Crash report</td><td>A note the LocalServer keeps in its own flash after a restart it did not plan (the last three are kept). Read it in Settings, This board, and send a screenshot to the developer.</td></tr>
+<tr><td>Dashboard</td><td>The first tab of the Control Center (called Home in older pages): the three boxes, the refill stations, the statistics and the Devices line.</td></tr>
+<tr><td>Day viewer</td><td>The card that opens when you tap a bar of the Daily chart or pick a date: the customers of that day, with a Machine tab and a JSON tab.</td></tr>
+<tr><td>Devices line</td><td>The line on the Dashboard that says how many boards answer (for example 13 of 13 online). Tap it for the badge of every board.</td></tr>
+<tr><td>ENTRY board</td><td>The spare ESP32 with a form (Wi-Fi JollyHelmet-Entry, address 192.168.5.1) for typing the previous customers and sending them to the LocalServer.</td></tr>
+<tr><td>history.json (previous data)</td><td>The file of customers the team collected from its own records before the log existed. The chart draws it lighter and the Finished and cancelled card counts it, but it never changes the machine log, the totals or the CSV.</td></tr>
+<tr><td>Integrity line</td><td>The last line of the backup CSV. It lets the LocalServer refuse a file that was edited or saved again. It protects against mistakes; it is not a lock.</td></tr>
+<tr><td>Navigation bar</td><td>The row at the top of every Control Center page: Dashboard, Settings, Box 1, Box 2, Box 3, ACS 1 / 2.</td></tr>
+<tr><td>Nickname</td><td>The optional name of up to 12 characters a customer can type on the status page while the cycle runs. It is public and clears when the cycle ends.</td></tr>
+</table>
+</div>
+<div class="op" data-op="append-para" data-startswith="A page where a technician switches relays or pumps by hand."><p>Hand-set relays go off after 2 seconds unless the safety is bypassed.</p></div>
+
+<!-- troubleshooting (admin) -->
+<div class="op" data-op="rows-append" data-after="Heading3:Troubleshooting" data-bold="no">
+<table>
+<tr><td>A red note says the board found damage in its memory, or the unit restarted by itself</td><td>Settings, This board, Crash reports kept on this board. Take a screenshot and send it to the developer. The reports stay after a power cut.</td></tr>
+<tr><td>A red note says the log storage was damaged and re-created empty</td><td>Settings, Restore from backup CSV with your last downloaded log. Send the history file again from the ENTRY board if you use it.</td></tr>
+<tr><td>A relay in Maintenance switches itself off</td><td>That is the 2-second safety. Tick Bypass Safety 2 Seconds Relay to keep it on, and untick it when you are done.</td></tr>
+<tr><td>A phone cannot find the Control Center</td><td>Join the Wi-Fi JollyHelmet-Local (the old name ESP32_LOCAL is no longer used). Then open http://192.168.4.1.</td></tr>
+</table>
+</div>
+
+<!-- settings reference -->
+<div class="op" data-op="settings-rows">
+<table>
+<tr><td>Bypass Safety 2 Seconds Relay</td><td>Box page, Maintenance. When ticked, relays you switch on by hand stay on until you switch them off. The heater still stops after 5 minutes and the enclosure lock rests after 60 seconds.</td><td>Off (relays go off after 2 s)</td><td>Tick or untick</td><td></td></tr>
+<tr><td>OPEN A / OPEN B beep</td><td>Box page. Length of the beep and the wait between beeps while OPEN A or OPEN B waits for the door. Kept in the box.</td><td>100 ms beep, 500 ms wait</td><td>Beep 20 to 1000 ms, wait 0 to 10000 ms (0 = one beep)</td><td></td></tr>
+<tr><td>Date and time (clock)</td><td>Settings tab. Set by a phone when the Control Center is opened after a power-on, or typed by hand. A power cut loses it.</td><td>Phone's time</td><td>Any date and time</td><td></td></tr>
+<tr><td>Restore from backup CSV</td><td>Settings tab. Puts back the sessions of an unchanged Download log (CSV) file. The totals are raised to at least the log's tally.</td><td>-</td><td>A CSV exactly as downloaded</td><td></td></tr>
+<tr><td>Previous data (history.json)</td><td>Settings tab. Customers from before the log existed, drawn lighter in the chart and counted in the Finished and cancelled card. Never a name.</td><td>None</td><td>Up to 1000 rows, 64 KB</td><td></td></tr>
+<tr><td>ENTRY board Wi-Fi</td><td>The form board for the previous data. Opens by itself, or go to 192.168.5.1. It joins JollyHelmet-Local only to push the file.</td><td>JollyHelmet-Entry, 12345678</td><td>Set in the firmware</td><td></td></tr>
+<tr><td>Crash reports</td><td>Settings, This board. The last restarts kept on the board. Delete these reports clears them.</td><td>None</td><td>The last 3 are kept</td><td></td></tr>
+</table>
+</div>
+
+<!-- firmware table: dates from the files on disk (2026-10-16), plus the ENTRY board -->
+<div class="op" data-op="cell-set" data-after="Heading3:Firmware in this manual" data-row="ESP32_S3A" data-col="3">2026-10-15</div>
+<div class="op" data-op="cell-set" data-after="Heading3:Firmware in this manual" data-row="ESP32_A1" data-col="3">2026-10-13</div>
+<div class="op" data-op="cell-set" data-after="Heading3:Firmware in this manual" data-row="ESP32_A2" data-col="3">2026-10-13</div>
+<div class="op" data-op="cell-set" data-after="Heading3:Firmware in this manual" data-row="ESP32_A3" data-col="3">2026-10-13</div>
+<div class="op" data-op="cell-set" data-after="Heading3:Firmware in this manual" data-row="ESP32_S3C" data-col="3">2026-10-15</div>
+<div class="op" data-op="cell-set" data-after="Heading3:Firmware in this manual" data-row="ESP32_C1" data-col="3">2026-10-15</div>
+<div class="op" data-op="cell-set" data-after="Heading3:Firmware in this manual" data-row="ESP32_C2" data-col="3">2026-10-13</div>
+<div class="op" data-op="cell-set" data-after="Heading3:Firmware in this manual" data-row="ESP32_S3B" data-col="3">2026-10-15</div>
+<div class="op" data-op="cell-set" data-after="Heading3:Firmware in this manual" data-row="ESP32_B1" data-col="3">2026-10-13</div>
+<div class="op" data-op="cell-set" data-after="Heading3:Firmware in this manual" data-row="ESP32_B2" data-col="3">2026-10-13</div>
+<div class="op" data-op="cell-set" data-after="Heading3:Firmware in this manual" data-row="ESP32_B3" data-col="3">2026-10-13</div>
+<div class="op" data-op="cell-set" data-after="Heading3:Firmware in this manual" data-row="ESP32_ACS1" data-col="3">2026-10-13</div>
+<div class="op" data-op="cell-set" data-after="Heading3:Firmware in this manual" data-row="ESP32_ACS2" data-col="3">2026-10-13</div>
+<div class="op" data-op="cell-set" data-after="Heading3:Firmware in this manual" data-row="ESP32_LOCALSRV" data-col="3">2026-10-16</div>
+<div class="op" data-op="cell-set" data-after="Heading3:Firmware in this manual" data-row="ESP32_ONLINESRV" data-col="3">2026-10-14</div>
+<div class="op" data-op="rows-append" data-after="Heading3:Firmware in this manual" data-bold="no">
+<table><tr><td>ESP32_ENTRY</td><td>ENTRY</td><td>Spare board: form for the previous data</td><td>2026-10-16</td></tr></table>
+</div>
+
+<!-- revision history -->
+<div class="op" data-op="rev-row">
+<table><tr><td>9</td><td>2026-10-16</td><td>One navigation bar and a Devices line instead of the menu button; the Dashboard, the day viewer (Machine and JSON tabs), the combined Finished and cancelled tally, the Settings tab with the backup restore, the previous-data label and the crash reports kept on the board. Maintenance 2-second safety with its bypass and the drain pump warning; the OPEN A / OPEN B beep settings. The ENTRY board (coins and minutes both ways, captive portal). C1 coin signal moved to GPIO 32. Optional customer names on the status page. Firmware dates and all Control Center screenshots renewed.</td></tr></table>
+</div>
+
+<!-- index entries for the new text -->
+<div class="op" data-op="xe-terms">[["Crash report (stored on the board)", "crash report"], ["Backup log (CSV) and restore", "backup CSV|Restore from backup|Download log"], ["ENTRY board (previous customers)", "ENTRY board|JollyHelmet-Entry"], ["Day viewer (customer by customer)", "day viewer|customer by customer"], ["Previous data (history.json)", "previous data|history\\.json"], ["2-second safety (Maintenance)", "2-second safety|Bypass Safety"], ["Drain pump warning", "drain pump warning|WARNING window"], ["Customer names (nickname)", "nickname"], ["Navigation bar and Devices line", "navigation bar|Devices line|Devices list"], ["OPEN A / OPEN B beep", "OPEN A / OPEN B beep"], ["Finished and cancelled sessions", "Finished and cancelled"], ["Integrity line (CSV check)", "check line|unchanged download|Integrity"], ["Dashboard (Home page)", "Dashboard"]]</div>
+
+<!-- the pictures: same place, new rendering of the new pages -->
+<div class="op" data-op="replace-png" data-after="Heading2:Home page" data-src="images/v9/home.png"></div>
+<div class="op" data-op="replace-png" data-after="Heading3:Rules and prices" data-src="images/v9/rules.png"></div>
+<div class="op" data-op="replace-png" data-after="Heading3:Containers and sensors" data-src="images/v9/levels.png"></div>
+<div class="op" data-op="replace-png" data-after="Heading3:Cleaning phases" data-src="images/v9/phases.png"></div>
+<div class="op" data-op="replace-png" data-after="Heading3:Screen (touch display)" data-src="images/v9/screen.png"></div>
+<div class="op" data-op="replace-png" data-after="Heading3:Maintenance mode" data-src="images/v9/maint.png" data-w="5.0"></div>
+<div class="op" data-op="replace-png" data-after="Heading2:Refill station (ACS)" data-src="images/v9/acs.png"></div>
+
+</body></html>

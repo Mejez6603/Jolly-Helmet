@@ -143,8 +143,9 @@ input[type="color"]::-webkit-color-swatch { border: 1px solid var(--card-border)
 .stat-label { color: var(--muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px; }
 .stat-value { font-size: 1.7rem; font-weight: 800; color: var(--accent); font-family: monospace; }
 
-.chart-wrap { display: flex; align-items: flex-end; gap: 8px; min-height: 160px; padding: 10px 4px 0 4px; }
-.chart-col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 150px; gap: 6px; }
+.chart-wrap { display: flex; align-items: flex-end; gap: 8px; min-height: 160px; padding: 10px 4px 0 4px; overflow-x: auto; }   /* too many bars scroll sideways instead of being cut off */
+.chart-col { flex: 1 0 44px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 150px; gap: 6px; }
+.stats-layout > * { min-width: 0; }
 .chart-bar { width: 100%; max-width: 34px; background: var(--accent); border-radius: 4px 4px 0 0; min-height: 3px; transition: height 0.3s ease; }
 .chart-val { font-size: 0.65rem; color: var(--muted); font-family: monospace; white-space: nowrap; }
 
@@ -199,6 +200,9 @@ input[type="color"]::-webkit-color-swatch { border: 1px solid var(--card-border)
   .grid-2 { grid-template-columns: 1fr; }
   .stat-grid { grid-template-columns: repeat(2, 1fr); }
   .stat-value { font-size: 1.3rem; }
+  .chart-wrap { gap: 4px; padding: 10px 0 0 0; }
+  .chart-col { flex: 1 0 40px; }
+  .chart-val { font-size: 0.58rem; }
 }
 )rawliteral";
 

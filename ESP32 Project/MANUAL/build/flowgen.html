@@ -1,0 +1,337 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Flowchart generator</title>
+<style>body{margin:10px;background:#ddd;font:12px Arial}#out{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-start}.f{background:#fff;width:420px}.f svg{width:100%;height:auto;display:block}#bar{position:sticky;top:0;background:#ff0;padding:4px 8px}</style></head><body>
+<div id="bar">generating...</div><div id="out"></div>
+<!--
+  Draws the box flowcharts and the troubleshooting trees for the user manual as inline SVG (fig-flowNN / fig-treeNN), then posts them to
+  /save/build/figs_ref.html (needs the manual helper server). The step names and branches come from the S3A / S3B / S3C firmware.
+  Open it, wait for "saved", look at the pictures, adjust a spec below if a box overlaps.
+-->
+<script>
+"use strict";
+const COLX = [64, 210, 356];
+const KIND = {
+  start: { fill: '#14325c', stroke: '#14325c', text: '#ffffff' },
+  end:   { fill: '#14325c', stroke: '#14325c', text: '#ffffff' },
+  step:  { fill: '#ffffff', stroke: '#14325c', text: '#14325c' },
+  run:   { fill: '#e2f3e7', stroke: '#1b7f3b', text: '#0f4d24' },
+  err:   { fill: '#fde8e6', stroke: '#b3261e', text: '#7a1812' },
+  dec:   { fill: '#fff1d0', stroke: '#f59e0b', text: '#5a3600' },
+  note:  { fill: '#ffffff', stroke: '#6b7280', text: '#4b5563', dash: true },
+  jump:  { fill: '#e1eefb', stroke: '#1c5fa8', text: '#14325c' },
+  act:   { fill: '#e2f3e7', stroke: '#1b7f3b', text: '#0f4d24' }
+};
+/* BLACK AND WHITE (the default; add ?color to the address for the old coloured version): no colours at all. The kinds are told apart by shape and line instead:
+   black rounded box = start / end, white box = a screen or step, THICK border = the machine is running (or, in the guides, "do this"),
+   DOUBLE border = a fault (OUT OF ORDER), diamond = a decision, thin pill = the chart goes on elsewhere, dashed box = a note. */
+const BW = !/[?&]color/.test(location.search);
+if (BW) Object.assign(KIND, {
+  start: { fill: '#000000', stroke: '#000000', text: '#ffffff' },
+  end:   { fill: '#000000', stroke: '#000000', text: '#ffffff' },
+  step:  { fill: '#ffffff', stroke: '#000000', text: '#000000' },
+  run:   { fill: '#ffffff', stroke: '#000000', text: '#000000', sw: 3 },
+  err:   { fill: '#ffffff', stroke: '#000000', text: '#000000', sw: 1.4, dbl: true },
+  dec:   { fill: '#ffffff', stroke: '#000000', text: '#000000', sw: 1.4 },
+  note:  { fill: '#ffffff', stroke: '#000000', text: '#000000', dash: true },
+  jump:  { fill: '#ffffff', stroke: '#000000', text: '#000000' },
+  act:   { fill: '#ffffff', stroke: '#000000', text: '#000000', sw: 2.8 }
+});
+const INK = BW ? '#000000' : '#1d2433', INK2 = BW ? '#000000' : '#14325c', FRAME = BW ? '#000000' : '#d6dbe6';
+const WARN = [];
+const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+function layout(spec) {
+  const gap = spec.gap == null ? 13 : spec.gap;
+  const perRow = {};
+  spec.nodes.forEach(n => { perRow[n.r] = (perRow[n.r] || 0) + 1; });
+  spec.nodes.forEach(n => {
+    n.lines = n.t.split('\n');
+    const dec = n.k === 'dec', multi = n.lines.length > 1;
+    n.h = n.h || (dec ? Math.max(48, 28 + n.lines.length * 13) : Math.max(28, 13 + n.lines.length * 10.5));
+    if (n.k === 'jump') n.h = Math.max(24, 11 + n.lines.length * 10.5);
+    // estimated text width (bold first line when there are several lines, or a single line) against what the shape can hold
+    const est = (ln, bold) => ln.split('').reduce((a, ch) => a + (/[A-Z0-9@#%&]/.test(ch) ? (bold ? 5.9 : 5.3) : /[ ilj.,:;'!()\/|-]/.test(ch) ? (bold ? 2.7 : 2.3) : (bold ? 4.7 : 4.2)), 0);
+    const need = Math.max.apply(null, n.lines.map((ln, i) => est(ln, i === 0 || !multi)));
+    const dy = (n.lines.length - 1) * 5.25 + 5.5;
+    const room = w => dec ? w * (1 - 2 * dy / n.h) - 4 : (n.k === 'jump' ? w - 26 : w - 10);
+    if (!n.w) {
+      n.w = dec ? 124 : (n.k === 'jump' ? 116 : 108);
+      if (need > room(n.w) && ((n.c === 1 && perRow[n.r] === 1) || dec)) n.w = Math.min(dec && perRow[n.r] > 1 ? 150 : 176,Math.ceil(dec ? (need + 4) / (1 - 2 * dy / n.h) : need + (n.k === 'jump' ? 26 : 10)));
+    }
+    if (need > room(n.w)) WARN.push(spec.name + ' ' + n.id + ': "' + n.lines.reduce((a, b) => (b.length > a.length ? b : a), '') + '" (' + Math.round(need) + ' > ' + Math.round(room(n.w)) + ')');
+  });
+  const rowH = {};
+  spec.nodes.forEach(n => { rowH[n.r] = Math.max(rowH[n.r] || 0, n.h); });
+  const rows = Object.keys(rowH).map(Number).sort((a, b) => a - b);
+  let y = 10; const rowY = {};
+  rows.forEach(r => { rowY[r] = y + rowH[r] / 2; y += rowH[r] + gap; });
+  spec.H = Math.round(y - gap + 10);
+  spec.byId = {};
+  spec.nodes.forEach(n => { n.x = COLX[0] + n.c * (COLX[1] - COLX[0]); n.y = rowY[n.r]; spec.byId[n.id] = n; });
+}
+
+function pt(n, side) {
+  if (side === 't') return [n.x, n.y - n.h / 2];
+  if (side === 'b') return [n.x, n.y + n.h / 2];
+  if (side === 'l') return [n.x - n.w / 2, n.y];
+  return [n.x + n.w / 2, n.y];
+}
+const DIR = { t: [0, -1], b: [0, 1], l: [-1, 0], r: [1, 0] };
+
+function route(a, sa, b, sb) {
+  const p0 = pt(a, sa), p1 = pt(b, sb), stub = 9;
+  const d0 = DIR[sa], d1 = DIR[sb];
+  const vert0 = sa === 't' || sa === 'b', vert1 = sb === 't' || sb === 'b';
+  const pts = [p0];
+  if (sa === sb) {                                   // a loop that leaves and re-enters on the same side
+    if (vert0) { const Y = (sa === 'b' ? Math.max(p0[1], p1[1]) : Math.min(p0[1], p1[1])) + d0[1] * 14; pts.push([p0[0], Y], [p1[0], Y]); }
+    else { const X = (sa === 'r' ? Math.max(p0[0], p1[0]) : Math.min(p0[0], p1[0])) + d0[0] * 14; pts.push([X, p0[1]], [X, p1[1]]); }
+  } else if (vert0 && vert1) {                       // top/bottom to top/bottom
+    if (Math.abs(p0[0] - p1[0]) < 0.5) { /* straight */ }
+    else { const m = (p0[1] + p1[1]) / 2; pts.push([p0[0], m], [p1[0], m]); }
+  } else if (!vert0 && !vert1) {                     // left/right to left/right
+    if (Math.abs(p0[1] - p1[1]) < 0.5) { /* straight */ }
+    else { const m = (p0[0] + p1[0]) / 2; pts.push([m, p0[1]], [m, p1[1]]); }
+  } else if (vert0 && !vert1) { pts.push([p0[0], p1[1]]); }   // leaves vertically, enters horizontally
+  else { pts.push([p1[0], p0[1]]); }                           // leaves horizontally, enters vertically
+  pts.push(p1);
+  return pts;
+}
+
+function render(spec) {
+  layout(spec);
+  let s = `<svg viewBox="0 0 420 ${spec.H}" xmlns="http://www.w3.org/2000/svg" font-family="Arial,Helvetica,sans-serif">`;
+  s += `<defs><marker id="ah${spec.name}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="${INK}"/></marker></defs>`;
+  s += `<rect x="0" y="0" width="420" height="${spec.H}" rx="8" fill="#ffffff" stroke="${FRAME}"/>`;
+  // edges first (under the boxes), their labels last (over everything)
+  let labels = '';
+  spec.edges.forEach(e => {
+    const a = spec.byId[e.a], b = spec.byId[e.b], [sa, sb] = e.s.split('>');
+    const pts = route(a, sa, b, sb);
+    const d = pts.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' ');
+    const marker = e.noarrow ? '' : ` marker-end="url(#ah${spec.name})"` + (e.both ? ` marker-start="url(#ah${spec.name})"` : '');
+    s += `<path d="${d}" fill="none" stroke="${INK}" stroke-width="1.3"${e.dash ? ' stroke-dasharray="3 3"' : ''}${marker}/>`;
+    if (e.l) {
+      const p0 = pts[0], p1 = pts[1], horiz = Math.abs(p1[1] - p0[1]) < 0.5;
+      let lx, ly, anchor = 'middle';
+      if (e.at) { lx = e.at[0]; ly = e.at[1]; }
+      else if (horiz) { lx = (p0[0] + p1[0]) / 2; ly = p0[1] - 3.5; if (Math.abs(p1[0] - p0[0]) < 30) lx = p0[0] + (p1[0] > p0[0] ? 15 : -15); }
+      else { lx = p0[0] + 4; ly = (p0[1] + Math.min(Math.max(p1[1], p0[1] - 22), p0[1] + 22)) / 2 + 3; anchor = 'start'; if (p1[1] < p0[1]) ly = p0[1] - 8; }
+      labels += `<text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="${anchor}" font-size="8" font-weight="700" fill="${INK2}" stroke="#ffffff" stroke-width="2.6" paint-order="stroke">${esc(e.l)}</text>`;
+    }
+  });
+  // nodes
+  spec.nodes.forEach(n => {
+    const K = KIND[n.k] || KIND.step, x0 = n.x - n.w / 2, y0 = n.y - n.h / 2;
+    if (n.k === 'dec') {
+      s += `<path d="M${n.x} ${y0} L${x0 + n.w} ${n.y} L${n.x} ${y0 + n.h} L${x0} ${n.y} Z" fill="${K.fill}" stroke="${K.stroke}" stroke-width="${K.sw || 1.2}"/>`;
+    } else {
+      const rx = (n.k === 'start' || n.k === 'end' || n.k === 'jump') ? Math.min(n.h / 2, 14) : 6;
+      s += `<rect x="${x0}" y="${y0}" width="${n.w}" height="${n.h}" rx="${rx}" fill="${K.fill}" stroke="${K.stroke}" stroke-width="${K.sw || 1.2}"${K.dash ? ' stroke-dasharray="3 3"' : ''}/>`;
+      if (K.dbl) s += `<rect x="${x0 + 3}" y="${y0 + 3}" width="${n.w - 6}" height="${n.h - 6}" rx="${Math.max(2, rx - 3)}" fill="none" stroke="${K.stroke}" stroke-width="1.1"/>`;   // a second line inside: a fault
+    }
+    const ty = n.y - (n.lines.length - 1) * 5.25 + 3;
+    n.lines.forEach((ln, i) => {
+      s += `<text x="${n.x}" y="${(ty + i * 10.5).toFixed(1)}" text-anchor="middle" font-size="8.3" ${i === 0 && n.lines.length > 1 ? 'font-weight="700"' : (n.lines.length === 1 ? 'font-weight="700"' : '')} fill="${K.text}">${esc(ln)}</text>`;
+    });
+  });
+  return s + labels + '</svg>';
+}
+
+/* ------------------------------------------------------------------ BOX FLOWCHARTS (from S3A / S3C / S3B) */
+const SPECS = [];
+const E = (a, b, s, l, o) => Object.assign({ a, b, s, l }, o || {});
+
+SPECS.push({ name: 'flow1', nodes: [
+  { id: 'A', c: 1, r: 0, k: 'start', t: 'TAPS\ntap anywhere' },
+  { id: 'B', c: 1, r: 1, k: 'dec', t: 'CHECKING\nenough alcohol\nand scented?' },
+  { id: 'D', c: 0, r: 1, k: 'step', t: 'REFILL\nthe ACS fills it,\nthen it checks again' },
+  { id: 'E', c: 0, r: 2, k: 'err', t: 'OUT OF ORDER\nrefill gave up:\nuse another station' },
+  { id: 'C', c: 1, r: 2, k: 'step', t: 'WELCOME\nTap to START' },
+  { id: 'F', c: 1, r: 3, k: 'step', t: 'RATE A\nodor 1 to 10, CONFIRM' },
+  { id: 'G', c: 1, r: 4, k: 'step', t: 'METHOD\nbalanced, alcohol\nor scented mist' },
+  { id: 'H', c: 1, r: 5, k: 'step', t: 'TIME ALLOT\ntype the time, OK' },
+  { id: 'I', c: 2, r: 5, k: 'note', t: 'Under the minimum or\nover the maximum\ncoins: it asks again' },
+  { id: 'J', c: 1, r: 6, k: 'step', t: 'INSERT COIN\ncoins count up (CANCEL,\nYES: back to TAPS)' },
+  { id: 'P', c: 1, r: 7, k: 'jump', t: 'continues in chart 2: OPEN A' }
+], edges: [E('A', 'B', 'b>t'), E('B', 'C', 'b>t', 'yes'), E('B', 'D', 'l>r', 'no'), E('D', 'E', 'b>t', 'gave up'), E('C', 'F', 'b>t'), E('F', 'G', 'b>t'), E('G', 'H', 'b>t'),
+  E('H', 'I', 'r>l', '', { noarrow: true, dash: true }), E('H', 'J', 'b>t'), E('J', 'P', 'b>t')] });
+
+SPECS.push({ name: 'flow2', nodes: [
+  { id: 'L', c: 1, r: 0, k: 'step', t: 'OPEN A\nthe door unlocks,\nput the helmet in' },
+  { id: 'M', c: 1, r: 1, k: 'step', w: 130, t: 'SENSORS A, CLOSE DOOR A\nhelmet seen, door shut' },
+  { id: 'N', c: 2, r: 1, k: 'step', t: 'HELMET NO DETECTED\nopen door again' },
+  { id: 'O', c: 1, r: 2, k: 'run', t: 'CLEANING\nUV and mist run,\nthe time counts down' },
+  { id: 'Pp', c: 2, r: 2, k: 'step', t: 'Door opened:\nSAFETY PAUSE, then\nit carries on' },
+  { id: 'Q', c: 0, r: 2, k: 'step', t: 'CANCEL, CONFIRM:\nstops early, coins\nare not refunded' },
+  { id: 'R', c: 1, r: 3, k: 'step', t: 'OPEN B, SENSORS B\ntake the helmet,\nclose the door' },
+  { id: 'S', c: 1, r: 4, k: 'step', t: 'RATE B\nodor 1 to 10, CONFIRM' },
+  { id: 'T', c: 1, r: 5, k: 'dec', t: 'FREE RETRY\noffered?' },
+  { id: 'U', c: 0, r: 5, k: 'jump', t: 'yes: FREE run\n(2 min), then\nback to OPEN A' },
+  { id: 'V', c: 1, r: 6, k: 'end', t: 'FINISH\nthank you, back to TAPS' }
+], edges: [E('L', 'M', 'b>t'), E('M', 'N', 'r>l', 'no'), E('N', 'L', 't>r', 'again'), E('M', 'O', 'b>t'), E('O', 'Pp', 'r>l', '', { both: true }),
+  E('O', 'Q', 'l>r', 'cancel'), E('Q', 'R', 'b>l'), E('O', 'R', 'b>t', 'time up'), E('R', 'S', 'b>t'), E('S', 'T', 'b>t'), E('T', 'U', 'l>r', 'yes'), E('T', 'V', 'b>t', 'no')] });
+
+SPECS.push({ name: 'flow3', nodes: [
+  { id: 'A', c: 1, r: 0, k: 'start', t: 'TAPS\ntap anywhere' },
+  { id: 'E', c: 0, r: 0, k: 'err', t: 'OUT OF ORDER\nif board C2 does\nnot answer' },
+  { id: 'C', c: 1, r: 1, k: 'step', t: 'WELCOME\nTap to START' },
+  { id: 'F', c: 1, r: 2, k: 'step', t: 'RATE A\nhow wet 1 to 10, CONFIRM' },
+  { id: 'H', c: 1, r: 3, k: 'step', t: 'TIME ALLOT\ntype the time, OK' },
+  { id: 'I', c: 2, r: 3, k: 'note', t: 'Under the minimum or\nover the maximum\ncoins: it asks again' },
+  { id: 'J', c: 1, r: 4, k: 'step', t: 'INSERT COIN\ncoins count up (CANCEL,\nYES: back to TAPS)' },
+  { id: 'L', c: 1, r: 5, k: 'step', w: 130, t: 'OPEN A, SENSORS A,\nCLOSE DOOR A\nhelmet in, door shut' },
+  { id: 'N', c: 2, r: 5, k: 'step', t: 'HELMET NO DETECTED\nopen door again' },
+  { id: 'P', c: 1, r: 6, k: 'jump', t: 'continues in chart 4: HEATING' }
+], edges: [E('A', 'E', 'l>r'), E('A', 'C', 'b>t'), E('C', 'F', 'b>t'), E('F', 'H', 'b>t'), E('H', 'I', 'r>l', '', { noarrow: true, dash: true }), E('H', 'J', 'b>t'), E('J', 'L', 'b>t'),
+  E('L', 'N', 'r>l', 'no', { both: true }), E('L', 'P', 'b>t')] });
+
+SPECS.push({ name: 'flow4', nodes: [
+  { id: 'O', c: 1, r: 0, k: 'run', t: 'HEATING\nheater, UV and fan run,\nthe time counts down' },
+  { id: 'Pp', c: 2, r: 0, k: 'step', t: 'Door opened:\nSAFETY PAUSE, then\nit carries on' },
+  { id: 'Q', c: 0, r: 0, k: 'step', t: 'CANCEL, CONFIRM:\nCOOL DOWN first,\ncoins not refunded' },
+  { id: 'W', c: 1, r: 1, k: 'run', t: 'COOL DOWN\nonly the fan runs\n(default 60 s)' },
+  { id: 'R', c: 1, r: 2, k: 'step', t: 'OPEN B, SENSORS B\ntake the helmet,\nclose the door' },
+  { id: 'S', c: 1, r: 3, k: 'step', t: 'RATE B\nhow wet now, CONFIRM' },
+  { id: 'T', c: 1, r: 4, k: 'dec', t: 'FREE RETRY\noffered?' },
+  { id: 'U', c: 0, r: 4, k: 'jump', t: 'yes: FREE heating\n(2 min), then\nback to OPEN A' },
+  { id: 'V', c: 1, r: 5, k: 'end', t: 'FINISH\nthank you, back to TAPS' }
+], edges: [E('O', 'W', 'b>t', 'time up'), E('O', 'Pp', 'r>l', '', { both: true }), E('O', 'Q', 'l>r', 'cancel'), E('Q', 'W', 'b>l'), E('W', 'R', 'b>t'), E('R', 'S', 'b>t'), E('S', 'T', 'b>t'),
+  E('T', 'U', 'l>r', 'yes'), E('T', 'V', 'b>t', 'no')] });
+
+SPECS.push({ name: 'flow5', nodes: [
+  { id: 'A', c: 1, r: 0, k: 'start', t: 'TAPS\ntap anywhere' },
+  { id: 'B', c: 1, r: 1, k: 'dec', t: 'CHECKING\nenough alcohol\nand scented?' },
+  { id: 'D', c: 0, r: 1, k: 'step', t: 'REFILL\nthe ACS fills it,\nthen it checks again' },
+  { id: 'E', c: 0, r: 2, k: 'note', t: 'Refill gave up:\nCLEANING is greyed,\nDRYING still works' },
+  { id: 'C', c: 1, r: 2, k: 'step', t: 'WELCOME\nTap to START' },
+  { id: 'F', c: 1, r: 3, k: 'dec', t: 'SELECT MODE\nCLEANING\nor DRYING?' },
+  { id: 'G', c: 0, r: 4, k: 'step', t: 'CLEANING\nRATE A (odor), METHOD,\nTIME ALLOT' },
+  { id: 'H', c: 2, r: 4, k: 'step', t: 'DRYING\nRATE A (how wet),\nTIME ALLOT' },
+  { id: 'J', c: 1, r: 5, k: 'step', t: 'INSERT COIN\ncoins count up (CANCEL,\nYES: back to TAPS)' },
+  { id: 'K', c: 1, r: 6, k: 'jump', t: 'continues in chart 6: OPEN A' }
+], edges: [E('A', 'B', 'b>t'), E('B', 'C', 'b>t', 'yes'), E('B', 'D', 'l>r', 'no'), E('D', 'E', 'b>t', 'gave up'), E('C', 'F', 'b>t'), E('F', 'G', 'l>t', 'cleaning'), E('F', 'H', 'r>t', 'drying'),
+  E('G', 'J', 'b>l'), E('H', 'J', 'b>r'), E('J', 'K', 'b>t')] });
+
+SPECS.push({ name: 'flow6', nodes: [
+  { id: 'L', c: 1, r: 0, k: 'step', w: 130, t: 'OPEN A, SENSORS A,\nCLOSE DOOR A\nhelmet in, door shut' },
+  { id: 'M', c: 1, r: 1, k: 'dec', t: 'Which mode?' },
+  { id: 'N', c: 0, r: 2, k: 'run', t: 'CLEANING\nUV and mist, heater\nin the last minute' },
+  { id: 'O', c: 2, r: 2, k: 'run', t: 'DRYING\nheater and UV run' },
+  { id: 'Pp', c: 2, r: 3, k: 'step', t: 'COOL DOWN\nnothing runs\n(default 60 s)' },
+  { id: 'R', c: 1, r: 4, k: 'step', t: 'OPEN B, SENSORS B\ntake the helmet,\nclose the door' },
+  { id: 'S', c: 1, r: 5, k: 'step', t: 'RATE B\ncleaning: how dry, then odor\ndrying: how dry' },
+  { id: 'T', c: 1, r: 6, k: 'dec', t: 'FREE RETRY\noffered?' },
+  { id: 'U', c: 0, r: 6, k: 'jump', t: 'yes: FREE run\n(2 min), then\nback to OPEN A' },
+  { id: 'V', c: 1, r: 7, k: 'end', t: 'FINISH\nthank you, back to TAPS' }
+], edges: [E('L', 'M', 'b>t'), E('M', 'N', 'l>t', 'cleaning'), E('M', 'O', 'r>t', 'drying'), E('O', 'Pp', 'b>t', 'time up'), E('N', 'R', 'b>l', 'time up'), E('Pp', 'R', 'b>r'),
+  E('R', 'S', 'b>t'), E('S', 'T', 'b>t'), E('T', 'U', 'l>r', 'yes'), E('T', 'V', 'b>t', 'no')] });
+
+/* ------------------------------------------------------------------ TROUBLESHOOTING TREES */
+SPECS.push({ name: 'tree1', nodes: [
+  { id: 'S', c: 1, r: 0, k: 'start', t: 'A box shows\nOUT OF ORDER' },
+  { id: 'Q1', c: 1, r: 1, k: 'dec', t: 'Home page: is a\nboard OFFLINE?' },
+  { id: 'A1', c: 0, r: 1, k: 'act', t: 'Fix that board first:\nsee "A board shows\nOFFLINE"' },
+  { id: 'Q2', c: 1, r: 2, k: 'dec', t: 'A container LOW,\nor an ACS tank\nEMPTY?' },
+  { id: 'A2', c: 0, r: 2, k: 'act', t: 'Fill it. See "Refill\nstation does not\nrefill"' },
+  { id: 'Q3', c: 1, r: 3, k: 'dec', t: 'Is the container\nreally low?' },
+  { id: 'A3', c: 2, r: 3, k: 'act', t: 'No: the LEVELS lines\nare wrong. Use live\nagain, or switch\nCheck levels OFF' },
+  { id: 'E', c: 1, r: 4, k: 'end', t: 'Still stuck?\nRead the Serial log\nof the box S3' }
+], edges: [E('S', 'Q1', 'b>t'), E('Q1', 'A1', 'l>r', 'yes'), E('Q1', 'Q2', 'b>t', 'no'), E('Q2', 'A2', 'l>r', 'yes'), E('Q2', 'Q3', 'b>t', 'no'), E('Q3', 'A3', 'r>l', 'no'), E('Q3', 'E', 'b>t', 'yes')] });
+
+SPECS.push({ name: 'tree2', nodes: [
+  { id: 'S', c: 1, r: 0, k: 'start', t: 'A board shows OFFLINE\n(Control Center Home)', w: 150 },
+  { id: 'Q1', c: 1, r: 1, k: 'dec', t: 'Is the board\npowered (5 V)?' },
+  { id: 'A1', c: 0, r: 1, k: 'act', t: 'No: check the supply,\nfuse, cable and the\nDC-DC module' },
+  { id: 'Q2', c: 1, r: 2, k: 'dec', t: 'All boards offline\nat once?' },
+  { id: 'A2', c: 2, r: 2, k: 'act', t: 'Yes: power-cycle the\nLocalServer, then the\nbrains (S3)' },
+  { id: 'Q3', c: 1, r: 3, k: 'dec', t: 'Just flashed or\nreplaced?' },
+  { id: 'A3', c: 0, r: 3, k: 'act', t: 'Right sketch folder?\nSame Shared_Common.h\nas ESP32_S3A? Reflash' },
+  { id: 'Q4', c: 1, r: 4, k: 'dec', t: 'A bench or test\nsketch running?' },
+  { id: 'A4', c: 2, r: 4, k: 'act', t: 'Switch it off: it\nfights the real board' },
+  { id: 'E', c: 1, r: 5, k: 'end', t: 'Reset it, read the Serial\nlog (115200): brown-out?' }
+], edges: [E('S', 'Q1', 'b>t'), E('Q1', 'A1', 'l>r', 'no'), E('Q1', 'Q2', 'b>t', 'yes'), E('Q2', 'A2', 'r>l', 'yes'), E('Q2', 'Q3', 'b>t', 'no'), E('Q3', 'A3', 'l>r', 'yes'), E('Q3', 'Q4', 'b>t', 'no'),
+  E('Q4', 'A4', 'r>l', 'yes'), E('Q4', 'E', 'b>t', 'no')] });
+
+SPECS.push({ name: 'tree3', nodes: [
+  { id: 'S', c: 1, r: 0, k: 'start', t: 'Coin inserted, the\ncount does not move' },
+  { id: 'Q1', c: 1, r: 1, k: 'dec', t: 'Is the screen on\nINSERT COIN?' },
+  { id: 'A1', c: 0, r: 1, k: 'act', t: 'No: normal. The coin\nslot only has power\nwhile paying' },
+  { id: 'Q2', c: 1, r: 2, k: 'dec', t: '12 V at the slot\nduring INSERT\nCOIN?' },
+  { id: 'A2', c: 0, r: 2, k: 'act', t: 'No: COIN POWER relay\n(A3, B3), 12 V supply\nor its wiring' },
+  { id: 'Q3', c: 1, r: 3, k: 'dec', t: 'Does the COIN\nwire go LOW as\na coin passes?' },
+  { id: 'A3', c: 0, r: 3, k: 'act', t: 'No: acceptor speed\nswitch, coin path,\nCOIN wire, 10 k\nresistor' },
+  { id: 'E', c: 1, r: 4, k: 'end', t: 'Pulses arrive: check the\ncoin pin (GPIO23) and the\ncoins-per-pulse setting' }
+], edges: [E('S', 'Q1', 'b>t'), E('Q1', 'A1', 'l>r', 'no'), E('Q1', 'Q2', 'b>t', 'yes'), E('Q2', 'A2', 'l>r', 'no'), E('Q2', 'Q3', 'b>t', 'yes'), E('Q3', 'A3', 'l>r', 'no'), E('Q3', 'E', 'b>t', 'yes')] });
+
+SPECS.push({ name: 'tree4', nodes: [
+  { id: 'S', c: 1, r: 0, k: 'start', t: 'The door will not open\n(helmet stuck)' },
+  { id: 'F', c: 1, r: 1, k: 'act', t: 'FIRST: slide the safety lock\nDOWN (lower left of the\nenclosure door). The door\nunlocks at once, with or\nwithout power.' },
+  { id: 'Q1', c: 1, r: 2, k: 'dec', t: 'Is the machine\nswitched on?' },
+  { id: 'A1', c: 0, r: 2, k: 'act', t: 'No: locks need power\nto unlock. Power on,\nthen Maintenance >\nENCLOSURE LOCK' },
+  { id: 'Q2', c: 1, r: 3, k: 'dec', t: 'Does the lock\nclick in\nMaintenance?' },
+  { id: 'A2', c: 2, r: 3, k: 'act', t: 'Yes: mechanical. Push\nthe door in a little,\ncheck the latch' },
+  { id: 'Q3', c: 1, r: 4, k: 'dec', t: '12 V at the\nsolenoid when the\nrelay is ON?' },
+  { id: 'A3', c: 0, r: 4, k: 'act', t: 'No: relay, 12 V supply\nor wiring (A3, B3, C2)' },
+  { id: 'E', c: 1, r: 5, k: 'end', t: 'The solenoid or its\ndiode is faulty:\nreplace it. The slide\nstill opens the door.' }
+], edges: [E('S', 'F', 'b>t'), E('F', 'Q1', 'b>t', 'then find the cause'), E('Q1', 'A1', 'l>r', 'no'), E('Q1', 'Q2', 'b>t', 'yes'), E('Q2', 'A2', 'r>l', 'yes'), E('Q2', 'Q3', 'b>t', 'no'), E('Q3', 'A3', 'l>r', 'no'), E('Q3', 'E', 'b>t', 'yes')] });
+
+SPECS.push({ name: 'tree5', nodes: [
+  { id: 'S', c: 1, r: 0, k: 'start', t: 'A mixer is LOW or a\ntank is EMPTY' },
+  { id: 'Q1', c: 1, r: 1, k: 'dec', t: 'Does the page\nsay a TANK is\nEMPTY?' },
+  { id: 'A1', c: 0, r: 1, k: 'act', t: 'Yes: fill that tank,\nthen Retry now on\nthe ACS page' },
+  { id: 'Q2', c: 1, r: 2, k: 'dec', t: 'Is the ACS board\nONLINE on Home?' },
+  { id: 'A2', c: 0, r: 2, k: 'act', t: 'No: see "A board\nshows OFFLINE"' },
+  { id: 'Q3', c: 1, r: 3, k: 'dec', t: 'In Maintenance,\ndoes each pump\nmove its liquid?' },
+  { id: 'A3', c: 2, r: 3, k: 'act', t: 'No: wrong pump on\nthe input, kinked\ntube, air, dead pump,\n5 V supply' },
+  { id: 'Q4', c: 1, r: 4, k: 'dec', t: 'Does the mixer\nlevel rise while\nit fills?' },
+  { id: 'A4', c: 2, r: 4, k: 'act', t: 'No: aim or calibrate\nthe sensors (use live).\nNo rise means "empty"\nto the ACS' },
+  { id: 'E', c: 1, r: 5, k: 'end', t: 'Check the LEVELS lines\nand the MIX water share' }
+], edges: [E('S', 'Q1', 'b>t'), E('Q1', 'A1', 'l>r', 'yes'), E('Q1', 'Q2', 'b>t', 'no'), E('Q2', 'A2', 'l>r', 'no'), E('Q2', 'Q3', 'b>t', 'yes'), E('Q3', 'A3', 'r>l', 'no'), E('Q3', 'Q4', 'b>t', 'yes'),
+  E('Q4', 'A4', 'r>l', 'no'), E('Q4', 'E', 'b>t', 'yes')] });
+
+SPECS.push({ name: 'tree6', nodes: [
+  { id: 'S', c: 1, r: 0, k: 'start', t: 'The web page says\nOLD DATA or NO LINK' },
+  { id: 'Q1', c: 1, r: 1, k: 'dec', t: 'Does the Online\nServer setup page\nsay ONLINE?' },
+  { id: 'A1', c: 0, r: 1, k: 'act', t: 'Yes: the page token\nis wrong or the\nbrowser is offline.\nCheck Settings' },
+  { id: 'Q2', c: 1, r: 2, k: 'dec', t: 'Does it say the\nWi-Fi was joined?' },
+  { id: 'A2', c: 0, r: 2, k: 'act', t: 'No: wrong password\nor not found. Use\n2.4 GHz and check\nthe hotspot' },
+  { id: 'Q3', c: 1, r: 3, k: 'dec', t: 'What does Blynk\nupload say?' },
+  { id: 'A3', c: 2, r: 3, k: 'act', t: 'datastream missing:\nmake V0\ninvalid token: copy\nit again\nread timeout: check\nthe internet' },
+  { id: 'E', c: 1, r: 4, k: 'end', t: 'OK but no data: is the\nLocalServer on? Power-\ncycle the Online Server' }
+], edges: [E('S', 'Q1', 'b>t'), E('Q1', 'A1', 'l>r', 'yes'), E('Q1', 'Q2', 'b>t', 'no'), E('Q2', 'A2', 'l>r', 'no'), E('Q2', 'Q3', 'b>t', 'yes'), E('Q3', 'A3', 'r>l', 'error'), E('Q3', 'E', 'b>t', 'OK')] });
+
+SPECS.push({ name: 'tree7', nodes: [
+  { id: 'S', c: 1, r: 0, k: 'start', t: 'Screen white, blank\nor the touch is wrong' },
+  { id: 'Q1', c: 1, r: 1, k: 'dec', t: 'Does Force\nrefresh bring\nit back?' },
+  { id: 'A1', c: 0, r: 1, k: 'act', t: 'No: is the terminal\nONLINE? If not, see\n"A board shows\nOFFLINE"' },
+  { id: 'Q2', c: 1, r: 2, k: 'dec', t: 'Does it keep\ncoming back?' },
+  { id: 'A2', c: 2, r: 2, k: 'act', t: 'No: fine. Watch it' },
+  { id: 'A3', c: 0, r: 3, k: 'act', t: 'Tick the relay that\ncauses it (Screen\nsection), lower the\nauto refresh seconds' },
+  { id: 'A4', c: 2, r: 3, k: 'act', t: 'Add a 470 to 1000 uF\ncapacitor at the TFT\nsupply, short thick\n5 V wires' },
+  { id: 'E', c: 1, r: 4, k: 'end', t: 'Touch wrong: calibrate with\nESP32_C1_CALIBRATE.\nAlways white: check VCC,\nGND, CS, DC, RST' }
+], edges: [E('S', 'Q1', 'b>t'), E('Q1', 'A1', 'l>r', 'no'), E('Q1', 'Q2', 'b>t', 'yes'), E('Q2', 'A2', 'r>l', 'no'), E('Q2', 'A3', 'b>t', 'yes'), E('A3', 'A4', 'r>l', '', { noarrow: true, dash: true }), E('A3', 'E', 'b>l'), E('A4', 'E', 'b>r')] });
+
+/* ------------------------------------------------------------------ run */
+(async () => {
+  const out = document.getElementById('out'); let fig = '';
+  SPECS.forEach(sp => {
+    const svg = render(sp);
+    out.insertAdjacentHTML('beforeend', `<div class="f" id="fig-${sp.name}">${svg}</div>`);
+    fig += `<div class="f" id="fig-${sp.name}">\n${svg}\n</div>\n\n`;
+  });
+  const html = '<!doctype html>\n<html><head><meta charset="utf-8"><title>Reference figures</title></head><body>\n<!-- GENERATED by flowgen.html. Do not edit by hand. -->\n' + fig + '</body></html>\n';
+  // the decision trees again, as data for the online page's "Fix it" wizard (ONLINE_WEB/js/wizard_data.js; copy it there)
+  const trees = SPECS.filter(sp => /^tree/.test(sp.name)).map(sp => {
+    const clean = t => t.replace(/\s*\n\s*/g, ' ').trim();
+    const nodes = {}; sp.nodes.forEach(n => { nodes[n.id] = { k: n.k, t: clean(n.t) }; });
+    return { id: sp.name, title: nodes.S.t, nodes, edges: sp.edges.filter(e => !e.noarrow).map(e => ({ a: e.a, b: e.b, l: e.l || '' })) };
+  });
+  const wiz = '"use strict";\n/* GENERATED from MANUAL\\build\\flowgen.html (the same decision trees as the manual). Do not edit by hand. */\nconst WIZARD_TREES = ' + JSON.stringify(trees, null, 1) + ';\n';
+  try { await fetch('/save/build/wizard_data.js', { method: 'POST', body: wiz }); } catch (e) {}
+  try {
+    const r = await fetch('/save/build/figs_ref.html', { method: 'POST', body: html });
+    document.getElementById('bar').textContent = 'figures: ' + SPECS.length + ' | ' + (await r.text()) + ' | text warnings: ' + WARN.length + (WARN.length ? ' | ' + WARN.join(' ;; ') : '');
+  } catch (e) { document.getElementById('bar').textContent = 'not saved: ' + e.message; }
+})();
+</script></body></html>

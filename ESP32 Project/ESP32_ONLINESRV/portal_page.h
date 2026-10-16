@@ -39,6 +39,9 @@ button.alt{background:#fff;color:#14325c;border:1px solid #d9cfae;margin-left:6p
     <div class="row"><span>Blynk upload</span><b id="s_blynk">-</b></div>
     <div class="row"><span>Machines heard on the radio</span><b id="s_radio">-</b></div>
     <div class="row"><span>Revenue totals (LocalServer)</span><b id="s_stats">-</b></div>
+    <div class="row"><span>Restated old data (spare ESP32_RESTATE board)</span><b id="s_rs">-</b></div>
+    <div class="row"><span>Public status device</span><b id="s_pub">-</b></div>
+    <div class="row"><span>Sessions counted (per box and hour)</span><b id="s_use">-</b></div>
     <div class="row"><span>Clock</span><b id="s_time">-</b></div>
     <div class="row"><span>Next upload</span><b id="s_next">-</b></div>
     <div class="row"><span>Uploads this month</span><b id="s_mq">-</b></div>
@@ -53,6 +56,7 @@ button.alt{background:#fff;color:#14325c;border:1px solid #d9cfae;margin-left:6p
   <label for="ssid">Network name (SSID)</label><input id="ssid" autocomplete="off" autocapitalize="none" spellcheck="false">
   <label for="pass">Password</label><input id="pass" type="password" autocomplete="off" placeholder="(leave empty for an open network)">
   <label for="token">Blynk device Auth Token</label><input id="token" type="password" autocomplete="off" spellcheck="false" placeholder="paste the token of this device">
+  <label for="ptoken">Public status device token (optional)</label><input id="ptoken" type="password" autocomplete="off" spellcheck="false" placeholder="token of a SECOND Blynk device, for the customer page status.html"><div class="fine">Not the same token as above. Type - (a minus sign) and Save to remove it.</div>
   <label for="iv">Send to Blynk every</label>
   <select id="iv"><option value="30">30 seconds</option><option value="60">1 minute</option><option value="120">2 minutes</option><option value="300">5 minutes</option></select>
   <label class="chk"><input id="extra" type="checkbox"><span>Also send single numbers V1 to V4 for Blynk dashboards (revenue, customers, alerts, boxes running). The datastreams must exist in the template.</span></label>
@@ -61,6 +65,7 @@ button.alt{background:#fff;color:#14325c;border:1px solid #d9cfae;margin-left:6p
     <label for="server">Blynk server</label><input id="server" autocomplete="off" spellcheck="false">
     <label for="tz">Time zone (hours from UTC)</label><input id="tz" type="number" step="0.5" min="-12" max="14">
     <label for="mqmax">Blynk messages per month in your plan (0 = do not show)</label><input id="mqmax" type="number" min="0" step="1000">
+    <button id="resetuse" type="button" class="alt" style="margin-left:0">Reset the per-box and busiest-hours statistics</button>
     <label class="chk"><input id="insecure" type="checkbox"><span>Skip the TLS certificate check (only if every upload fails with a TLS error)</span></label>
   </details>
   <div><button id="save" type="button">Save and connect</button><button id="forget" type="button" class="alt">Forget Wi-Fi</button></div>
@@ -86,13 +91,16 @@ function render(s){
   $('s_blynk').textContent=s.blynk.age<0?'not tried yet':(s.blynk.ok?'OK':'FAILED: '+s.blynk.err)+' ('+ago(s.blynk.age)+' ago)'+(s.blynk.note?' - '+s.blynk.note:'');
   $('s_radio').textContent=s.radio.heard+' of 13 boards';
   $('s_stats').textContent=s.radio.stats?'heard '+ago(s.radio.statsAge)+' ago':'not heard yet (is the LocalServer on?)';
+  $('s_rs').textContent=s.radio.rs?('stored: update #'+s.radio.rs):'none';
+  $('s_pub').textContent=!s.hasPtoken?'not used':(s.pub.tried?(s.pub.ok?'OK':'FAILED: '+s.pub.err)+' ('+ago(s.pub.age)+' ago)':'waiting for the next upload');
+  $('s_use').textContent=s.sessions;
   $('s_time').textContent=s.time;
   $('s_next').textContent=s.state==='testing'?'-':s.next+' s';
   $('s_mq').textContent=s.mq+(s.mqmax>0?' of '+s.mqmax:'');
   $('s_up').textContent=up(s.up)+' ('+s.rst+')';
   if(!filled){filled=true;$('ssid').value=s.ssid||'';$('server').value=s.server;$('iv').value=String(s.iv);$('tz').value=s.tz;$('mqmax').value=s.mqmax;
     $('extra').checked=!!s.extra;$('events').checked=!!s.events;$('insecure').checked=!!s.insecure;
-    if(s.hasPass)$('pass').placeholder='(unchanged)';if(s.hasToken)$('token').placeholder='(unchanged)';}
+    if(s.hasPass)$('pass').placeholder='(unchanged)';if(s.hasToken)$('token').placeholder='(unchanged)';if(s.hasPtoken)$('ptoken').placeholder='(unchanged)';}
 }
 async function poll(){try{render(await api('/api/status'));}catch(e){if(Date.now()-lastOk>4000)$('lost').style.display='block';}}
 setInterval(poll,2000);poll();
@@ -112,11 +120,12 @@ $('scan').onclick=async()=>{
 $('save').onclick=async()=>{
   const q=new URLSearchParams({ssid:$('ssid').value.trim(),iv:$('iv').value,server:$('server').value.trim(),tz:$('tz').value,mqmax:$('mqmax').value||'0',
     extra:$('extra').checked?1:0,events:$('events').checked?1:0,insecure:$('insecure').checked?1:0});
-  if($('pass').value)q.set('pass',$('pass').value);if($('token').value.trim())q.set('token',$('token').value.trim());
+  if($('pass').value)q.set('pass',$('pass').value);if($('token').value.trim())q.set('token',$('token').value.trim());if($('ptoken').value.trim())q.set('ptoken',$('ptoken').value.trim());
   if(!$('pass').value&&!$('token').value.trim())q.set('keep','1');
-  $('pass').value='';$('token').value='';
+  $('pass').value='';$('token').value='';$('ptoken').value='';
   try{await api('/api/save?'+q.toString());}catch(e){}
   $('why').textContent='Saved. Testing now...';
 };
+$('resetuse').onclick=async()=>{if(!confirm('Start the per-box and busiest-hours statistics again from zero?'))return;try{await api('/api/resetusage');}catch(e){}};
 $('forget').onclick=async()=>{if(!confirm('Forget the saved Wi-Fi and token?'))return;try{await api('/api/forget');}catch(e){}filled=false;$('ssid').value='';poll();};
 </script></body></html>)rawliteral";

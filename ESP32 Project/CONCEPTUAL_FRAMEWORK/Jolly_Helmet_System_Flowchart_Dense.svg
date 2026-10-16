@@ -1,0 +1,772 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 3482 2675" width="3482" height="2675" font-family="Arial, Helvetica, sans-serif">
+<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#000"/></marker></defs>
+<rect width="3482" height="2675" fill="#fff"/>
+<text x="40" y="60" font-size="34" font-weight="700">JOLLY HELMET: SYSTEM FLOWCHART</text>
+<text x="40" y="92" font-size="16">Admin and customer branches, the three boxes, the ACS refill stations, the LocalServer, the Online Server, Blynk, GitHub, Vercel, the web page and the status page</text>
+<path d="M1779.0 223.0 L1779.0 245.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M1779.0 285.0 L1779.0 307.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M1779.0 347.0 L1779.0 367.0 L1178.7 367.0 L1178.7 387.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M1779.0 347.0 L1779.0 367.0 L2296.5 367.0 L2296.5 387.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M973.0 402.0 L1116.7 402.0" fill="none" stroke="#000" stroke-width="1.1"/>
+<path d="M2543.6 402.0 L2358.5 402.0" fill="none" stroke="#000" stroke-width="1.1"/>
+<path d="M1178.7 417.0 L1178.7 437.0 L702.6 437.0 L702.6 457.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M1178.7 417.0 L1178.7 437.0 L1282.2 437.0 L1282.2 457.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M1178.7 417.0 L1178.7 437.0 L1475.4 437.0 L1475.4 457.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M1178.7 417.0 L1178.7 442.8 L1654.8 442.8 L1654.8 468.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M702.6 510.0 L702.6 532.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M702.6 585.0 L702.6 601.8 L330.0 601.8 L330.0 618.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M702.6 585.0 L702.6 601.8 L516.3 601.8 L516.3 618.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M702.6 585.0 L702.6 618.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M702.6 585.0 L702.6 601.8 L888.9 601.8 L888.9 618.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M702.6 585.0 L702.6 599.3 L1075.2 599.3 L1075.2 613.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M330.0 648.5 L330.0 682.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M330.0 735.0 L330.0 763.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M330.0 803.5 L330.0 838.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M330.0 878.5 L330.0 913.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M330.0 953.5 L330.0 988.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M330.0 1028.5 L330.0 1063.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M268.0 1083.5 L219.6 1083.5 L219.6 558.5 L640.6 558.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M516.3 648.5 L516.3 682.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M516.3 735.0 L516.3 757.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M516.3 810.0 L516.3 832.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M516.3 885.0 L516.3 907.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M516.3 960.0 L516.3 982.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M516.3 1035.0 L516.3 1063.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M516.3 1103.5 L516.3 1143.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M516.3 1173.5 L516.3 1207.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M516.3 1260.0 L516.3 1282.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M516.3 1335.0 L516.3 1363.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M454.3 1383.5 L423.8 1383.5 L423.8 558.5 L640.6 558.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M702.6 648.5 L702.6 688.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M702.6 728.5 L702.6 757.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M702.6 810.0 L702.6 838.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M702.6 878.5 L702.6 907.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M702.6 960.0 L702.6 988.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M702.6 1028.5 L702.6 1068.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M702.6 1098.5 L702.6 1132.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M702.6 1185.0 L702.6 1213.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M702.6 1253.5 L702.6 1288.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M764.6 1308.5 L796.4 1308.5 L796.4 558.5 L764.6 558.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M888.9 648.5 L888.9 688.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M888.9 728.5 L888.9 757.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M888.9 810.0 L888.9 832.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M888.9 885.0 L888.9 913.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M888.9 953.5 L888.9 982.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M888.9 1035.0 L888.9 1057.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M888.9 1110.0 L888.9 1138.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M888.9 1178.5 L888.9 1218.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M888.9 1248.5 L888.9 1282.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M888.9 1335.0 L888.9 1363.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M888.9 1403.5 L888.9 1438.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M950.9 1458.5 L981.4 1458.5 L981.4 558.5 L764.6 558.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M1075.2 653.5 L1075.2 688.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M1075.2 728.5 L1075.2 757.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M1075.2 810.0 L1075.2 832.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M1075.2 885.0 L1075.2 913.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M1075.2 953.5 L1075.2 982.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M1075.2 1035.0 L1075.2 1068.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M1075.2 1098.5 L1075.2 1132.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M1075.2 1185.0 L1075.2 1218.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M1075.2 1248.5 L1075.2 1288.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M1137.2 1308.5 L1169.0 1308.5 L1169.0 558.5 L764.6 558.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M1282.2 510.0 L1282.2 532.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M1282.2 585.0 L1282.2 607.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M1282.2 660.0 L1282.2 688.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M1282.2 728.5 L1282.2 757.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M1282.2 810.0 L1282.2 832.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M1282.2 885.0 L1282.2 907.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M1282.2 960.0 L1282.2 993.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M1344.2 1008.5 L1365.0 1008.5 L1365.0 558.5 L1344.2 558.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M1475.4 510.0 L1475.4 543.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M1475.4 573.5 L1475.4 613.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M1475.4 653.5 L1475.4 682.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M1475.4 735.0 L1475.4 757.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M1475.4 810.0 L1475.4 843.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M1475.4 873.5 L1475.4 918.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M1475.4 948.5 L1475.4 982.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M1537.4 933.5 L1565.1 933.5 L1565.1 1083.5 L1537.4 1083.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M1413.4 1083.5 L1395.4 1083.5 L1395.4 633.5 L1413.4 633.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M1654.8 498.5 L1654.8 532.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M1654.8 585.0 L1654.8 613.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M1654.8 653.5 L1654.8 682.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M1654.8 735.0 L1654.8 757.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M1654.8 810.0 L1654.8 843.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M2296.5 417.0 L2296.5 457.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M2296.5 510.0 L2296.5 532.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M2358.5 483.5 L2896.8 483.5 L2896.8 538.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M2296.5 585.0 L2296.5 599.3 L2110.2 599.3 L2110.2 613.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M2296.5 585.0 L2296.5 613.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M2296.5 585.0 L2296.5 599.3 L2482.8 599.3 L2482.8 613.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M2896.8 578.5 L2896.8 613.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M2896.8 653.5 L2896.8 682.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M2896.8 735.0 L2896.8 768.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M2896.8 798.5 L2896.8 832.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M2958.8 783.5 L3028.0 783.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M2896.8 885.0 L2896.8 907.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M2896.8 960.0 L2896.8 993.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M2896.8 1023.5 L2896.8 1063.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M2958.8 1008.5 L3028.0 1008.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M2958.8 1083.5 L3269.4 1083.5 L3269.4 446.0 L2296.5 446.0 L2296.5 457.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M2958.8 708.5 L3228.0 708.5 L3228.0 2374.5 L1937.6 2374.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M2110.2 653.5 L2110.2 688.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M2110.2 728.5 L2110.2 757.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M2110.2 810.0 L2110.2 838.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M2110.2 878.5 L2110.2 982.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M2110.2 1035.0 L2110.2 1057.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M2110.2 1110.0 L2110.2 1138.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M2110.2 1178.5 L2110.2 1213.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M2110.2 1253.5 L2110.2 1282.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M2110.2 1335.0 L2110.2 1363.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M2110.2 1403.5 L2110.2 1432.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M2110.2 1485.0 L2110.2 1582.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M2110.2 1635.0 L2110.2 1657.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M2110.2 1710.0 L2110.2 1732.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M2110.2 1785.0 L2110.2 1807.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M2048.2 1758.5 L2034.3 1758.5 L2034.3 1308.5 L2048.2 1308.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M2048.2 1833.5 L2013.6 1833.5 L2013.6 708.5 L2048.2 708.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M2048.2 783.5 L1937.6 783.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M1875.6 810.0 L1875.6 832.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M2296.5 653.5 L2296.5 688.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M2296.5 728.5 L2296.5 757.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M2296.5 810.0 L2296.5 838.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M2296.5 878.5 L2296.5 988.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M2296.5 1028.5 L2296.5 1138.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M2296.5 1178.5 L2296.5 1213.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M2296.5 1253.5 L2296.5 1282.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M2296.5 1335.0 L2296.5 1363.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M2296.5 1403.5 L2296.5 1432.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M2296.5 1485.0 L2296.5 1507.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M2296.5 1560.0 L2296.5 1582.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M2296.5 1635.0 L2296.5 1663.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M2296.5 1703.5 L2296.5 1732.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M2296.5 1785.0 L2296.5 1807.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M2234.5 1758.5 L2220.6 1758.5 L2220.6 1308.5 L2234.5 1308.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M2234.5 1833.5 L2199.9 1833.5 L2199.9 708.5 L2234.5 708.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M2482.8 653.5 L2482.8 688.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M2482.8 728.5 L2482.8 757.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M2482.8 810.0 L2482.8 838.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M2482.8 878.5 L2482.8 907.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M2482.8 960.0 L2482.8 982.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M2482.8 1035.0 L2482.8 1063.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M2482.8 1103.5 L2482.8 1138.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M2544.8 1008.5 L2554.6 1008.5 L2554.6 1158.5 L2544.8 1158.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M2482.8 1178.5 L2482.8 1213.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M2482.8 1253.5 L2482.8 1282.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M2482.8 1335.0 L2482.8 1363.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M2482.8 1403.5 L2482.8 1432.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M2482.8 1485.0 L2482.8 1507.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M2420.8 1458.5 L2413.8 1458.5 L2413.8 1608.5 L2420.8 1608.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M2482.8 1560.0 L2482.8 1582.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M2482.8 1635.0 L2482.8 1657.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M2482.8 1710.0 L2482.8 1732.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M2482.8 1785.0 L2482.8 1807.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M2420.8 1758.5 L2393.1 1758.5 L2393.1 1308.5 L2420.8 1308.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M2420.8 1833.5 L2372.4 1833.5 L2372.4 708.5 L2420.8 708.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M2544.8 783.5 L2627.8 783.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M2689.8 810.0 L2689.8 832.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M2110.2 1432.0 L2110.2 1421.0 L2689.8 1421.0 L2689.8 1432.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M2296.5 1432.0 L2296.5 1421.0 L2689.8 1421.0 L2689.8 1432.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M2544.8 1458.5 L2627.8 1458.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M2110.2 1485.0 L2110.2 1496.0 L2689.8 1496.0 L2689.8 1507.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M2296.5 1485.0 L2296.5 1496.0 L2689.8 1496.0 L2689.8 1507.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M2482.8 1485.0 L2482.8 1496.0 L2689.8 1496.0 L2689.8 1507.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M1875.6 960.0 L1875.6 1207.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M1875.6 1260.0 L1875.6 1432.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M1875.6 1485.0 L1875.6 1813.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M1937.6 933.5 L1992.9 933.5 L1992.9 1008.5 L2048.2 1008.5" fill="none" stroke="#000" stroke-width="1.1" stroke-dasharray="5 4" marker-end="url(#ah)"/>
+<path d="M2048.2 1233.5 L1937.6 1233.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M2048.2 1458.5 L1937.6 1458.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M1875.6 1853.5 L1875.6 1893.8 L2179.2 1893.8 L2179.2 1934.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M2110.2 1860.0 L2110.2 1897.0 L2179.2 1897.0 L2179.2 1934.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M2296.5 1860.0 L2296.5 1897.0 L2179.2 1897.0 L2179.2 1934.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M2482.8 1860.0 L2482.8 1897.0 L2179.2 1897.0 L2179.2 1934.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M2179.2 1964.0 L2179.2 1975.0 L1875.6 1975.0 L1875.6 1986.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M1875.6 2039.0 L1875.6 2061.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M1875.6 2114.0 L1875.6 2136.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M1875.6 2176.0 L1875.6 2198.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M1875.6 2251.0 L1875.6 2273.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M1875.6 2326.0 L1875.6 2348.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M1875.6 2401.0 L1875.6 2423.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M1875.6 2476.0 L1875.6 2498.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M1875.6 2538.0 L1875.6 2560.0" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<path d="M1813.6 2586.5 L178.2 2586.5 L178.2 558.5 L640.6 558.5" fill="none" stroke="#000" stroke-width="1.1" marker-end="url(#ah)"/>
+<rect x="1717.0" y="170.0" width="124.0" height="53.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.9"/>
+<text x="1779.0" y="187.1" text-anchor="middle" font-size="10.3" font-weight="bold">JOLLY HELMET</text>
+<text x="1779.0" y="200.1" text-anchor="middle" font-size="10.3" font-weight="normal">coin-operated helmet</text>
+<text x="1779.0" y="213.1" text-anchor="middle" font-size="10.3" font-weight="normal">cleaning and drying</text>
+<rect x="1717.0" y="245.0" width="124.0" height="40.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="1779.0" y="262.1" text-anchor="middle" font-size="10.3" font-weight="normal">GITHUB REPOSITORY</text>
+<text x="1779.0" y="275.1" text-anchor="middle" font-size="10.3" font-weight="normal">the web page files</text>
+<rect x="1717.0" y="307.0" width="124.0" height="40.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="1779.0" y="324.1" text-anchor="middle" font-size="10.3" font-weight="normal">VERCEL</text>
+<text x="1779.0" y="337.1" text-anchor="middle" font-size="10.3" font-weight="normal">web host deployment</text>
+<rect x="1116.7" y="387.0" width="124.0" height="30.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.9"/>
+<text x="1178.7" y="405.6" text-anchor="middle" font-size="10.3" font-weight="bold">JOLLY HELMET ADMIN</text>
+<rect x="2234.5" y="387.0" width="124.0" height="30.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.9"/>
+<text x="2296.5" y="405.6" text-anchor="middle" font-size="10.3" font-weight="bold">JOLLY HELMET USER</text>
+<g stroke="#000" stroke-width="1.6" fill="#fff"><circle cx="951.0" cy="378.0" r="8"/><path d="M951.0 386.0 L951.0 406.0 M938.0 394.0 L964.0 394.0 M951.0 406.0 L940.0 424.0 M951.0 406.0 L962.0 424.0" fill="none"/></g>
+<text x="951.0" y="438.0" text-anchor="middle" font-size="11" font-weight="700">Admin</text>
+<g stroke="#000" stroke-width="1.6" fill="#fff"><circle cx="2565.6" cy="378.0" r="8"/><path d="M2565.6 386.0 L2565.6 406.0 M2552.6 394.0 L2578.6 394.0 M2565.6 406.0 L2554.6 424.0 M2565.6 406.0 L2576.6 424.0" fill="none"/></g>
+<text x="2565.6" y="438.0" text-anchor="middle" font-size="11" font-weight="700">User</text>
+<rect x="640.6" y="457.0" width="124.0" height="53.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="702.6" y="474.1" text-anchor="middle" font-size="10.3" font-weight="normal">CONTROL CENTER</text>
+<text x="702.6" y="487.1" text-anchor="middle" font-size="10.3" font-weight="normal">LocalServer Wi-Fi</text>
+<text x="702.6" y="500.1" text-anchor="middle" font-size="10.3" font-weight="normal">ESP32_LOCAL</text>
+<rect x="640.6" y="532.0" width="124.0" height="53.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.9"/>
+<text x="702.6" y="549.1" text-anchor="middle" font-size="10.3" font-weight="bold">DASHBOARD</text>
+<text x="702.6" y="562.1" text-anchor="middle" font-size="10.3" font-weight="normal">Home page: live boxes,</text>
+<text x="702.6" y="575.1" text-anchor="middle" font-size="10.3" font-weight="normal">ACS, statistics</text>
+<rect x="268.0" y="618.5" width="124.0" height="30.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="330.0" y="637.1" text-anchor="middle" font-size="10.3" font-weight="normal">STATISTICS</text>
+<rect x="454.3" y="618.5" width="124.0" height="30.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="516.3" y="637.1" text-anchor="middle" font-size="10.3" font-weight="normal">BOX 1 PAGE</text>
+<rect x="640.6" y="618.5" width="124.0" height="30.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="702.6" y="637.1" text-anchor="middle" font-size="10.3" font-weight="normal">BOX 2 PAGE</text>
+<rect x="826.9" y="618.5" width="124.0" height="30.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="888.9" y="637.1" text-anchor="middle" font-size="10.3" font-weight="normal">BOX 3 PAGE</text>
+<rect x="1013.2" y="613.5" width="124.0" height="40.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="1075.2" y="630.6" text-anchor="middle" font-size="10.3" font-weight="normal">ACS 1 / ACS 2</text>
+<text x="1075.2" y="643.6" text-anchor="middle" font-size="10.3" font-weight="normal">PAGE</text>
+<rect x="268.0" y="682.0" width="124.0" height="53.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="330.0" y="699.1" text-anchor="middle" font-size="10.3" font-weight="normal">CUSTOMERS, COINS,</text>
+<text x="330.0" y="712.1" text-anchor="middle" font-size="10.3" font-weight="normal">REVENUE, AVERAGE</text>
+<text x="330.0" y="725.1" text-anchor="middle" font-size="10.3" font-weight="normal">SESSION TIME</text>
+<rect x="268.0" y="763.5" width="124.0" height="40.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="330.0" y="780.6" text-anchor="middle" font-size="10.3" font-weight="normal">LAST 10 VISITS</text>
+<text x="330.0" y="793.6" text-anchor="middle" font-size="10.3" font-weight="normal">revenue bars</text>
+<rect x="268.0" y="838.5" width="124.0" height="40.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="330.0" y="855.6" text-anchor="middle" font-size="10.3" font-weight="normal">RESET STATS</text>
+<text x="330.0" y="868.6" text-anchor="middle" font-size="10.3" font-weight="normal">asks to confirm</text>
+<rect x="268.0" y="913.5" width="124.0" height="40.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="330.0" y="930.6" text-anchor="middle" font-size="10.3" font-weight="normal">SAVE THE COIN VALUE</text>
+<text x="330.0" y="943.6" text-anchor="middle" font-size="10.3" font-weight="normal">PHP per coin</text>
+<rect x="268.0" y="988.5" width="124.0" height="40.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="330.0" y="1005.6" text-anchor="middle" font-size="10.3" font-weight="normal">SAVED IN THE</text>
+<text x="330.0" y="1018.6" text-anchor="middle" font-size="10.3" font-weight="normal">HUB'S FLASH</text>
+<rect x="268.0" y="1063.5" width="124.0" height="40.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="330.0" y="1080.6" text-anchor="middle" font-size="10.3" font-weight="normal">BACK TO</text>
+<text x="330.0" y="1093.6" text-anchor="middle" font-size="10.3" font-weight="normal">DASHBOARD</text>
+<rect x="454.3" y="682.0" width="124.0" height="53.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="516.3" y="699.1" text-anchor="middle" font-size="10.3" font-weight="normal">READ THE LIVE</text>
+<text x="516.3" y="712.1" text-anchor="middle" font-size="10.3" font-weight="normal">VALUES</text>
+<text x="516.3" y="725.1" text-anchor="middle" font-size="10.3" font-weight="normal">the brain sends them</text>
+<rect x="454.3" y="757.0" width="124.0" height="53.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="516.3" y="774.1" text-anchor="middle" font-size="10.3" font-weight="normal">RULES</text>
+<text x="516.3" y="787.1" text-anchor="middle" font-size="10.3" font-weight="normal">coins = minutes,</text>
+<text x="516.3" y="800.1" text-anchor="middle" font-size="10.3" font-weight="normal">minimum, free retry</text>
+<rect x="454.3" y="832.0" width="124.0" height="53.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="516.3" y="849.1" text-anchor="middle" font-size="10.3" font-weight="normal">LEVELS</text>
+<text x="516.3" y="862.1" text-anchor="middle" font-size="10.3" font-weight="normal">tank distances,</text>
+<text x="516.3" y="875.1" text-anchor="middle" font-size="10.3" font-weight="normal">refill tries</text>
+<rect x="454.3" y="907.0" width="124.0" height="53.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="516.3" y="924.1" text-anchor="middle" font-size="10.3" font-weight="normal">PHASES</text>
+<text x="516.3" y="937.1" text-anchor="middle" font-size="10.3" font-weight="normal">UV and mist parts</text>
+<text x="516.3" y="950.1" text-anchor="middle" font-size="10.3" font-weight="normal">of a run</text>
+<rect x="454.3" y="982.0" width="124.0" height="53.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="516.3" y="999.1" text-anchor="middle" font-size="10.3" font-weight="normal">RELAYS</text>
+<text x="516.3" y="1012.1" text-anchor="middle" font-size="10.3" font-weight="normal">MAINTENANCE:</text>
+<text x="516.3" y="1025.1" text-anchor="middle" font-size="10.3" font-weight="normal">hand control</text>
+<rect x="454.3" y="1063.5" width="124.0" height="40.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="516.3" y="1080.6" text-anchor="middle" font-size="10.3" font-weight="normal">CALIBRATE</text>
+<text x="516.3" y="1093.6" text-anchor="middle" font-size="10.3" font-weight="normal">sensors, screen</text>
+<rect x="454.3" y="1143.5" width="124.0" height="30.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="516.3" y="1162.1" text-anchor="middle" font-size="10.3" font-weight="normal">PRESS SEND</text>
+<rect x="454.3" y="1207.0" width="124.0" height="53.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="516.3" y="1224.1" text-anchor="middle" font-size="10.3" font-weight="normal">THE HUB SENDS IT</text>
+<text x="516.3" y="1237.1" text-anchor="middle" font-size="10.3" font-weight="normal">by ESP-NOW to</text>
+<text x="516.3" y="1250.1" text-anchor="middle" font-size="10.3" font-weight="normal">Box 1 only</text>
+<rect x="454.3" y="1282.0" width="124.0" height="53.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="516.3" y="1299.1" text-anchor="middle" font-size="10.3" font-weight="normal">THE BRAIN CHECKS</text>
+<text x="516.3" y="1312.1" text-anchor="middle" font-size="10.3" font-weight="normal">and SAVES IT in</text>
+<text x="516.3" y="1325.1" text-anchor="middle" font-size="10.3" font-weight="normal">its own flash</text>
+<rect x="454.3" y="1363.5" width="124.0" height="40.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="516.3" y="1380.6" text-anchor="middle" font-size="10.3" font-weight="normal">BACK TO</text>
+<text x="516.3" y="1393.6" text-anchor="middle" font-size="10.3" font-weight="normal">DASHBOARD</text>
+<rect x="640.6" y="688.5" width="124.0" height="40.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="702.6" y="705.6" text-anchor="middle" font-size="10.3" font-weight="normal">READ THE LIVE</text>
+<text x="702.6" y="718.6" text-anchor="middle" font-size="10.3" font-weight="normal">VALUES</text>
+<rect x="640.6" y="757.0" width="124.0" height="53.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="702.6" y="774.1" text-anchor="middle" font-size="10.3" font-weight="normal">RULES</text>
+<text x="702.6" y="787.1" text-anchor="middle" font-size="10.3" font-weight="normal">coins = minutes,</text>
+<text x="702.6" y="800.1" text-anchor="middle" font-size="10.3" font-weight="normal">minimum, free retry</text>
+<rect x="640.6" y="838.5" width="124.0" height="40.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="702.6" y="855.6" text-anchor="middle" font-size="10.3" font-weight="normal">HEATER</text>
+<text x="702.6" y="868.6" text-anchor="middle" font-size="10.3" font-weight="normal">cool-down seconds</text>
+<rect x="640.6" y="907.0" width="124.0" height="53.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="702.6" y="924.1" text-anchor="middle" font-size="10.3" font-weight="normal">RELAYS</text>
+<text x="702.6" y="937.1" text-anchor="middle" font-size="10.3" font-weight="normal">MAINTENANCE:</text>
+<text x="702.6" y="950.1" text-anchor="middle" font-size="10.3" font-weight="normal">hand control</text>
+<rect x="640.6" y="988.5" width="124.0" height="40.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="702.6" y="1005.6" text-anchor="middle" font-size="10.3" font-weight="normal">CALIBRATE</text>
+<text x="702.6" y="1018.6" text-anchor="middle" font-size="10.3" font-weight="normal">sensors, screen</text>
+<rect x="640.6" y="1068.5" width="124.0" height="30.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="702.6" y="1087.1" text-anchor="middle" font-size="10.3" font-weight="normal">PRESS SEND</text>
+<rect x="640.6" y="1132.0" width="124.0" height="53.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="702.6" y="1149.1" text-anchor="middle" font-size="10.3" font-weight="normal">THE HUB SENDS IT</text>
+<text x="702.6" y="1162.1" text-anchor="middle" font-size="10.3" font-weight="normal">by ESP-NOW to</text>
+<text x="702.6" y="1175.1" text-anchor="middle" font-size="10.3" font-weight="normal">Box 2 only</text>
+<rect x="640.6" y="1213.5" width="124.0" height="40.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="702.6" y="1230.6" text-anchor="middle" font-size="10.3" font-weight="normal">THE BRAIN CHECKS</text>
+<text x="702.6" y="1243.6" text-anchor="middle" font-size="10.3" font-weight="normal">and SAVES IT</text>
+<rect x="640.6" y="1288.5" width="124.0" height="40.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="702.6" y="1305.6" text-anchor="middle" font-size="10.3" font-weight="normal">BACK TO</text>
+<text x="702.6" y="1318.6" text-anchor="middle" font-size="10.3" font-weight="normal">DASHBOARD</text>
+<rect x="826.9" y="688.5" width="124.0" height="40.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="888.9" y="705.6" text-anchor="middle" font-size="10.3" font-weight="normal">READ THE LIVE</text>
+<text x="888.9" y="718.6" text-anchor="middle" font-size="10.3" font-weight="normal">VALUES</text>
+<rect x="826.9" y="757.0" width="124.0" height="53.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="888.9" y="774.1" text-anchor="middle" font-size="10.3" font-weight="normal">RULES</text>
+<text x="888.9" y="787.1" text-anchor="middle" font-size="10.3" font-weight="normal">coins = minutes,</text>
+<text x="888.9" y="800.1" text-anchor="middle" font-size="10.3" font-weight="normal">minimum, free retry</text>
+<rect x="826.9" y="832.0" width="124.0" height="53.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="888.9" y="849.1" text-anchor="middle" font-size="10.3" font-weight="normal">LEVELS</text>
+<text x="888.9" y="862.1" text-anchor="middle" font-size="10.3" font-weight="normal">tank distances,</text>
+<text x="888.9" y="875.1" text-anchor="middle" font-size="10.3" font-weight="normal">refill tries</text>
+<rect x="826.9" y="913.5" width="124.0" height="40.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="888.9" y="930.6" text-anchor="middle" font-size="10.3" font-weight="normal">PHASES</text>
+<text x="888.9" y="943.6" text-anchor="middle" font-size="10.3" font-weight="normal">UV and mist parts</text>
+<rect x="826.9" y="982.0" width="124.0" height="53.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="888.9" y="999.1" text-anchor="middle" font-size="10.3" font-weight="normal">DRYING</text>
+<text x="888.9" y="1012.1" text-anchor="middle" font-size="10.3" font-weight="normal">heater and UV,</text>
+<text x="888.9" y="1025.1" text-anchor="middle" font-size="10.3" font-weight="normal">cool-down</text>
+<rect x="826.9" y="1057.0" width="124.0" height="53.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="888.9" y="1074.1" text-anchor="middle" font-size="10.3" font-weight="normal">RELAYS</text>
+<text x="888.9" y="1087.1" text-anchor="middle" font-size="10.3" font-weight="normal">MAINTENANCE:</text>
+<text x="888.9" y="1100.1" text-anchor="middle" font-size="10.3" font-weight="normal">hand control</text>
+<rect x="826.9" y="1138.5" width="124.0" height="40.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="888.9" y="1155.6" text-anchor="middle" font-size="10.3" font-weight="normal">CALIBRATE</text>
+<text x="888.9" y="1168.6" text-anchor="middle" font-size="10.3" font-weight="normal">sensors, screen</text>
+<rect x="826.9" y="1218.5" width="124.0" height="30.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="888.9" y="1237.1" text-anchor="middle" font-size="10.3" font-weight="normal">PRESS SEND</text>
+<rect x="826.9" y="1282.0" width="124.0" height="53.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="888.9" y="1299.1" text-anchor="middle" font-size="10.3" font-weight="normal">THE HUB SENDS IT</text>
+<text x="888.9" y="1312.1" text-anchor="middle" font-size="10.3" font-weight="normal">by ESP-NOW to</text>
+<text x="888.9" y="1325.1" text-anchor="middle" font-size="10.3" font-weight="normal">Box 3 only</text>
+<rect x="826.9" y="1363.5" width="124.0" height="40.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="888.9" y="1380.6" text-anchor="middle" font-size="10.3" font-weight="normal">THE BRAIN CHECKS</text>
+<text x="888.9" y="1393.6" text-anchor="middle" font-size="10.3" font-weight="normal">and SAVES IT</text>
+<rect x="826.9" y="1438.5" width="124.0" height="40.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="888.9" y="1455.6" text-anchor="middle" font-size="10.3" font-weight="normal">BACK TO</text>
+<text x="888.9" y="1468.6" text-anchor="middle" font-size="10.3" font-weight="normal">DASHBOARD</text>
+<rect x="1013.2" y="688.5" width="124.0" height="40.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="1075.2" y="705.6" text-anchor="middle" font-size="10.3" font-weight="normal">READ THE LIVE</text>
+<text x="1075.2" y="718.6" text-anchor="middle" font-size="10.3" font-weight="normal">VALUES</text>
+<rect x="1013.2" y="757.0" width="124.0" height="53.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="1075.2" y="774.1" text-anchor="middle" font-size="10.3" font-weight="normal">LINES</text>
+<text x="1075.2" y="787.1" text-anchor="middle" font-size="10.3" font-weight="normal">pumps and</text>
+<text x="1075.2" y="800.1" text-anchor="middle" font-size="10.3" font-weight="normal">valves set-up</text>
+<rect x="1013.2" y="832.0" width="124.0" height="53.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="1075.2" y="849.1" text-anchor="middle" font-size="10.3" font-weight="normal">MIX</text>
+<text x="1075.2" y="862.1" text-anchor="middle" font-size="10.3" font-weight="normal">alcohol and</text>
+<text x="1075.2" y="875.1" text-anchor="middle" font-size="10.3" font-weight="normal">scented ratios</text>
+<rect x="1013.2" y="913.5" width="124.0" height="40.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="1075.2" y="930.6" text-anchor="middle" font-size="10.3" font-weight="normal">LEVELS</text>
+<text x="1075.2" y="943.6" text-anchor="middle" font-size="10.3" font-weight="normal">tank distances</text>
+<rect x="1013.2" y="982.0" width="124.0" height="53.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="1075.2" y="999.1" text-anchor="middle" font-size="10.3" font-weight="normal">PUMPS</text>
+<text x="1075.2" y="1012.1" text-anchor="middle" font-size="10.3" font-weight="normal">MAINTENANCE:</text>
+<text x="1075.2" y="1025.1" text-anchor="middle" font-size="10.3" font-weight="normal">hand control</text>
+<rect x="1013.2" y="1068.5" width="124.0" height="30.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="1075.2" y="1087.1" text-anchor="middle" font-size="10.3" font-weight="normal">PRESS SEND</text>
+<rect x="1013.2" y="1132.0" width="124.0" height="53.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="1075.2" y="1149.1" text-anchor="middle" font-size="10.3" font-weight="normal">THE HUB SENDS IT</text>
+<text x="1075.2" y="1162.1" text-anchor="middle" font-size="10.3" font-weight="normal">by ESP-NOW to</text>
+<text x="1075.2" y="1175.1" text-anchor="middle" font-size="10.3" font-weight="normal">the ACS</text>
+<rect x="1013.2" y="1218.5" width="124.0" height="30.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="1075.2" y="1237.1" text-anchor="middle" font-size="10.3" font-weight="normal">THE ACS SAVES IT</text>
+<rect x="1013.2" y="1288.5" width="124.0" height="40.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="1075.2" y="1305.6" text-anchor="middle" font-size="10.3" font-weight="normal">BACK TO</text>
+<text x="1075.2" y="1318.6" text-anchor="middle" font-size="10.3" font-weight="normal">DASHBOARD</text>
+<rect x="1220.2" y="457.0" width="124.0" height="53.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="1282.2" y="474.1" text-anchor="middle" font-size="10.3" font-weight="normal">ONLINE WEB PAGE</text>
+<text x="1282.2" y="487.1" text-anchor="middle" font-size="10.3" font-weight="normal">Vercel address,</text>
+<text x="1282.2" y="500.1" text-anchor="middle" font-size="10.3" font-weight="normal">token typed once</text>
+<rect x="1220.2" y="532.0" width="124.0" height="53.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="1282.2" y="549.1" text-anchor="middle" font-size="10.3" font-weight="normal">MONITOR</text>
+<text x="1282.2" y="562.1" text-anchor="middle" font-size="10.3" font-weight="normal">boxes, tank gauges,</text>
+<text x="1282.2" y="575.1" text-anchor="middle" font-size="10.3" font-weight="normal">analytics</text>
+<rect x="1220.2" y="607.0" width="124.0" height="53.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="1282.2" y="624.1" text-anchor="middle" font-size="10.3" font-weight="normal">ALERTS</text>
+<text x="1282.2" y="637.1" text-anchor="middle" font-size="10.3" font-weight="normal">sound, banner,</text>
+<text x="1282.2" y="650.1" text-anchor="middle" font-size="10.3" font-weight="normal">notification, log</text>
+<rect x="1220.2" y="688.5" width="124.0" height="40.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="1282.2" y="705.6" text-anchor="middle" font-size="10.3" font-weight="normal">REPORTS</text>
+<text x="1282.2" y="718.6" text-anchor="middle" font-size="10.3" font-weight="normal">charts, CSV, print</text>
+<rect x="1220.2" y="757.0" width="124.0" height="53.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="1282.2" y="774.1" text-anchor="middle" font-size="10.3" font-weight="normal">CHECKLIST</text>
+<text x="1282.2" y="787.1" text-anchor="middle" font-size="10.3" font-weight="normal">maintenance</text>
+<text x="1282.2" y="800.1" text-anchor="middle" font-size="10.3" font-weight="normal">schedule</text>
+<rect x="1220.2" y="832.0" width="124.0" height="53.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="1282.2" y="849.1" text-anchor="middle" font-size="10.3" font-weight="normal">FIX IT</text>
+<text x="1282.2" y="862.1" text-anchor="middle" font-size="10.3" font-weight="normal">troubleshooting</text>
+<text x="1282.2" y="875.1" text-anchor="middle" font-size="10.3" font-weight="normal">wizard</text>
+<rect x="1220.2" y="907.0" width="124.0" height="53.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="1282.2" y="924.1" text-anchor="middle" font-size="10.3" font-weight="normal">MANUAL</text>
+<text x="1282.2" y="937.1" text-anchor="middle" font-size="10.3" font-weight="normal">customer guide,</text>
+<text x="1282.2" y="950.1" text-anchor="middle" font-size="10.3" font-weight="normal">team password</text>
+<rect x="1220.2" y="993.5" width="124.0" height="30.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="1282.2" y="1012.1" text-anchor="middle" font-size="10.3" font-weight="normal">BACK TO MONITOR</text>
+<rect x="1413.4" y="457.0" width="124.0" height="53.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="1475.4" y="474.1" text-anchor="middle" font-size="10.3" font-weight="normal">ONLINE SERVER</text>
+<text x="1475.4" y="487.1" text-anchor="middle" font-size="10.3" font-weight="normal">SETUP: join Wi-Fi</text>
+<text x="1475.4" y="500.1" text-anchor="middle" font-size="10.3" font-weight="normal">JollyHelmet-Online</text>
+<rect x="1413.4" y="543.5" width="124.0" height="30.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="1475.4" y="562.1" text-anchor="middle" font-size="10.3" font-weight="normal">OPEN 192.168.4.1</text>
+<rect x="1413.4" y="613.5" width="124.0" height="40.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="1475.4" y="630.6" text-anchor="middle" font-size="10.3" font-weight="normal">PICK YOUR WI-FI</text>
+<text x="1475.4" y="643.6" text-anchor="middle" font-size="10.3" font-weight="normal">type the password</text>
+<rect x="1413.4" y="682.0" width="124.0" height="53.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="1475.4" y="699.1" text-anchor="middle" font-size="10.3" font-weight="normal">PASTE THE</text>
+<text x="1475.4" y="712.1" text-anchor="middle" font-size="10.3" font-weight="normal">BLYNK TOKEN</text>
+<text x="1475.4" y="725.1" text-anchor="middle" font-size="10.3" font-weight="normal">(and the public one)</text>
+<rect x="1413.4" y="757.0" width="124.0" height="53.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="1475.4" y="774.1" text-anchor="middle" font-size="10.3" font-weight="normal">SET THE OPTIONS</text>
+<text x="1475.4" y="787.1" text-anchor="middle" font-size="10.3" font-weight="normal">interval, time zone,</text>
+<text x="1475.4" y="800.1" text-anchor="middle" font-size="10.3" font-weight="normal">alerts</text>
+<rect x="1413.4" y="843.5" width="124.0" height="30.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="1475.4" y="862.1" text-anchor="middle" font-size="10.3" font-weight="normal">PRESS SAVE</text>
+<rect x="1413.4" y="918.5" width="124.0" height="30.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="1475.4" y="937.1" text-anchor="middle" font-size="10.3" font-weight="normal">UPLOAD OK?</text>
+<rect x="1413.4" y="982.0" width="124.0" height="53.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="1475.4" y="999.1" text-anchor="middle" font-size="10.3" font-weight="normal">CONNECTED</text>
+<text x="1475.4" y="1012.1" text-anchor="middle" font-size="10.3" font-weight="normal">uploads about</text>
+<text x="1475.4" y="1025.1" text-anchor="middle" font-size="10.3" font-weight="normal">every minute</text>
+<rect x="1413.4" y="1063.5" width="124.0" height="40.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1" stroke-dasharray="4 3"/>
+<text x="1475.4" y="1080.6" text-anchor="middle" font-size="10.3" font-weight="normal">no: fix the Wi-Fi</text>
+<text x="1475.4" y="1093.6" text-anchor="middle" font-size="10.3" font-weight="normal">or the token</text>
+<rect x="1592.8" y="468.5" width="124.0" height="30.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="1654.8" y="487.1" text-anchor="middle" font-size="10.3" font-weight="normal">BLYNK CONSOLE</text>
+<rect x="1592.8" y="532.0" width="124.0" height="53.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="1654.8" y="549.1" text-anchor="middle" font-size="10.3" font-weight="normal">CREATE A TEMPLATE</text>
+<text x="1654.8" y="562.1" text-anchor="middle" font-size="10.3" font-weight="normal">datastream V0,</text>
+<text x="1654.8" y="575.1" text-anchor="middle" font-size="10.3" font-weight="normal">type String</text>
+<rect x="1592.8" y="613.5" width="124.0" height="40.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="1654.8" y="630.6" text-anchor="middle" font-size="10.3" font-weight="normal">ADD TWO DEVICES</text>
+<text x="1654.8" y="643.6" text-anchor="middle" font-size="10.3" font-weight="normal">private and public</text>
+<rect x="1592.8" y="682.0" width="124.0" height="53.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="1654.8" y="699.1" text-anchor="middle" font-size="10.3" font-weight="normal">COPY THE TOKENS</text>
+<text x="1654.8" y="712.1" text-anchor="middle" font-size="10.3" font-weight="normal">private: setup page,</text>
+<text x="1654.8" y="725.1" text-anchor="middle" font-size="10.3" font-weight="normal">web</text>
+<rect x="1592.8" y="757.0" width="124.0" height="53.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="1654.8" y="774.1" text-anchor="middle" font-size="10.3" font-weight="normal">OPTIONAL EVENTS</text>
+<text x="1654.8" y="787.1" text-anchor="middle" font-size="10.3" font-weight="normal">alert code for the</text>
+<text x="1654.8" y="800.1" text-anchor="middle" font-size="10.3" font-weight="normal">Blynk phone app</text>
+<rect x="1592.8" y="843.5" width="124.0" height="30.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="1654.8" y="862.1" text-anchor="middle" font-size="10.3" font-weight="normal">DONE</text>
+<rect x="2234.5" y="457.0" width="124.0" height="53.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="2296.5" y="474.1" text-anchor="middle" font-size="10.3" font-weight="normal">HOW DOES THE</text>
+<text x="2296.5" y="487.1" text-anchor="middle" font-size="10.3" font-weight="normal">CUSTOMER CHECK</text>
+<text x="2296.5" y="500.1" text-anchor="middle" font-size="10.3" font-weight="normal">THE BOXES?</text>
+<rect x="2234.5" y="532.0" width="124.0" height="53.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="2296.5" y="549.1" text-anchor="middle" font-size="10.3" font-weight="normal">PICK A BOX</text>
+<text x="2296.5" y="562.1" text-anchor="middle" font-size="10.3" font-weight="normal">walk up to Box 1,</text>
+<text x="2296.5" y="575.1" text-anchor="middle" font-size="10.3" font-weight="normal">Box 2 or Box 3</text>
+<rect x="2834.8" y="538.5" width="124.0" height="40.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="2896.8" y="555.6" text-anchor="middle" font-size="10.3" font-weight="normal">SCAN THE QR CODE</text>
+<text x="2896.8" y="568.6" text-anchor="middle" font-size="10.3" font-weight="normal">on any machine</text>
+<rect x="2834.8" y="613.5" width="124.0" height="40.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="2896.8" y="630.6" text-anchor="middle" font-size="10.3" font-weight="normal">OPEN THE STATUS PAGE</text>
+<text x="2896.8" y="643.6" text-anchor="middle" font-size="10.3" font-weight="normal">public link on Vercel</text>
+<rect x="2834.8" y="682.0" width="124.0" height="53.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="2896.8" y="699.1" text-anchor="middle" font-size="10.3" font-weight="normal">ASK BLYNK</text>
+<text x="2896.8" y="712.1" text-anchor="middle" font-size="10.3" font-weight="normal">public device,</text>
+<text x="2896.8" y="725.1" text-anchor="middle" font-size="10.3" font-weight="normal">every 30 seconds</text>
+<rect x="2834.8" y="768.5" width="124.0" height="30.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="2896.8" y="787.1" text-anchor="middle" font-size="10.3" font-weight="normal">FRESH ANSWER?</text>
+<rect x="3028.0" y="757.0" width="124.0" height="53.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1" stroke-dasharray="4 3"/>
+<text x="3090.0" y="774.1" text-anchor="middle" font-size="10.3" font-weight="normal">no: STATUS NOT</text>
+<text x="3090.0" y="787.1" text-anchor="middle" font-size="10.3" font-weight="normal">AVAILABLE,</text>
+<text x="3090.0" y="800.1" text-anchor="middle" font-size="10.3" font-weight="normal">ask the staff</text>
+<rect x="2834.8" y="832.0" width="124.0" height="53.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="2896.8" y="849.1" text-anchor="middle" font-size="10.3" font-weight="normal">SHOW EACH BOX</text>
+<text x="2896.8" y="862.1" text-anchor="middle" font-size="10.3" font-weight="normal">FREE, IN USE,</text>
+<text x="2896.8" y="875.1" text-anchor="middle" font-size="10.3" font-weight="normal">OUT OF ORDER</text>
+<rect x="2834.8" y="907.0" width="124.0" height="53.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="2896.8" y="924.1" text-anchor="middle" font-size="10.3" font-weight="normal">SHOW PRICES AND</text>
+<text x="2896.8" y="937.1" text-anchor="middle" font-size="10.3" font-weight="normal">HOW TO USE</text>
+<text x="2896.8" y="950.1" text-anchor="middle" font-size="10.3" font-weight="normal">English or Filipino</text>
+<rect x="2834.8" y="993.5" width="124.0" height="30.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="2896.8" y="1012.1" text-anchor="middle" font-size="10.3" font-weight="normal">IS A BOX FREE?</text>
+<rect x="3028.0" y="988.5" width="124.0" height="40.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1" stroke-dasharray="4 3"/>
+<text x="3090.0" y="1005.6" text-anchor="middle" font-size="10.3" font-weight="normal">no: wait, the page</text>
+<text x="3090.0" y="1018.6" text-anchor="middle" font-size="10.3" font-weight="normal">refreshes by itself</text>
+<rect x="2834.8" y="1063.5" width="124.0" height="40.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="2896.8" y="1080.6" text-anchor="middle" font-size="10.3" font-weight="normal">WALK TO</text>
+<text x="2896.8" y="1093.6" text-anchor="middle" font-size="10.3" font-weight="normal">THAT BOX</text>
+<rect x="2048.2" y="613.5" width="124.0" height="40.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.9"/>
+<text x="2110.2" y="630.6" text-anchor="middle" font-size="10.3" font-weight="bold">BOX 1</text>
+<text x="2110.2" y="643.6" text-anchor="middle" font-size="10.3" font-weight="normal">cleaning</text>
+<rect x="2234.5" y="613.5" width="124.0" height="40.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.9"/>
+<text x="2296.5" y="630.6" text-anchor="middle" font-size="10.3" font-weight="bold">BOX 2</text>
+<text x="2296.5" y="643.6" text-anchor="middle" font-size="10.3" font-weight="normal">drying</text>
+<rect x="2420.8" y="613.5" width="124.0" height="40.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.9"/>
+<text x="2482.8" y="630.6" text-anchor="middle" font-size="10.3" font-weight="bold">BOX 3</text>
+<text x="2482.8" y="643.6" text-anchor="middle" font-size="10.3" font-weight="normal">cleaning + drying</text>
+<rect x="2048.2" y="688.5" width="124.0" height="40.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="2110.2" y="705.6" text-anchor="middle" font-size="10.3" font-weight="normal">TAPS</text>
+<text x="2110.2" y="718.6" text-anchor="middle" font-size="10.3" font-weight="normal">tap the screen</text>
+<rect x="2048.2" y="757.0" width="124.0" height="53.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="2110.2" y="774.1" text-anchor="middle" font-size="10.3" font-weight="normal">CHECKING</text>
+<text x="2110.2" y="787.1" text-anchor="middle" font-size="10.3" font-weight="normal">enough alcohol</text>
+<text x="2110.2" y="800.1" text-anchor="middle" font-size="10.3" font-weight="normal">and scented?</text>
+<rect x="2048.2" y="838.5" width="124.0" height="40.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="2110.2" y="855.6" text-anchor="middle" font-size="10.3" font-weight="normal">WELCOME</text>
+<text x="2110.2" y="868.6" text-anchor="middle" font-size="10.3" font-weight="normal">tap to START</text>
+<rect x="2048.2" y="982.0" width="124.0" height="53.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="2110.2" y="999.1" text-anchor="middle" font-size="10.3" font-weight="normal">RATE A</text>
+<text x="2110.2" y="1012.1" text-anchor="middle" font-size="10.3" font-weight="normal">how bad is</text>
+<text x="2110.2" y="1025.1" text-anchor="middle" font-size="10.3" font-weight="normal">the smell?</text>
+<rect x="2048.2" y="1057.0" width="124.0" height="53.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="2110.2" y="1074.1" text-anchor="middle" font-size="10.3" font-weight="normal">METHOD</text>
+<text x="2110.2" y="1087.1" text-anchor="middle" font-size="10.3" font-weight="normal">balanced, alcohol</text>
+<text x="2110.2" y="1100.1" text-anchor="middle" font-size="10.3" font-weight="normal">or scented</text>
+<rect x="2048.2" y="1138.5" width="124.0" height="40.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="2110.2" y="1155.6" text-anchor="middle" font-size="10.3" font-weight="normal">TIME ALLOT</text>
+<text x="2110.2" y="1168.6" text-anchor="middle" font-size="10.3" font-weight="normal">type the time</text>
+<rect x="2048.2" y="1213.5" width="124.0" height="40.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="2110.2" y="1230.6" text-anchor="middle" font-size="10.3" font-weight="normal">INSERT COIN</text>
+<text x="2110.2" y="1243.6" text-anchor="middle" font-size="10.3" font-weight="normal">coins count up</text>
+<rect x="2048.2" y="1282.0" width="124.0" height="53.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="2110.2" y="1299.1" text-anchor="middle" font-size="10.3" font-weight="normal">OPEN A</text>
+<text x="2110.2" y="1312.1" text-anchor="middle" font-size="10.3" font-weight="normal">door unlocks,</text>
+<text x="2110.2" y="1325.1" text-anchor="middle" font-size="10.3" font-weight="normal">helmet in</text>
+<rect x="2048.2" y="1363.5" width="124.0" height="40.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="2110.2" y="1380.6" text-anchor="middle" font-size="10.3" font-weight="normal">SENSORS A,</text>
+<text x="2110.2" y="1393.6" text-anchor="middle" font-size="10.3" font-weight="normal">CLOSE DOOR A</text>
+<rect x="2048.2" y="1432.0" width="124.0" height="53.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.9"/>
+<text x="2110.2" y="1449.1" text-anchor="middle" font-size="10.3" font-weight="bold">CLEANING</text>
+<text x="2110.2" y="1462.1" text-anchor="middle" font-size="10.3" font-weight="normal">UV lamps and mist</text>
+<text x="2110.2" y="1475.1" text-anchor="middle" font-size="10.3" font-weight="normal">time counts down</text>
+<rect x="2048.2" y="1582.0" width="124.0" height="53.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="2110.2" y="1599.1" text-anchor="middle" font-size="10.3" font-weight="normal">OPEN B,</text>
+<text x="2110.2" y="1612.1" text-anchor="middle" font-size="10.3" font-weight="normal">SENSORS B</text>
+<text x="2110.2" y="1625.1" text-anchor="middle" font-size="10.3" font-weight="normal">take the helmet</text>
+<rect x="2048.2" y="1657.0" width="124.0" height="53.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="2110.2" y="1674.1" text-anchor="middle" font-size="10.3" font-weight="normal">RATE B</text>
+<text x="2110.2" y="1687.1" text-anchor="middle" font-size="10.3" font-weight="normal">how is the smell</text>
+<text x="2110.2" y="1700.1" text-anchor="middle" font-size="10.3" font-weight="normal">now?</text>
+<rect x="2048.2" y="1732.0" width="124.0" height="53.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="2110.2" y="1749.1" text-anchor="middle" font-size="10.3" font-weight="normal">FREE RETRY</text>
+<text x="2110.2" y="1762.1" text-anchor="middle" font-size="10.3" font-weight="normal">offered? yes:</text>
+<text x="2110.2" y="1775.1" text-anchor="middle" font-size="10.3" font-weight="normal">free run, 2 min</text>
+<rect x="2048.2" y="1807.0" width="124.0" height="53.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="2110.2" y="1824.1" text-anchor="middle" font-size="10.3" font-weight="normal">FINISH</text>
+<text x="2110.2" y="1837.1" text-anchor="middle" font-size="10.3" font-weight="normal">back to TAPS</text>
+<text x="2110.2" y="1850.1" text-anchor="middle" font-size="10.3" font-weight="normal">next customer</text>
+<rect x="2234.5" y="688.5" width="124.0" height="40.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="2296.5" y="705.6" text-anchor="middle" font-size="10.3" font-weight="normal">TAPS</text>
+<text x="2296.5" y="718.6" text-anchor="middle" font-size="10.3" font-weight="normal">tap the screen</text>
+<rect x="2234.5" y="757.0" width="124.0" height="53.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="2296.5" y="774.1" text-anchor="middle" font-size="10.3" font-weight="normal">BOARD C2</text>
+<text x="2296.5" y="787.1" text-anchor="middle" font-size="10.3" font-weight="normal">answers? If not:</text>
+<text x="2296.5" y="800.1" text-anchor="middle" font-size="10.3" font-weight="normal">OUT OF ORDER</text>
+<rect x="2234.5" y="838.5" width="124.0" height="40.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="2296.5" y="855.6" text-anchor="middle" font-size="10.3" font-weight="normal">WELCOME</text>
+<text x="2296.5" y="868.6" text-anchor="middle" font-size="10.3" font-weight="normal">tap to START</text>
+<rect x="2234.5" y="988.5" width="124.0" height="40.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="2296.5" y="1005.6" text-anchor="middle" font-size="10.3" font-weight="normal">RATE A</text>
+<text x="2296.5" y="1018.6" text-anchor="middle" font-size="10.3" font-weight="normal">how wet is it?</text>
+<rect x="2234.5" y="1138.5" width="124.0" height="40.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="2296.5" y="1155.6" text-anchor="middle" font-size="10.3" font-weight="normal">TIME ALLOT</text>
+<text x="2296.5" y="1168.6" text-anchor="middle" font-size="10.3" font-weight="normal">type the time</text>
+<rect x="2234.5" y="1213.5" width="124.0" height="40.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="2296.5" y="1230.6" text-anchor="middle" font-size="10.3" font-weight="normal">INSERT COIN</text>
+<text x="2296.5" y="1243.6" text-anchor="middle" font-size="10.3" font-weight="normal">coins count up</text>
+<rect x="2234.5" y="1282.0" width="124.0" height="53.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="2296.5" y="1299.1" text-anchor="middle" font-size="10.3" font-weight="normal">OPEN A</text>
+<text x="2296.5" y="1312.1" text-anchor="middle" font-size="10.3" font-weight="normal">door unlocks,</text>
+<text x="2296.5" y="1325.1" text-anchor="middle" font-size="10.3" font-weight="normal">helmet in</text>
+<rect x="2234.5" y="1363.5" width="124.0" height="40.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="2296.5" y="1380.6" text-anchor="middle" font-size="10.3" font-weight="normal">SENSORS A,</text>
+<text x="2296.5" y="1393.6" text-anchor="middle" font-size="10.3" font-weight="normal">CLOSE DOOR A</text>
+<rect x="2234.5" y="1432.0" width="124.0" height="53.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.9"/>
+<text x="2296.5" y="1449.1" text-anchor="middle" font-size="10.3" font-weight="bold">HEATING</text>
+<text x="2296.5" y="1462.1" text-anchor="middle" font-size="10.3" font-weight="normal">heater, UV and fan</text>
+<text x="2296.5" y="1475.1" text-anchor="middle" font-size="10.3" font-weight="normal">time counts down</text>
+<rect x="2234.5" y="1507.0" width="124.0" height="53.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="2296.5" y="1524.1" text-anchor="middle" font-size="10.3" font-weight="normal">COOL DOWN</text>
+<text x="2296.5" y="1537.1" text-anchor="middle" font-size="10.3" font-weight="normal">only the fan runs</text>
+<text x="2296.5" y="1550.1" text-anchor="middle" font-size="10.3" font-weight="normal">(default 60 s)</text>
+<rect x="2234.5" y="1582.0" width="124.0" height="53.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="2296.5" y="1599.1" text-anchor="middle" font-size="10.3" font-weight="normal">OPEN B,</text>
+<text x="2296.5" y="1612.1" text-anchor="middle" font-size="10.3" font-weight="normal">SENSORS B</text>
+<text x="2296.5" y="1625.1" text-anchor="middle" font-size="10.3" font-weight="normal">take the helmet</text>
+<rect x="2234.5" y="1663.5" width="124.0" height="40.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="2296.5" y="1680.6" text-anchor="middle" font-size="10.3" font-weight="normal">RATE B</text>
+<text x="2296.5" y="1693.6" text-anchor="middle" font-size="10.3" font-weight="normal">how wet is it now?</text>
+<rect x="2234.5" y="1732.0" width="124.0" height="53.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="2296.5" y="1749.1" text-anchor="middle" font-size="10.3" font-weight="normal">FREE RETRY</text>
+<text x="2296.5" y="1762.1" text-anchor="middle" font-size="10.3" font-weight="normal">offered? yes:</text>
+<text x="2296.5" y="1775.1" text-anchor="middle" font-size="10.3" font-weight="normal">free run, 2 min</text>
+<rect x="2234.5" y="1807.0" width="124.0" height="53.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="2296.5" y="1824.1" text-anchor="middle" font-size="10.3" font-weight="normal">FINISH</text>
+<text x="2296.5" y="1837.1" text-anchor="middle" font-size="10.3" font-weight="normal">back to TAPS</text>
+<text x="2296.5" y="1850.1" text-anchor="middle" font-size="10.3" font-weight="normal">next customer</text>
+<rect x="2420.8" y="688.5" width="124.0" height="40.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="2482.8" y="705.6" text-anchor="middle" font-size="10.3" font-weight="normal">TAPS</text>
+<text x="2482.8" y="718.6" text-anchor="middle" font-size="10.3" font-weight="normal">tap the screen</text>
+<rect x="2420.8" y="757.0" width="124.0" height="53.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="2482.8" y="774.1" text-anchor="middle" font-size="10.3" font-weight="normal">CHECKING</text>
+<text x="2482.8" y="787.1" text-anchor="middle" font-size="10.3" font-weight="normal">enough alcohol</text>
+<text x="2482.8" y="800.1" text-anchor="middle" font-size="10.3" font-weight="normal">and scented?</text>
+<rect x="2420.8" y="838.5" width="124.0" height="40.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="2482.8" y="855.6" text-anchor="middle" font-size="10.3" font-weight="normal">WELCOME</text>
+<text x="2482.8" y="868.6" text-anchor="middle" font-size="10.3" font-weight="normal">tap to START</text>
+<rect x="2420.8" y="907.0" width="124.0" height="53.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="2482.8" y="924.1" text-anchor="middle" font-size="10.3" font-weight="normal">SELECT MODE</text>
+<text x="2482.8" y="937.1" text-anchor="middle" font-size="10.3" font-weight="normal">cleaning or</text>
+<text x="2482.8" y="950.1" text-anchor="middle" font-size="10.3" font-weight="normal">drying</text>
+<rect x="2420.8" y="982.0" width="124.0" height="53.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="2482.8" y="999.1" text-anchor="middle" font-size="10.3" font-weight="normal">RATE A</text>
+<text x="2482.8" y="1012.1" text-anchor="middle" font-size="10.3" font-weight="normal">smell (cleaning)</text>
+<text x="2482.8" y="1025.1" text-anchor="middle" font-size="10.3" font-weight="normal">wetness (drying)</text>
+<rect x="2420.8" y="1063.5" width="124.0" height="40.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="2482.8" y="1080.6" text-anchor="middle" font-size="10.3" font-weight="normal">METHOD</text>
+<text x="2482.8" y="1093.6" text-anchor="middle" font-size="10.3" font-weight="normal">cleaning only</text>
+<rect x="2420.8" y="1138.5" width="124.0" height="40.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="2482.8" y="1155.6" text-anchor="middle" font-size="10.3" font-weight="normal">TIME ALLOT</text>
+<text x="2482.8" y="1168.6" text-anchor="middle" font-size="10.3" font-weight="normal">type the time</text>
+<rect x="2420.8" y="1213.5" width="124.0" height="40.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="2482.8" y="1230.6" text-anchor="middle" font-size="10.3" font-weight="normal">INSERT COIN</text>
+<text x="2482.8" y="1243.6" text-anchor="middle" font-size="10.3" font-weight="normal">coins count up</text>
+<rect x="2420.8" y="1282.0" width="124.0" height="53.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="2482.8" y="1299.1" text-anchor="middle" font-size="10.3" font-weight="normal">OPEN A</text>
+<text x="2482.8" y="1312.1" text-anchor="middle" font-size="10.3" font-weight="normal">door unlocks,</text>
+<text x="2482.8" y="1325.1" text-anchor="middle" font-size="10.3" font-weight="normal">helmet in</text>
+<rect x="2420.8" y="1363.5" width="124.0" height="40.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="2482.8" y="1380.6" text-anchor="middle" font-size="10.3" font-weight="normal">SENSORS A,</text>
+<text x="2482.8" y="1393.6" text-anchor="middle" font-size="10.3" font-weight="normal">CLOSE DOOR A</text>
+<rect x="2420.8" y="1432.0" width="124.0" height="53.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.9"/>
+<text x="2482.8" y="1449.1" text-anchor="middle" font-size="10.3" font-weight="bold">CLEANING (UV, mist)</text>
+<text x="2482.8" y="1462.1" text-anchor="middle" font-size="10.3" font-weight="normal">or DRYING (heater,</text>
+<text x="2482.8" y="1475.1" text-anchor="middle" font-size="10.3" font-weight="normal">UV), time counts down</text>
+<rect x="2420.8" y="1507.0" width="124.0" height="53.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="2482.8" y="1524.1" text-anchor="middle" font-size="10.3" font-weight="normal">COOL DOWN</text>
+<text x="2482.8" y="1537.1" text-anchor="middle" font-size="10.3" font-weight="normal">(drying only)</text>
+<text x="2482.8" y="1550.1" text-anchor="middle" font-size="10.3" font-weight="normal">default 60 s</text>
+<rect x="2420.8" y="1582.0" width="124.0" height="53.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="2482.8" y="1599.1" text-anchor="middle" font-size="10.3" font-weight="normal">OPEN B,</text>
+<text x="2482.8" y="1612.1" text-anchor="middle" font-size="10.3" font-weight="normal">SENSORS B</text>
+<text x="2482.8" y="1625.1" text-anchor="middle" font-size="10.3" font-weight="normal">take the helmet</text>
+<rect x="2420.8" y="1657.0" width="124.0" height="53.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="2482.8" y="1674.1" text-anchor="middle" font-size="10.3" font-weight="normal">RATE B</text>
+<text x="2482.8" y="1687.1" text-anchor="middle" font-size="10.3" font-weight="normal">dryness, then</text>
+<text x="2482.8" y="1700.1" text-anchor="middle" font-size="10.3" font-weight="normal">smell (cleaning)</text>
+<rect x="2420.8" y="1732.0" width="124.0" height="53.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="2482.8" y="1749.1" text-anchor="middle" font-size="10.3" font-weight="normal">FREE RETRY</text>
+<text x="2482.8" y="1762.1" text-anchor="middle" font-size="10.3" font-weight="normal">offered? yes:</text>
+<text x="2482.8" y="1775.1" text-anchor="middle" font-size="10.3" font-weight="normal">free run, 2 min</text>
+<rect x="2420.8" y="1807.0" width="124.0" height="53.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="2482.8" y="1824.1" text-anchor="middle" font-size="10.3" font-weight="normal">FINISH</text>
+<text x="2482.8" y="1837.1" text-anchor="middle" font-size="10.3" font-weight="normal">back to TAPS</text>
+<text x="2482.8" y="1850.1" text-anchor="middle" font-size="10.3" font-weight="normal">next customer</text>
+<rect x="1813.6" y="757.0" width="124.0" height="53.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1" stroke-dasharray="4 3"/>
+<text x="1875.6" y="774.1" text-anchor="middle" font-size="10.3" font-weight="normal">REFILL (Box 1)</text>
+<text x="1875.6" y="787.1" text-anchor="middle" font-size="10.3" font-weight="normal">the ACS fills the</text>
+<text x="1875.6" y="800.1" text-anchor="middle" font-size="10.3" font-weight="normal">tank, then checks again</text>
+<rect x="1813.6" y="832.0" width="124.0" height="53.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1" stroke-dasharray="4 3"/>
+<text x="1875.6" y="849.1" text-anchor="middle" font-size="10.3" font-weight="normal">OUT OF ORDER</text>
+<text x="1875.6" y="862.1" text-anchor="middle" font-size="10.3" font-weight="normal">refill gave up:</text>
+<text x="1875.6" y="875.1" text-anchor="middle" font-size="10.3" font-weight="normal">use another box</text>
+<rect x="2627.8" y="757.0" width="124.0" height="53.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1" stroke-dasharray="4 3"/>
+<text x="2689.8" y="774.1" text-anchor="middle" font-size="10.3" font-weight="normal">REFILL (Box 3)</text>
+<text x="2689.8" y="787.1" text-anchor="middle" font-size="10.3" font-weight="normal">the ACS fills the</text>
+<text x="2689.8" y="800.1" text-anchor="middle" font-size="10.3" font-weight="normal">tank, then checks again</text>
+<rect x="2627.8" y="832.0" width="124.0" height="53.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1" stroke-dasharray="4 3"/>
+<text x="2689.8" y="849.1" text-anchor="middle" font-size="10.3" font-weight="normal">Refill gave up:</text>
+<text x="2689.8" y="862.1" text-anchor="middle" font-size="10.3" font-weight="normal">CLEANING greyed,</text>
+<text x="2689.8" y="875.1" text-anchor="middle" font-size="10.3" font-weight="normal">DRYING still works</text>
+<rect x="2627.8" y="1132.0" width="124.0" height="53.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1" stroke-dasharray="4 3"/>
+<text x="2689.8" y="1149.1" text-anchor="middle" font-size="10.3" font-weight="normal">TIME TOO SHORT OR</text>
+<text x="2689.8" y="1162.1" text-anchor="middle" font-size="10.3" font-weight="normal">TOO LONG FOR THE</text>
+<text x="2689.8" y="1175.1" text-anchor="middle" font-size="10.3" font-weight="normal">COINS: IT ASKS AGAIN</text>
+<rect x="2627.8" y="1288.5" width="124.0" height="40.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1" stroke-dasharray="4 3"/>
+<text x="2689.8" y="1305.6" text-anchor="middle" font-size="10.3" font-weight="normal">NO HELMET SEEN:</text>
+<text x="2689.8" y="1318.6" text-anchor="middle" font-size="10.3" font-weight="normal">open the door again</text>
+<rect x="2627.8" y="1357.0" width="124.0" height="53.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1" stroke-dasharray="4 3"/>
+<text x="2689.8" y="1374.1" text-anchor="middle" font-size="10.3" font-weight="normal">WHILE RUNNING:</text>
+<text x="2689.8" y="1387.1" text-anchor="middle" font-size="10.3" font-weight="normal">more coins add time</text>
+<text x="2689.8" y="1400.1" text-anchor="middle" font-size="10.3" font-weight="normal">while the slot is open</text>
+<rect x="2627.8" y="1432.0" width="124.0" height="53.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="2689.8" y="1449.1" text-anchor="middle" font-size="10.3" font-weight="normal">DOOR OPENED:</text>
+<text x="2689.8" y="1462.1" text-anchor="middle" font-size="10.3" font-weight="normal">SAFETY PAUSE,</text>
+<text x="2689.8" y="1475.1" text-anchor="middle" font-size="10.3" font-weight="normal">then it carries on</text>
+<rect x="2627.8" y="1507.0" width="124.0" height="53.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="2689.8" y="1524.1" text-anchor="middle" font-size="10.3" font-weight="normal">CANCEL, CONFIRM:</text>
+<text x="2689.8" y="1537.1" text-anchor="middle" font-size="10.3" font-weight="normal">stops early, no</text>
+<text x="2689.8" y="1550.1" text-anchor="middle" font-size="10.3" font-weight="normal">refund (heated: cool down)</text>
+<rect x="1813.6" y="907.0" width="124.0" height="53.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="1875.6" y="924.1" text-anchor="middle" font-size="10.3" font-weight="normal">SUB-SERVER</text>
+<text x="1875.6" y="937.1" text-anchor="middle" font-size="10.3" font-weight="normal">S3A, S3C or S3B</text>
+<text x="1875.6" y="950.1" text-anchor="middle" font-size="10.3" font-weight="normal">runs every step</text>
+<rect x="1813.6" y="1207.0" width="124.0" height="53.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="1875.6" y="1224.1" text-anchor="middle" font-size="10.3" font-weight="normal">COIN PULSES</text>
+<text x="1875.6" y="1237.1" text-anchor="middle" font-size="10.3" font-weight="normal">A1, C1 or B1</text>
+<text x="1875.6" y="1250.1" text-anchor="middle" font-size="10.3" font-weight="normal">are counted</text>
+<rect x="1813.6" y="1432.0" width="124.0" height="53.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="1875.6" y="1449.1" text-anchor="middle" font-size="10.3" font-weight="normal">BOX STATUS</text>
+<text x="1875.6" y="1462.1" text-anchor="middle" font-size="10.3" font-weight="normal">RUNNING</text>
+<text x="1875.6" y="1475.1" text-anchor="middle" font-size="10.3" font-weight="normal">sent by radio</text>
+<rect x="1813.6" y="1813.5" width="124.0" height="40.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="1875.6" y="1830.6" text-anchor="middle" font-size="10.3" font-weight="normal">FINISHED VISIT</text>
+<text x="1875.6" y="1843.6" text-anchor="middle" font-size="10.3" font-weight="normal">reported by radio</text>
+<rect x="1819.7" y="1934.0" width="719.0" height="30.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.9"/>
+<text x="2179.2" y="1952.6" text-anchor="middle" font-size="10.3" font-weight="bold">ESP-NOW RADIO (channel 1)</text>
+<rect x="1813.6" y="1986.0" width="124.0" height="53.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="1875.6" y="2003.1" text-anchor="middle" font-size="10.3" font-weight="normal">LOCALSERVER</text>
+<text x="1875.6" y="2016.1" text-anchor="middle" font-size="10.3" font-weight="normal">receives, remembers</text>
+<text x="1875.6" y="2029.1" text-anchor="middle" font-size="10.3" font-weight="normal">the latest values</text>
+<rect x="1813.6" y="2061.0" width="124.0" height="53.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="1875.6" y="2078.1" text-anchor="middle" font-size="10.3" font-weight="normal">SAVE THE SESSION</text>
+<text x="1875.6" y="2091.1" text-anchor="middle" font-size="10.3" font-weight="normal">and ADD THE COINS</text>
+<text x="1875.6" y="2104.1" text-anchor="middle" font-size="10.3" font-weight="normal">in its flash</text>
+<rect x="1813.6" y="2136.0" width="124.0" height="40.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="1875.6" y="2153.1" text-anchor="middle" font-size="10.3" font-weight="normal">BROADCAST TOTALS</text>
+<text x="1875.6" y="2166.1" text-anchor="middle" font-size="10.3" font-weight="normal">every 10 seconds</text>
+<rect x="1813.6" y="2198.0" width="124.0" height="53.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="1875.6" y="2215.1" text-anchor="middle" font-size="10.3" font-weight="normal">ONLINE SERVER</text>
+<text x="1875.6" y="2228.1" text-anchor="middle" font-size="10.3" font-weight="normal">keeps the packets,</text>
+<text x="1875.6" y="2241.1" text-anchor="middle" font-size="10.3" font-weight="normal">counts the statistics</text>
+<rect x="1813.6" y="2273.0" width="124.0" height="53.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="1875.6" y="2290.1" text-anchor="middle" font-size="10.3" font-weight="normal">JOIN WI-FI, BUILD</text>
+<text x="1875.6" y="2303.1" text-anchor="middle" font-size="10.3" font-weight="normal">THE MESSAGE,</text>
+<text x="1875.6" y="2316.1" text-anchor="middle" font-size="10.3" font-weight="normal">SEND TO BLYNK</text>
+<rect x="1813.6" y="2348.0" width="124.0" height="53.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="1875.6" y="2365.1" text-anchor="middle" font-size="10.3" font-weight="normal">BLYNK CLOUD</text>
+<text x="1875.6" y="2378.1" text-anchor="middle" font-size="10.3" font-weight="normal">private and</text>
+<text x="1875.6" y="2391.1" text-anchor="middle" font-size="10.3" font-weight="normal">public device</text>
+<rect x="1813.6" y="2423.0" width="124.0" height="53.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="1875.6" y="2440.1" text-anchor="middle" font-size="10.3" font-weight="normal">WEB PAGE</text>
+<text x="1875.6" y="2453.1" text-anchor="middle" font-size="10.3" font-weight="normal">reads Blynk</text>
+<text x="1875.6" y="2466.1" text-anchor="middle" font-size="10.3" font-weight="normal">every 10 seconds</text>
+<rect x="1813.6" y="2498.0" width="124.0" height="40.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="1875.6" y="2515.1" text-anchor="middle" font-size="10.3" font-weight="normal">ANY ALERT?</text>
+<text x="1875.6" y="2528.1" text-anchor="middle" font-size="10.3" font-weight="normal">banner, sound, log</text>
+<rect x="1813.6" y="2560.0" width="124.0" height="53.0" rx="2" fill="#fff" stroke="#000" stroke-width="1.1"/>
+<text x="1875.6" y="2577.1" text-anchor="middle" font-size="10.3" font-weight="normal">OWNER ACTS</text>
+<text x="1875.6" y="2590.1" text-anchor="middle" font-size="10.3" font-weight="normal">refill, maintenance</text>
+<text x="1875.6" y="2603.1" text-anchor="middle" font-size="10.3" font-weight="normal">or a new setting</text>
+<text x="1479.4" y="959.5" text-anchor="start" font-size="9.5" font-weight="700" stroke="#fff" stroke-width="3" paint-order="stroke">yes</text>
+<text x="1551.3" y="929.5" text-anchor="middle" font-size="9.5" font-weight="700" stroke="#fff" stroke-width="3" paint-order="stroke">no</text>
+<text x="2627.7" y="479.5" text-anchor="middle" font-size="9.5" font-weight="700" stroke="#fff" stroke-width="3" paint-order="stroke">with a phone</text>
+<text x="2900.8" y="809.5" text-anchor="start" font-size="9.5" font-weight="700" stroke="#fff" stroke-width="3" paint-order="stroke">yes</text>
+<text x="2993.4" y="779.5" text-anchor="middle" font-size="9.5" font-weight="700" stroke="#fff" stroke-width="3" paint-order="stroke">no</text>
+<text x="2900.8" y="1034.5" text-anchor="start" font-size="9.5" font-weight="700" stroke="#fff" stroke-width="3" paint-order="stroke">yes</text>
+<text x="2993.4" y="1004.5" text-anchor="middle" font-size="9.5" font-weight="700" stroke="#fff" stroke-width="3" paint-order="stroke">no</text>
+<text x="3114.1" y="1079.5" text-anchor="middle" font-size="9.5" font-weight="700" stroke="#fff" stroke-width="3" paint-order="stroke">back to the boxes</text>
+<text x="3093.4" y="704.5" text-anchor="middle" font-size="9.5" font-weight="700" stroke="#fff" stroke-width="3" paint-order="stroke">the page reads Blynk</text>
+<text x="2114.2" y="821.0" text-anchor="start" font-size="9.5" font-weight="700" stroke="#fff" stroke-width="3" paint-order="stroke">yes</text>
+<text x="2114.2" y="1796.0" text-anchor="start" font-size="9.5" font-weight="700" stroke="#fff" stroke-width="3" paint-order="stroke">no</text>
+<text x="1992.9" y="779.5" text-anchor="middle" font-size="9.5" font-weight="700" stroke="#fff" stroke-width="3" paint-order="stroke">no</text>
+<text x="1879.6" y="821.0" text-anchor="start" font-size="9.5" font-weight="700" stroke="#fff" stroke-width="3" paint-order="stroke">gave up</text>
+<text x="2300.5" y="821.0" text-anchor="start" font-size="9.5" font-weight="700" stroke="#fff" stroke-width="3" paint-order="stroke">yes</text>
+<text x="2300.5" y="1796.0" text-anchor="start" font-size="9.5" font-weight="700" stroke="#fff" stroke-width="3" paint-order="stroke">no</text>
+<text x="2486.8" y="821.0" text-anchor="start" font-size="9.5" font-weight="700" stroke="#fff" stroke-width="3" paint-order="stroke">yes</text>
+<text x="2486.8" y="1796.0" text-anchor="start" font-size="9.5" font-weight="700" stroke="#fff" stroke-width="3" paint-order="stroke">no</text>
+<text x="2586.3" y="779.5" text-anchor="middle" font-size="9.5" font-weight="700" stroke="#fff" stroke-width="3" paint-order="stroke">no</text>
+<text x="2693.8" y="821.0" text-anchor="start" font-size="9.5" font-weight="700" stroke="#fff" stroke-width="3" paint-order="stroke">gave up</text>
+<text x="1965.3" y="929.5" text-anchor="middle" font-size="9.5" font-weight="700" stroke="#fff" stroke-width="3" paint-order="stroke">shows the screens</text>
+<text x="1992.9" y="1229.5" text-anchor="middle" font-size="9.5" font-weight="700" stroke="#fff" stroke-width="3" paint-order="stroke">coins counted</text>
+<text x="1992.9" y="1454.5" text-anchor="middle" font-size="9.5" font-weight="700" stroke="#fff" stroke-width="3" paint-order="stroke">status</text>
+<text x="995.9" y="2582.5" text-anchor="middle" font-size="9.5" font-weight="700" stroke="#fff" stroke-width="3" paint-order="stroke">owner acts</text>
+</svg>

@@ -1,0 +1,165 @@
+<!-- Text that build\patch_docx.html puts INTO the user's edited Word file (revision 5): the new features of the online page.
+     Each <div class="ins"> says where it goes (data-where="before", data-anchor="STYLE:heading text"); <div class="op"> are small edits of existing tables / lists.
+     Same HTML vocabulary as the other source files: h1-h4, p, ul, ol, table (data-w = column shares), div.tip, div.warn, figure with img + figcaption. -->
+
+<!-- ================================================================ CUSTOMER GUIDE -->
+<div class="ins" data-where="before" data-anchor="Heading2:Before you start">
+<h3>Which machine is free?</h3>
+<p>Look for the <b>QR sticker</b> on the machines. Scan it with your phone camera. A page opens that shows Box 1, Box 2 and Box 3 as <b>FREE</b>, <b>IN USE</b> (with about how many minutes are left) or <b>OUT OF ORDER</b>. You do not need an app or a password. The button at the top changes the language between English and Filipino.</p>
+<figure data-w="2.5"><img src="images/web/web_status_c.png" alt="The customer status page on a phone"><figcaption>The customer status page: which machine is free (phone)</figcaption></figure>
+<div class="tip">Tip / Paalala: I-scan ang QR sticker para makita kung aling makina ang libre. Pindutin ang "Filipino" sa itaas ng page.</div>
+</div>
+
+<!-- ================================================================ ADMIN GUIDE: new chapter -->
+<div class="ins" data-where="before" data-anchor="Heading1:Technician guide (Hardware, online monitoring and maintenance)">
+<h2 data-pb>Online page (Monitor, Alerts, Reports)</h2>
+<p>The <b>online page</b> shows your machines on a phone or a PC, wherever you are. It only <b>watches</b>: nothing on it can start, stop or change a machine. Open it with the address your technician gave you. The first time it asks for the Blynk token: paste it once, it stays in that browser.</p>
+<h3>The tabs</h3>
+<table data-w="20,80">
+<tr><th>Tab</th><th>What it is for</th></tr>
+<tr><td><b>Monitor</b></td><td>The live state of every box and refill station, the level dials, the revenue and the customers served.</td></tr>
+<tr><td><b>Alerts</b></td><td>What needs attention now, a log of what happened, and the sound of each alert.</td></tr>
+<tr><td><b>Reports</b></td><td>Revenue and customers per day, the busiest hours and days, what each box earns. CSV files and a printable report.</td></tr>
+<tr><td><b>Checklist</b></td><td>The daily, weekly and monthly checks. Tap them as you do them.</td></tr>
+<tr><td><b>Fix it</b></td><td>Yes / no questions that lead you to the fix. The same guides as the decision trees in the Reference chapter.</td></tr>
+<tr><td><b>Manual</b></td><td>This manual. The customer chapters are open to everybody. The admin, technician and reference chapters open with the <b>team password</b>.</td></tr>
+<tr><td><b>QR button</b></td><td>The QR code and a printable sign for the customer page. Stick the sign on every machine.</td></tr>
+</table>
+<h3>Level dials</h3>
+<p>Every container has a dial. <b>0</b> is the refill line: a box stops cleaning there. The dial is green when the container is fine, <b>amber</b> from the early warning line (30 %) and <b>red</b> under 15 %. So you can refill <b>before</b> a box shows OUT OF ORDER. Under each dial the page says whether the level is falling and about how long it will last.</p>
+<figure><img src="images/web/web_monitor_c.png" alt="The Monitor tab with the level dials"><figcaption>The Monitor tab: alerts at the top, the level dials, then the machines (demo data)</figcaption></figure>
+<h3>Alerts and sounds</h3>
+<p>When something needs attention the page shows a banner, puts a number on the tab and the tab icon, and plays a sound. Every kind of alert has its own sound, so you can tell them apart without looking.</p>
+<table data-w="30,10,22,38">
+<tr><th>Alert</th><th>Level</th><th>Sound</th><th>What to do</th></tr>
+<tr><td><b>A box is OUT OF ORDER</b></td><td>Critical</td><td>Siren. Repeats.</td><td>Fix it: <i>A box shows OUT OF ORDER</i>. Usually a container needs a refill or a board is offline.</td></tr>
+<tr><td><b>An ACS supply tank is empty</b></td><td>Critical</td><td>Alarm. Repeats.</td><td>Fill that tank, then use Retry now on the ACS page.</td></tr>
+<tr><td><b>No board is heard at all</b></td><td>Critical</td><td>Alarm. Repeats.</td><td>Check the power and the radio at the site. Fix it: <i>A board shows OFFLINE</i>.</td></tr>
+<tr><td><b>A door was opened during a run</b></td><td>Warning</td><td>Three rising beeps, twice</td><td>The run continues when the door is shut. Find out why it was opened.</td></tr>
+<tr><td><b>A container is low (under 15 %)</b></td><td>Warning</td><td>Three beeps</td><td>Refill it now.</td></tr>
+<tr><td><b>An ACS mixer is low, cleaning is switched off, a board is offline</b></td><td>Warning</td><td>Two tones (ding-dong)</td><td>Look at the ACS tanks and the Home page. Use Fix it.</td></tr>
+<tr><td><b>The data is old, or Blynk cannot be read</b></td><td>Warning</td><td>Falling tones</td><td>Check the internet at the site and the Online Server. Fix it: <i>The web page says OLD DATA</i>.</td></tr>
+<tr><td><b>A container is getting low</b></td><td>Notice</td><td>Soft blip</td><td>Plan a refill.</td></tr>
+<tr><td><b>A maintenance check is overdue</b></td><td>Notice</td><td>Soft blip</td><td>Open the Checklist tab.</td></tr>
+<tr><td><b>An alert cleared</b></td><td>Info</td><td>Chime</td><td>Nothing: it is back to normal.</td></tr>
+</table>
+<ul>
+<li>A browser keeps a page silent until you have tapped it once. Tap <b>Turn on alert sounds</b>, then keep the page open (a background tab is fine).</li>
+<li>Press <b>Acknowledge</b> to stop a repeating alarm. A new alert still sounds.</li>
+<li>In the Alerts tab you can change the sound of every alert, switch one off, set the volume, change how often a critical alert repeats and move the early warning line.</li>
+</ul>
+<figure><img src="images/web/web_alerts_c.png" alt="The Alerts tab"><figcaption>The Alerts tab: active alerts, the sound settings and the log (demo data)</figcaption></figure>
+<div class="warn">A page that is closed, or a phone that is locked, cannot play a sound. For alerts on a closed page use the Blynk app (Technician guide, Online monitoring, <i>Alerts when the page is closed</i>).</div>
+<h3>Reports</h3>
+<ul>
+<li><b>Revenue and customers per day</b> for the last 14 days, with the 7-day average, and this week against the week before.</li>
+<li><b>Busiest hours</b> and <b>busiest days</b>: when the customers come.</li>
+<li><b>What each box earns</b>: sessions, revenue and the share of each box.</li>
+<li><b>Daily CSV</b>, <b>Last sessions CSV</b> and <b>Boxes and hours CSV</b> open in Excel. <b>Print / save as PDF</b> makes a clean report page.</li>
+</ul>
+<figure><img src="images/web/web_reports_c.png" alt="The Reports tab"><figcaption>The Reports tab (demo data)</figcaption></figure>
+<h3>Checklist and Fix it</h3>
+<p>The <b>Checklist</b> follows the maintenance schedule of the Technician guide. Tap a machine under a check when you have done it there. The page shows when each check was last done and what is due. It is saved in the browser you use: use <b>Save a backup</b> to move it to another phone.</p>
+<p><b>Fix it</b> asks one yes / no question at a time and ends with what to do. If an alert is on, the matching guide is suggested at the top.</p>
+<figure><img src="images/web/web_fixit_c.png" alt="The Fix it tab"><figcaption>Fix it: one question at a time</figcaption></figure>
+</div>
+
+<!-- ================================================================ TECHNICIAN GUIDE: Online monitoring, more -->
+<div class="ins" data-where="before" data-anchor="Heading2:Maintenance">
+<h3>Customer status page (a second Blynk device)</h3>
+<p>The customer page (<b>status.html</b>) shows Box 1, Box 2 and Box 3 as FREE, IN USE or OUT OF ORDER. It is public, so it must not use your private token (a Blynk token can also write). It reads a <b>second Blynk device</b> that holds nothing but those three boxes.</p>
+<ol>
+<li>In the Blynk Console open <b>Devices</b>, <b>New Device</b>, <b>From template</b>, and pick the same template as before. Name it <i>Jolly Helmet Public status</i>.</li>
+<li>Open it, tab <b>Device info</b>, and copy its <b>Auth Token</b>. This token may be public. Never use the private token here.</li>
+<li>Open the Online Server setup page (Wi-Fi <b>JollyHelmet-Online</b>). Paste the token into <b>Public status device token</b> and tap <b>Save and connect</b>. The row <b>Public status device</b> on top then says OK.</li>
+<li>In the folder ONLINE_WEB open <b>js/config.js</b> and write the token in <b>publicToken</b>. (If you leave it empty, the QR code carries the token in the address.) Edit the prices and the "Something wrong?" line in the same file.</li>
+<li>Put the folder on the web host. Open the online page and tap the <b>QR</b> button. Paste the public token if it asks. Tap <b>Print the sign</b> and stick it on every machine.</li>
+<li>Test it: scan the QR code with a phone. The boxes must show FREE or IN USE. <b>status.html?demo</b> shows made-up data.</li>
+</ol>
+<table data-w="22,78">
+<tr><th>The public device holds</th><th>Meaning</th></tr>
+<tr><td><b>b</b></td><td>For Box 1, Box 2 and Box 3: the step number, the seconds left and whether the brain is heard. Nothing else.</td></tr>
+<tr><td><b>seq, ts, iv</b></td><td>A counter, the time and the upload interval. The page shows NO INFORMATION when the data is older than about 4 minutes.</td></tr>
+</table>
+<div class="warn">If somebody misuses the public token, the worst they can do is write a wrong status into that one device (the next upload overwrites it within a minute) and use up some Blynk messages. They cannot reach the private device, the revenue or the machines. The page costs one more Blynk message per upload.</div>
+<h3>Online Server firmware of 2026-10-10</h3>
+<p>Flash ESP32_ONLINESRV again (same settings, see Firmware and flashing). The new version:</p>
+<ul>
+<li>counts every finished session per box, per hour of the day and per weekday, from the brains' own counters, and keeps the counts inside the board (this feeds <b>Busiest hours</b>, <b>Busiest days</b> and <b>What each box earns</b> in the Reports tab);</li>
+<li>writes the public status device when its token is set;</li>
+<li>shows two new rows on its setup page: <b>Public status device</b> and <b>Sessions counted</b>, and has a button <b>Reset the per-box and busiest-hours statistics</b> under <i>More settings</i>.</li>
+</ul>
+<p>Until it is flashed, the three charts above say "Needs the Online Server firmware of 2026-10-10". Everything else works with the old firmware.</p>
+<h3>Alerts when the page is closed (Blynk app)</h3>
+<p>A closed page cannot make a sound. The Blynk app can.</p>
+<ol>
+<li>On the Online Server setup page tick <b>Send a Blynk event with code alert</b>, then <b>Save and connect</b>.</li>
+<li>In the Blynk Console open the template, tab <b>Events</b>, and make sure the event with the code <b>alert</b> exists (see Step 1). Choose the type <b>Warning</b> or <b>Critical</b> and switch on its <b>push notification</b>. Click <b>Save</b>.</li>
+<li>Install the Blynk app on the phone, sign in with the same account and allow notifications. Every new alert (box out of order, tank empty, container low, board offline) now arrives as a notification, even with the page closed.</li>
+</ol>
+<h3>The Manual tab and the team password</h3>
+<p>The customer chapters of this manual are public. The rest (admin, technician, reference) prints the Wi-Fi passwords, so the web page keeps it <b>encrypted</b>: the file on the web host is unreadable without the team password, and the page decrypts it in the browser after the password is typed. The team password is not the Blynk token.</p>
+<p><b>After you change this Word file:</b> press Ctrl+A, then F9 in Word (updates the contents and the index) and save. Right-click <b>MANUAL\build_web_manual.ps1</b> and choose <b>Run with PowerShell</b>. It asks for the team password (use the same one, or a new one and tell the team). It makes a fresh PDF next to the Word file and rewrites the folder <b>ONLINE_WEB\manual</b>. Upload that folder again. Word must be installed on that PC.</p>
+<h3>Online page problems</h3>
+<table data-w="30,32,38">
+<tr><th>Symptom</th><th>Cause</th><th>What to do</th></tr>
+<tr><td>No sound when an alert comes</td><td>The browser needs one tap. Or the page is closed, or sound is switched off.</td><td>Tap <b>Turn on alert sounds</b>. Keep the page open. Check Alerts, Sounds (the volume and the On boxes).</td></tr>
+<tr><td>The customer page says NO INFORMATION</td><td>The public token is missing or wrong, the Online Server is not reflashed, or its data is old.</td><td>Check <b>publicToken</b> in js/config.js (or the QR address). The setup page row <b>Public status device</b> must say OK.</td></tr>
+<tr><td>Busiest hours, days and box earnings are empty</td><td>The Online Server has the old firmware, or nothing was counted yet.</td><td>Flash the firmware of 2026-10-10 and wait for sessions.</td></tr>
+<tr><td>A dial says "watching the trend"</td><td>It needs about 10 minutes of readings with the page open.</td><td>Wait. The trend is kept in the browser.</td></tr>
+<tr><td>The Checklist is empty on another phone</td><td>Ticks are saved per browser.</td><td>Use <b>Save a backup</b> and <b>Restore a backup</b>.</td></tr>
+<tr><td>The Manual tab shows only the customer guide</td><td>The team chapters are locked.</td><td>Tap <b>Unlock</b> and type the team password.</td></tr>
+<tr><td>"That is not the team password"</td><td>Wrong password, or the web files were made with another one.</td><td>Run build_web_manual.ps1 again and upload the folder.</td></tr>
+</table>
+</div>
+
+<!-- ================================================================ REFERENCE: settings reference -->
+<div class="ins" data-where="before" data-anchor="Heading3:Fixed values (not settings)">
+<h3>Online web page (kept in each browser)</h3>
+<table data-w="26,30,16,16,12">
+<tr><th>Setting</th><th>What it does</th><th>Default</th><th>Allowed</th><th>Yours</th></tr>
+<tr><td><b>Refresh every</b> (Settings window)</td><td>How often the page reads Blynk.</td><td>10 s</td><td>5, 10, 30, 60 s</td><td></td></tr>
+<tr><td><b>Early warning for containers</b> (Alerts tab)</td><td>The dial turns amber and a notice alert starts here.</td><td>30 %</td><td>Off, 20-40 %</td><td></td></tr>
+<tr><td><b>Play alert sounds</b>, <b>Volume</b></td><td>Master switch and loudness on this device.</td><td>On, 80 %</td><td>On or off, 0-100 %</td><td></td></tr>
+<tr><td><b>Repeat a critical alert every</b></td><td>An unacknowledged critical alert sounds again.</td><td>1 minute</td><td>Never, 30 s, 1, 2, 5 min</td><td></td></tr>
+<tr><td><b>Sound of each alert</b></td><td>Which sound, or none, each kind of alert plays.</td><td>See Alerts and sounds</td><td>9 sounds or silent</td><td></td></tr>
+<tr><td><b>Chime when a warning clears</b></td><td>Plays when an alert goes away.</td><td>On</td><td>On or off</td><td></td></tr>
+<tr><td><b>Browser notifications</b></td><td>A notification when the page is in the background.</td><td>Off</td><td>On or off</td><td></td></tr>
+<tr><td><b>publicToken</b> (js/config.js)</td><td>Token of the public status device for the customer page.</td><td>Empty (the QR address carries it)</td><td>A token</td><td></td></tr>
+<tr><td><b>prices, contact</b> (js/config.js)</td><td>Texts on the customer page.</td><td>The firmware prices</td><td>Any text</td><td></td></tr>
+<tr><td><b>Team password</b></td><td>Opens the encrypted chapters of the Manual tab.</td><td>Set when build_web_manual.ps1 is run</td><td>6 or more characters</td><td></td></tr>
+</table>
+</div>
+
+<!-- ================================================================ small edits -->
+<div class="op" data-op="settings-rows">
+<table>
+<tr><td>Public status device token</td><td>Token of a second Blynk device for the customer page (status.html). Type - to remove it.</td><td>Empty (not used)</td><td>A token</td><td></td></tr>
+<tr><td>Reset statistics</td><td>Button in More settings: starts the per-box, busiest-hours and busiest-days counts again from zero.</td><td>-</td><td>Button</td><td></td></tr>
+</table>
+</div>
+
+<div class="op" data-op="glossary">
+<table>
+<tr><td>Acknowledge</td><td>The button on the online page that stops a repeating alarm. A new alert still sounds.</td></tr>
+<tr><td>Alert sound</td><td>The beep pattern of one kind of alert (siren, alarm, three beeps, two tones, chime...). Each can be changed in the Alerts tab.</td></tr>
+<tr><td>Customer status page</td><td>status.html: the public page that shows which machine is free, in use or out of order.</td></tr>
+<tr><td>Early warning</td><td>The level (30 % by default) where a container dial turns amber and a notice appears, before the box runs out.</td></tr>
+<tr><td>Level dial</td><td>The half-circle gauge of a container on the Monitor tab. 0 is the refill line.</td></tr>
+<tr><td>Public status device</td><td>The second Blynk device whose token may be public. It holds only the step and time left of each box.</td></tr>
+<tr><td>QR code</td><td>The square code on the sign at each machine. A phone camera opens the customer status page with it.</td></tr>
+<tr><td>Team password</td><td>The password that opens the encrypted admin, technician and reference chapters of the Manual tab.</td></tr>
+</table>
+</div>
+
+<div class="op" data-op="bullet-after" data-after="The Online Server sends only totals and status to Blynk">
+<ul><li>The customer status page shows only whether each machine is free, in use or out of order. The public Blynk device behind it holds nothing else. The admin, technician and reference chapters of the manual are encrypted on the web and open with the team password.</li></ul>
+</div>
+
+<div class="op" data-op="bullet-after" data-after="Online Server: after its first upload">
+<ul><li>Online page: flash the Online Server firmware of 2026-10-10, create the public status Blynk device, print the QR sign for every machine, and run build_web_manual.ps1 after every change to this manual.</li></ul>
+</div>
+
+<div class="op" data-op="rev-row">
+<table><tr><td>5</td><td>@@TODAY@@</td><td>Online page: level dials with early warning, Alerts with a sound for every kind of alert, Reports (busiest hours and days, what each box earns), Checklist, Fix it, customer status page and QR sign, Manual tab with a team password. New Online Server firmware (per-box statistics, public status device).</td></tr></table>
+</div>

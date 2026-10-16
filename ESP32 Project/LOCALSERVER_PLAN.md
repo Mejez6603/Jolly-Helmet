@@ -6,7 +6,7 @@ nodes). The old files are archived in `ESP32_LOCALSRV/legacy_dashboard/` (`ESP32
 `script_js_LEGACY.h.txt`).
 
 ## Use
-1. Power the unit (all nodes), flash `ESP32_LOCALSRV`, join Wi-Fi **`ESP32_LOCAL`** / **`12345678`**, open **http://192.168.4.1**.
+1. Power the unit (all nodes), flash `ESP32_LOCALSRV`, join Wi-Fi **`JollyHelmet-Local`** / **`12345678`**, open **http://192.168.4.1**.
 2. Home: who is online (13 nodes), what each box and each ACS is doing, alerts (EMPTY supplies, low mixers, OUT OF ORDER, CLEANING greyed out), revenue.
 3. **Box 1 / Box 2 / Box 3 / ACS 1-2 pages** (`/box1` `/box2` `/box3` `/acs`, also the big buttons on Home):
 

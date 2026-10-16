@@ -82,7 +82,7 @@ Open the corresponding folder's `.ino` file, select the correct board/port, and 
 
 ### Accessing the dashboard
 
-1. Connect a phone or laptop to the WiFi network **`ESP32_LOCAL`** (password `12345678`).
+1. Connect a phone or laptop to the WiFi network **`JollyHelmet-Local`** (password `12345678`).
 2. Open a browser to `http://192.168.4.1` (or just open any URL — the captive portal will redirect you).
 3. Use the ☰ menu to switch between:
    - **Statistics & Revenue** — sessions, revenue, average duration, and a recent-cycles chart.

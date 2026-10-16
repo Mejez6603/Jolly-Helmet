@@ -1,0 +1,318 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Patch DOCX</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+</head><body style="font:12px Consolas,monospace">
+<!--
+  Puts the new text of build\web_features.src.html INTO the user's edited Word file, and writes it as a NEW file (the original is never changed):
+      patch_docx.html?in=JollyHelmet_UserManual_v4.docx&out=JollyHelmet_UserManual_v5.docx
+  Everything the user typed in Word stays: the file is opened as a zip, only new paragraphs / tables / pictures are inserted at named headings,
+  a few rows and bullets are added to existing tables and lists, and the numbering / relationships / settings parts get the small additions they need.
+  Needs the manual helper server (http://localhost:8766/m/ and POST /save/).
+-->
+<pre id="log">working...</pre>
+<script>
+const LOG = m => { document.getElementById('log').textContent += '\n' + m; };
+const Q = new URLSearchParams(location.search);
+const IN = Q.get('in') || 'JollyHelmet_UserManual_v5.docx', OUT = Q.get('out') || 'JollyHelmet_UserManual_v6.docx', SRC = Q.get('src') || 'web_features.src.html';
+const W = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main', WP = 'http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing';
+const NS = `xmlns:w="${W}" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:wp="${WP}" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"`;
+const TW = 9648, NAVY = '14325C', AMBER = 'F59E0B', EMU = 914400;
+const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+const TODAY = new Date().toLocaleDateString('sv-SE');
+
+/* ------------------------------------------------------------ index entries for the new text (hidden XE fields, shown after the index is updated) */
+let NEW_TERMS = [];   // filled from the source file: <div class="op" data-op="xe-terms">[["name", "regex"], ...]</div>
+const xeCount = {}, XE_MAX = 6;
+function xeRuns(text) {
+  let out = '';
+  for (const [name, rx] of NEW_TERMS) {
+    if ((xeCount[name] || 0) >= XE_MAX || !rx.test(text)) continue; xeCount[name] = (xeCount[name] || 0) + 1;
+    const h = ''; /* no w:vanish: Word hides XE itself, and a hidden XE is skipped by INDEX */
+    out += `<w:r>${h}<w:fldChar w:fldCharType="begin"/></w:r><w:r>${h}<w:instrText xml:space="preserve"> XE "${esc(name)}" </w:instrText></w:r><w:r>${h}<w:fldChar w:fldCharType="end"/></w:r>`;
+  }
+  return out;
+}
+
+/* ------------------------------------------------------------ xml builders (same look as the rest of the manual) */
+function rPr(o) { let x = ''; if (o.b) x += '<w:b/><w:bCs/>'; if (o.i) x += '<w:i/><w:iCs/>'; if (o.color) x += `<w:color w:val="${o.color}"/>`; if (o.sz) x += `<w:sz w:val="${o.sz}"/><w:szCs w:val="${o.sz}"/>`; if (o.shd) x += `<w:shd w:val="clear" w:color="auto" w:fill="${o.shd}"/>`; return x ? `<w:rPr>${x}</w:rPr>` : ''; }
+const T = (t, o = {}) => `<w:r>${rPr(o)}<w:t xml:space="preserve">${esc(t)}</w:t></w:r>`;
+function inline(node, st, out) {
+  for (const n of node.childNodes) {
+    if (n.nodeType === 3) { out.push({ t: n.nodeValue.replace(/\s+/g, ' '), ...st }); continue; }
+    if (n.nodeType !== 1) continue; const tag = n.tagName;
+    if (tag === 'BR') out.push({ br: true });
+    else if (tag === 'B' || tag === 'STRONG') inline(n, { ...st, b: true }, out);
+    else if (tag === 'I' || tag === 'EM') inline(n, { ...st, i: true }, out);
+    else inline(n, st, out);
+  }
+}
+function runsOf(el) {
+  const out = []; inline(el, {}, out);
+  for (let i = 0; i < out.length; i++) { const r = out[i]; if (r.t === undefined) continue; if (i === 0 || out[i - 1].br) r.t = r.t.replace(/^\s+/, ''); if (i === out.length - 1 || out[i + 1].br) r.t = r.t.replace(/\s+$/, ''); }
+  return out.filter(r => r.br || r.t !== '');
+}
+const plain = runs => runs.map(r => r.br ? ' ' : r.t).join('').trim();
+function runsXml(runs, base = {}, xe = true) {
+  const body = runs.map(r => { if (r.br) return '<w:r><w:br/></w:r>'; const o = { ...base }; if (r.b) o.b = true; if (r.i) o.i = true; return T(r.t, o); }).join('');
+  return body + (xe ? xeRuns(plain(runs)) : '');
+}
+function P(content, o = {}) {
+  let pp = '';
+  if (o.style) pp += `<w:pStyle w:val="${o.style}"/>`;
+  if (o.keepNext) pp += '<w:keepNext/>';
+  if (o.pb) pp += '<w:pageBreakBefore/>';
+  if (o.num) pp += `<w:numPr><w:ilvl w:val="0"/><w:numId w:val="${o.num}"/></w:numPr>`;
+  if (o.before !== undefined || o.after !== undefined || o.line) pp += `<w:spacing${o.before !== undefined ? ` w:before="${o.before}"` : ''}${o.after !== undefined ? ` w:after="${o.after}"` : ''}${o.line ? ` w:line="${o.line}" w:lineRule="${o.rule || 'auto'}"` : ''}/>`;
+  if (o.jc) pp += `<w:jc w:val="${o.jc}"/>`;
+  return `<w:p>${pp ? `<w:pPr>${pp}</w:pPr>` : ''}${content}</w:p>`;
+}
+const gap = (h = 100) => P('', { before: 0, after: 0, line: h, rule: 'exact' });
+function TC(w, content, o = {}) { let pr = `<w:tcW w:w="${w}" w:type="dxa"/>`; if (o.borders) pr += `<w:tcBorders>${o.borders}</w:tcBorders>`; if (o.fill) pr += `<w:shd w:val="clear" w:color="auto" w:fill="${o.fill}"/>`; if (o.mar) pr += `<w:tcMar>${o.mar}</w:tcMar>`; if (o.va) pr += `<w:vAlign w:val="${o.va}"/>`; return `<w:tc><w:tcPr>${pr}</w:tcPr>${content}</w:tc>`; }
+const MAR = (t, l, b, r) => `<w:top w:w="${t}" w:type="dxa"/><w:left w:w="${l}" w:type="dxa"/><w:bottom w:w="${b}" w:type="dxa"/><w:right w:w="${r}" w:type="dxa"/>`;
+function TR(cells, o = {}) { let pr = ''; if (o.cant !== false) pr += '<w:cantSplit/>'; if (o.header) pr += '<w:tblHeader/>'; return `<w:tr>${pr ? `<w:trPr>${pr}</w:trPr>` : ''}${cells}</w:tr>`; }
+function TBL(widths, rows, o = {}) {
+  const tw = widths.reduce((a, b) => a + b, 0), cm = o.cellMar || MAR(0, 108, 0, 108);
+  return `<w:tbl><w:tblPr><w:tblW w:w="${tw}" w:type="dxa"/><w:tblInd w:w="0" w:type="dxa"/><w:tblBorders><w:top w:val="nil"/><w:left w:val="nil"/><w:bottom w:val="nil"/><w:right w:val="nil"/><w:insideH w:val="nil"/><w:insideV w:val="nil"/></w:tblBorders><w:tblLayout w:type="fixed"/><w:tblCellMar>${cm}</w:tblCellMar><w:tblLook w:val="0000" w:firstRow="0" w:lastRow="0" w:firstColumn="0" w:lastColumn="0" w:noHBand="1" w:noVBand="1"/></w:tblPr><w:tblGrid>${widths.map(w => `<w:gridCol w:w="${w}"/>`).join('')}</w:tblGrid>${rows}</w:tbl>`;
+}
+function callout(kind, runs) {
+  const tip = kind === 'tip', col = tip ? AMBER : 'B3261E', fill = tip ? 'FFF4D1' : 'FDE8E6';
+  const b = `<w:top w:val="nil"/><w:left w:val="single" w:sz="36" w:space="0" w:color="${col}"/><w:bottom w:val="nil"/><w:right w:val="nil"/>`;
+  return gap(60) + TBL([TW], TR(TC(TW, P(runsXml(runs), { style: 'Callout' }), { fill, borders: b, mar: MAR(100, 170, 100, 170), va: 'center' }))) + gap(120);
+}
+function parseTable(el) { const rows = [...el.querySelectorAll('tr')]; const head = [], body = []; rows.forEach(tr => { const cells = [...tr.children].map(runsOf); if (tr.querySelector('th')) head.push(cells); else body.push(cells); }); return { head: head[0] || null, rows: body }; }
+function dataTable(el) {
+  const t = parseTable(el), n = (t.head || t.rows[0]).length, ws = (el.getAttribute('data-w') || '').split(',').map(Number);
+  let widths; if (ws.length === n) { const s = ws.reduce((a, b) => a + b, 0); widths = ws.map(w => Math.floor(TW * w / s)); widths[n - 1] += TW - widths.reduce((a, b) => a + b, 0); } else { const a = Math.round(TW / n); widths = Array.from({ length: n }, (_, i) => i === n - 1 ? TW - a * (n - 1) : a); }
+  let rows = '';
+  if (t.head) rows += TR(t.head.map((c, i) => TC(widths[i], P(runsXml(c, {}, false), { style: 'TableHead' }), { fill: NAVY, va: 'center' })).join(''), { header: true });
+  t.rows.forEach((r, ri) => {
+    const bd = `<w:top w:val="nil"/><w:left w:val="nil"/><w:bottom w:val="single" w:sz="4" w:space="0" w:color="C9D1E0"/><w:right w:val="nil"/>`;
+    rows += TR(r.map((c, i) => TC(widths[i], P(runsXml(c), { style: 'TableText' }), { fill: ri % 2 ? 'FFF8E1' : 'FFFFFF', borders: bd })).join(''));
+  });
+  return gap(40) + TBL(widths, rows, { cellMar: MAR(60, 120, 60, 120) }) + gap(120);
+}
+
+/* ------------------------------------------------------------ pictures, numbered lists */
+let zip, docDom, body, relsXml, numberingXml, nextRid = 300, docPrId = 0, nextNum = 0, nextAbs = 0;
+const newMedia = {}, newRels = [], newAbs = [], newNums = [];
+function pngSize(b) { const dv = new DataView(b.buffer, b.byteOffset); return { w: dv.getUint32(16), h: dv.getUint32(20) }; }
+async function figure(el) {
+  const im = el.querySelector('img'), cap = el.querySelector('figcaption'), capText = cap ? plain(runsOf(cap)) : '';
+  const src = im.getAttribute('src'), r = await fetch('/m/' + src + '?x=' + Date.now()); if (!r.ok) throw new Error('missing picture ' + src);
+  const b = new Uint8Array(await r.arrayBuffer()), sz = pngSize(b), name = 'web_' + src.split('/').pop();
+  newMedia[name] = b;
+  const rid = 'rId' + (nextRid++); newRels.push(`<Relationship Id="${rid}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/${name}"/>`);
+  let w = Number(el.getAttribute('data-w')) || 6.0, h = w * sz.h / sz.w; const maxH = 7.2; if (h > maxH) { h = maxH; w = h * sz.w / sz.h; }
+  const cx = Math.round(w * EMU), cy = Math.round(h * EMU), id = ++docPrId, alt = esc(im.getAttribute('alt') || capText);
+  const pic = `<w:r><w:rPr><w:noProof/></w:rPr><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="${cx}" cy="${cy}"/><wp:effectExtent l="0" t="0" r="0" b="0"/><wp:docPr id="${id}" name="Picture ${id}" descr="${alt}"/><wp:cNvGraphicFramePr><a:graphicFrameLocks noChangeAspect="1"/></wp:cNvGraphicFramePr><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic><pic:nvPicPr><pic:cNvPr id="${id}" name="${esc(name)}" descr="${alt}"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="${rid}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom><a:ln w="9525"><a:solidFill><a:srgbClr val="D6DBE6"/></a:solidFill></a:ln></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r>`;
+  return P(pic, { jc: 'center', before: 80, after: 0, keepNext: true }) + (capText ? P(T(capText), { style: 'Caption' }) : gap(100));
+}
+function orderedList(items) {
+  const numId = nextNum++, absId = nextAbs++;
+  newAbs.push(`<w:abstractNum w:abstractNumId="${absId}"><w:nsid w:val="${(0x5A1C0000 + absId).toString(16).toUpperCase().padStart(8, '0')}"/><w:multiLevelType w:val="singleLevel"/><w:lvl w:ilvl="0"><w:start w:val="1"/><w:numFmt w:val="decimal"/><w:lvlText w:val="%1."/><w:lvlJc w:val="left"/><w:pPr><w:ind w:left="420" w:hanging="340"/></w:pPr><w:rPr><w:b/><w:color w:val="F59E0B"/></w:rPr></w:lvl></w:abstractNum>`);
+  newNums.push(`<w:num w:numId="${numId}"><w:abstractNumId w:val="${absId}"/></w:num>`);
+  return items.map(it => P(runsXml(it), { style: 'ManualList', num: numId })).join('');
+}
+async function blocksXml(container) {
+  let x = '';
+  for (const el of container.children) {
+    const tag = el.tagName, cls = el.classList;
+    if (tag === 'H1') x += P(T(plain(runsOf(el))), { style: 'Heading1', pb: el.hasAttribute('data-pb') });
+    else if (tag === 'H2') x += P(T(plain(runsOf(el))), { style: 'Heading2', pb: el.hasAttribute('data-pb') });
+    else if (tag === 'H3') x += P(T(plain(runsOf(el))), { style: 'Heading3', pb: el.hasAttribute('data-pb') });
+    else if (tag === 'H4') x += P(T(plain(runsOf(el))), { style: 'Heading4' });
+    else if (tag === 'P') x += P(runsXml(runsOf(el)));
+    else if (tag === 'UL') x += [...el.children].map(li => P(runsXml(runsOf(li)), { style: 'ManualList', num: 1 })).join('');
+    else if (tag === 'OL') x += orderedList([...el.children].map(runsOf));
+    else if (cls.contains('tip')) x += callout('tip', runsOf(el));
+    else if (cls.contains('warn')) x += callout('warn', runsOf(el));
+    else if (tag === 'TABLE') x += dataTable(el);
+    else if (tag === 'FIGURE') x += await figure(el);
+    else LOG('WARN unhandled <' + tag + '>');
+  }
+  return x;
+}
+
+/* ------------------------------------------------------------ finding things in the user's document */
+const kids = () => [...body.children];
+const pText = n => [...n.getElementsByTagNameNS(W, 't')].map(t => t.textContent).join('');
+const pStyle = n => { const s = n.getElementsByTagNameNS(W, 'pStyle')[0]; return s ? s.getAttributeNS(W, 'val') : ''; };
+function findPara(style, text, startAfter) {
+  const list = kids(); let i0 = startAfter ? list.indexOf(startAfter) + 1 : 0;
+  for (let i = i0; i < list.length; i++) { const n = list[i]; if (n.localName === 'p' && (!style || pStyle(n) === style) && pText(n).trim() === text) return n; }
+  return null;
+}
+function findParaStarts(text) { return kids().find(n => n.localName === 'p' && pText(n).trim().startsWith(text)) || null; }
+function findAny(text) { return [...body.getElementsByTagNameNS(W, 'p')].find(p => pText(p).trim().startsWith(text)) || null; }   // also inside tables
+async function svgToPng(svgText) {                      // an <svg> drawing -> PNG bytes at 2x on a white ground
+  const vb = /viewBox="0 0 (\d+) (\d+)"/.exec(svgText), W2 = +vb[1] * 2, H2 = +vb[2] * 2;
+  let s = svgText.replace(/<svg([^>]*?)>/, (m, a) => '<svg' + a.replace(/\s(width|height)="[^"]*"/g, '') + ` width="${W2}" height="${H2}">`);
+  if (!/<svg[^>]*xmlns=/.test(s)) s = s.replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg"');
+  const img = new Image(); await new Promise((res, rej) => { img.onload = res; img.onerror = () => rej(new Error('svg render failed')); img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(s); });
+  const c = document.createElement('canvas'); c.width = W2; c.height = H2; const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, W2, H2); g.drawImage(img, 0, 0, W2, H2);
+  const blob = await new Promise(r => c.toBlob(r, 'image/png')); return { bytes: new Uint8Array(await blob.arrayBuffer()), w: W2, h: H2 };
+}
+function tableAfter(node) { let n = node.nextElementSibling; while (n && n.localName !== 'tbl') n = n.nextElementSibling; return n; }
+function frag(xml) { const d = new DOMParser().parseFromString(`<root ${NS}>${xml}</root>`, 'application/xml'); const err = d.querySelector('parsererror'); if (err) throw new Error('fragment xml error: ' + err.textContent.slice(0, 300)); return [...d.documentElement.children].map(c => docDom.importNode(c, true)); }
+function setCellText(tc, text, bold) {
+  const p = tc.getElementsByTagNameNS(W, 'p')[0];
+  [...p.childNodes].forEach(c => { if (c.localName !== 'pPr') p.removeChild(c); });
+  if (text !== '') p.appendChild(frag(T(text, bold ? { b: true } : {}))[0]);
+}
+const rowText = tr => pText(tr).trim();
+const shade = (tr, fill) => [...tr.getElementsByTagNameNS(W, 'shd')].forEach(s => s.setAttributeNS(W, 'w:fill', fill));
+function reband(tbl) { [...tbl.children].filter(c => c.localName === 'tr').slice(1).forEach((tr, i) => shade(tr, i % 2 ? 'FFF8E1' : 'FFFFFF')); }
+function cellsOfTable(el) { return [...el.querySelectorAll('tr')].map(tr => [...tr.children].map(td => plain(runsOf(td)))); }
+
+/* ------------------------------------------------------------ main */
+(async () => {
+  try {
+    const buf = await (await fetch('/m/' + IN + '?x=' + Date.now())).arrayBuffer();
+    zip = await JSZip.loadAsync(buf);
+    const docText = await zip.file('word/document.xml').async('string');
+    docDom = new DOMParser().parseFromString(docText, 'application/xml');
+    if (docDom.querySelector('parsererror')) throw new Error('the input document.xml does not parse');
+    body = docDom.getElementsByTagNameNS(W, 'body')[0];
+    relsXml = await zip.file('word/_rels/document.xml.rels').async('string');
+    numberingXml = await zip.file('word/numbering.xml').async('string');
+    docPrId = Math.max(0, ...[...docDom.getElementsByTagNameNS(WP, 'docPr')].map(e => +e.getAttribute('id') || 0));
+    nextNum = Math.max(...[...numberingXml.matchAll(/<w:num w:numId="(\d+)"/g)].map(m => +m[1])) + 1;
+    nextAbs = Math.max(...[...numberingXml.matchAll(/<w:abstractNum w:abstractNumId="(\d+)"/g)].map(m => +m[1])) + 1;
+    LOG(`input: ${kids().length} blocks, next numId ${nextNum}, next docPr ${docPrId + 1}`);
+
+    nextRid = Math.max(100, ...[...relsXml.matchAll(/Id="rId(\d+)"/g)].map(m => +m[1])) + 1;
+    const src = (await (await fetch('/m/build/' + SRC + '?x=' + Date.now())).text()).replace(/@@TODAY@@/g, TODAY);
+    const sd = new DOMParser().parseFromString(src, 'text/html');
+    const xt = sd.querySelector('div.op[data-op="xe-terms"]'); if (xt) NEW_TERMS = JSON.parse(xt.textContent).map(([n, r]) => [n, new RegExp(r, 'i')]);
+
+    // 1. inserted blocks
+    for (const ins of sd.querySelectorAll('div.ins')) {
+      const [style, text] = ins.dataset.anchor.split(/:(.+)/);
+      let anchor = findPara(style, text);
+      if (style === 'Heading2' && text === 'Maintenance') anchor = findPara(style, text, findPara('Heading2', 'Online monitoring'));   // the technician chapter, not "Maintenance mode"
+      if (!anchor) throw new Error('anchor not found: ' + ins.dataset.anchor);
+      const nodes = frag(await blocksXml(ins));
+      nodes.forEach(n => body.insertBefore(n, anchor));
+      LOG(`inserted ${nodes.length} blocks before "${text}"`);
+    }
+    // 2. small edits
+    for (const op of sd.querySelectorAll('div.op')) {
+      const kind = op.dataset.op;
+      if (kind === 'glossary') {
+        const h = findPara('Heading2', 'Glossary'), tbl = tableAfter(h), trs = () => [...tbl.children].filter(c => c.localName === 'tr');
+        const proto = trs()[1];
+        for (const [term, meaning] of cellsOfTable(op)) {
+          const row = proto.cloneNode(true), tcs = row.getElementsByTagNameNS(W, 'tc');
+          setCellText(tcs[0], term, true); setCellText(tcs[1], meaning, false);
+          const after = trs().slice(1).find(r => rowText(r.getElementsByTagNameNS(W, 'tc')[0]).localeCompare(term, 'en', { sensitivity: 'base' }) > 0);
+          if (after) tbl.insertBefore(row, after); else tbl.appendChild(row);
+        }
+        reband(tbl); LOG('glossary: ' + (trs().length - 1) + ' terms');
+      } else if (kind === 'settings-rows') {
+        const h = findPara('Heading3', 'LocalServer and Online Server'), tbl = tableAfter(h), trs = [...tbl.children].filter(c => c.localName === 'tr');
+        for (const cells of cellsOfTable(op)) {
+          const row = trs[trs.length - 1].cloneNode(true), tcs = row.getElementsByTagNameNS(W, 'tc');
+          cells.forEach((c, i) => setCellText(tcs[i], c, i === 0));
+          tbl.appendChild(row); trs.push(row);
+        }
+        reband(tbl); LOG('settings table: now ' + (trs.length - 1) + ' rows');
+      } else if (kind === 'rev-row') {
+        const h = findPara('Heading3', 'Revision history'), tbl = tableAfter(h), trs = [...tbl.children].filter(c => c.localName === 'tr');
+        const row = trs[trs.length - 1].cloneNode(true), tcs = row.getElementsByTagNameNS(W, 'tc'), cells = cellsOfTable(op)[0];
+        cells.forEach((c, i) => setCellText(tcs[i], c, false));
+        tbl.appendChild(row); reband(tbl); LOG('revision row added');
+        // the version line
+        const vp = [...body.getElementsByTagNameNS(W, 'p')].find(p => /revision \d+, \d{4}-\d{2}-\d{2}/.test(pText(p)));
+        if (vp) { const t = pText(vp).replace(/revision \d+, \d{4}-\d{2}-\d{2}/, `revision ${cells[0]}, ${cells[1]}`); const tc = vp.parentNode; setCellText(tc, t, false); LOG('version line: ' + t); }
+        const tcell = [...body.getElementsByTagNameNS(W, 'p')].find(p => /Reference section: safety and emergencies/.test(pText(p)));
+      } else if (kind === 'bullet-after' || kind === 'bullet-before') {
+        const key = op.dataset.after || op.dataset.before, p = findParaStarts(key); if (!p) throw new Error('bullet anchor not found: ' + key);
+        const items = [...op.querySelectorAll('li')];
+        if (kind === 'bullet-after') items.reverse();
+        for (const li of items) {
+          const np = p.cloneNode(true); [...np.childNodes].forEach(c => { if (c.localName !== 'pPr') np.removeChild(c); }); frag(runsXml(runsOf(li))).forEach(r => np.appendChild(r));
+          if (kind === 'bullet-after') p.parentNode.insertBefore(np, p.nextSibling); else p.parentNode.insertBefore(np, p);
+        }
+        LOG(kind + ' "' + key + '"');
+      } else if (kind === 'replace-para') {                       // the whole text of a paragraph (anywhere, also inside a table) is replaced; its style stays
+        const p = findAny(op.dataset.startswith); if (!p) throw new Error('paragraph not found: ' + op.dataset.startswith);
+        [...p.childNodes].forEach(c => { if (c.localName !== 'pPr') p.removeChild(c); });
+        frag(runsXml(runsOf(op.querySelector('p')))).forEach(r => p.appendChild(r));
+        LOG('replaced "' + op.dataset.startswith + '"');
+      } else if (kind === 'append-para') {                        // adds text at the end of a paragraph
+        const p = findAny(op.dataset.startswith); if (!p) throw new Error('paragraph not found: ' + op.dataset.startswith);
+        frag(T(' ')).forEach(r => p.appendChild(r));
+        frag(runsXml(runsOf(op.querySelector('p')))).forEach(r => p.appendChild(r));
+        LOG('appended to "' + op.dataset.startswith + '"');
+      } else if (kind === 'rows-append') {                        // rows are added to the end of the first table after a heading
+        const [style, text] = op.dataset.after.split(/:(.+)/), h = findPara(style, text); if (!h) throw new Error('table heading not found: ' + op.dataset.after);
+        const tbl = tableAfter(h), trs = [...tbl.children].filter(c => c.localName === 'tr'), bold = op.dataset.bold !== 'no';
+        for (const cells of cellsOfTable(op)) {
+          const row = trs[trs.length - 1].cloneNode(true), tcs = row.getElementsByTagNameNS(W, 'tc');
+          cells.forEach((c, i) => setCellText(tcs[i], c, bold && i === 0));
+          tbl.appendChild(row); trs.push(row);
+        }
+        reband(tbl); LOG('rows added to the table after "' + text + '": now ' + (trs.length - 1));
+      } else if (kind === 'replace-image') {                      // the picture after a heading is replaced by a new rendering of a drawing (same width, new height)
+        const [style, text] = op.dataset.after.split(/:(.+)/), h = findPara(style, text); if (!h) throw new Error('picture heading not found: ' + op.dataset.after);
+        const A = 'http://schemas.openxmlformats.org/drawingml/2006/main', R = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
+        let n = h.nextElementSibling; while (n && !n.getElementsByTagNameNS(A, 'blip').length) n = n.nextElementSibling;
+        if (!n) throw new Error('no picture after ' + text);
+        const rid = n.getElementsByTagNameNS(A, 'blip')[0].getAttributeNS(R, 'embed');
+        const rd = new DOMParser().parseFromString(relsXml, 'application/xml'), rel = [...rd.getElementsByTagName('Relationship')].find(r => r.getAttribute('Id') === rid);
+        const mediaPath = 'word/' + rel.getAttribute('Target');
+        const figs = await (await fetch('/m/build/' + op.dataset.figs + '?x=' + Date.now())).text();
+        const m = new RegExp('<div class="f" id="fig-' + op.dataset.fig + '">\\s*(<svg[\\s\\S]*?</svg>)').exec(figs); if (!m) throw new Error('figure not found: ' + op.dataset.fig);
+        const png = await svgToPng(m[1]);
+        zip.file(mediaPath, png.bytes);
+        const ext = n.getElementsByTagNameNS(WP, 'extent')[0], cx0 = +ext.getAttribute('cx'); let cx = cx0, cy = Math.round(cx * png.h / png.w);
+        const maxCy = Math.round(7.0 * EMU); if (cy > maxCy) { cy = maxCy; cx = Math.round(cy * png.w / png.h); }
+        ext.setAttribute('cx', cx); ext.setAttribute('cy', cy);
+        for (const e of n.getElementsByTagNameNS(A, 'ext')) { e.setAttribute('cx', cx); e.setAttribute('cy', cy); }
+        LOG(`picture after "${text}" replaced (${mediaPath}, ${(cx / EMU).toFixed(2)} x ${(cy / EMU).toFixed(2)} in)`);
+      } else if (kind === 'replace-png') {                        // (v9) the first picture after a heading gets the bytes of a PNG file (same width, height from the new picture's shape)
+        const [style, text] = op.dataset.after.split(/:(.+)/), h = findPara(style, text); if (!h) throw new Error('picture heading not found: ' + op.dataset.after);
+        const A = 'http://schemas.openxmlformats.org/drawingml/2006/main', R = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
+        let n = h.nextElementSibling; while (n && !n.getElementsByTagNameNS(A, 'blip').length) n = n.nextElementSibling;
+        if (!n) throw new Error('no picture after ' + text);
+        const rid = n.getElementsByTagNameNS(A, 'blip')[0].getAttributeNS(R, 'embed');
+        const rd = new DOMParser().parseFromString(relsXml, 'application/xml'), rel = [...rd.getElementsByTagName('Relationship')].find(r => r.getAttribute('Id') === rid);
+        const mediaPath = 'word/' + rel.getAttribute('Target');
+        const rr = await fetch('/m/' + op.dataset.src + '?x=' + Date.now()); if (!rr.ok) throw new Error('missing picture ' + op.dataset.src);
+        const pb = new Uint8Array(await rr.arrayBuffer()), psz = pngSize(pb);
+        zip.file(mediaPath, pb);
+        const ext = n.getElementsByTagNameNS(WP, 'extent')[0], cx0 = +ext.getAttribute('cx'); let cx = op.dataset.w ? Math.round(+op.dataset.w * EMU) : cx0, cy = Math.round(cx * psz.h / psz.w);
+        const maxCy = Math.round(7.0 * EMU); if (cy > maxCy) { cy = maxCy; cx = Math.round(cy * psz.w / psz.h); }
+        ext.setAttribute('cx', cx); ext.setAttribute('cy', cy);
+        for (const e of n.getElementsByTagNameNS(A, 'ext')) { e.setAttribute('cx', cx); e.setAttribute('cy', cy); }
+        LOG(`png after "${text}" replaced (${mediaPath} <- ${op.dataset.src}, ${psz.w}x${psz.h}, ${(cx / EMU).toFixed(2)} x ${(cy / EMU).toFixed(2)} in)`);
+      } else if (kind === 'cell-set') {                           // (v9) one cell of the first table after a heading: the row is found by the text of its first cell
+        const [style, text] = op.dataset.after.split(/:(.+)/), h = findPara(style, text); if (!h) throw new Error('table heading not found: ' + op.dataset.after);
+        const tbl = tableAfter(h), trs = [...tbl.children].filter(c => c.localName === 'tr');
+        const row = trs.find(tr => rowText(tr.getElementsByTagNameNS(W, 'tc')[0]) === op.dataset.row); if (!row) throw new Error('table row not found: ' + op.dataset.row);
+        setCellText(row.getElementsByTagNameNS(W, 'tc')[+op.dataset.col], op.textContent.trim(), op.dataset.bold === 'yes');
+        LOG('cell set: ' + op.dataset.row + ' [' + op.dataset.col + '] = ' + op.textContent.trim());
+      }
+    }
+
+    // 3. package
+    const serial = new XMLSerializer().serializeToString(docDom);
+    const outXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\r\n' + serial.replace(/^<\?xml[^>]*\?>\s*/, '');
+    const check = new DOMParser().parseFromString(outXml, 'application/xml'); if (check.querySelector('parsererror')) throw new Error('output document.xml does not parse: ' + check.querySelector('parsererror').textContent.slice(0, 300));
+    zip.file('word/document.xml', outXml);
+    if (newAbs.length) {
+      let n = numberingXml; const i = n.indexOf('<w:num '); n = n.slice(0, i) + newAbs.join('') + n.slice(i); n = n.replace('</w:numbering>', newNums.join('') + '</w:numbering>');
+      zip.file('word/numbering.xml', n);
+    }
+    zip.file('word/_rels/document.xml.rels', relsXml.replace('</Relationships>', newRels.join('') + '</Relationships>'));
+    for (const [name, bytes] of Object.entries(newMedia)) zip.file('word/media/' + name, bytes);
+    let st = await zip.file('word/settings.xml').async('string');
+    if (!/w:updateFields/.test(st)) { st = st.replace(/<w:footnotePr>/, '<w:updateFields w:val="true"/><w:footnotePr>'); zip.file('word/settings.xml', st); }   // Word asks to update the contents and the index on opening
+    const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } });
+    const res = await fetch('/save/' + OUT, { method: 'POST', body: blob });
+    LOG(`media: ${Object.keys(newMedia).length}, new numbered lists: ${newNums.length}, XE added: ${Object.values(xeCount).reduce((a, b) => a + b, 0)}`);
+    LOG(`docx: ${blob.size} bytes -> ${await res.text()}`);
+    LOG('DONE');
+  } catch (e) { LOG('FAILED: ' + e.message + '\n' + e.stack); }
+})();
+</script></body></html>

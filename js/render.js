@@ -100,6 +100,21 @@ function renderStats() {
     let k = tile(nz(T.ss, 0).toLocaleString(), 'Customers served') + tile(money(nz(T.rv, 0)), 'Revenue') + tile(nz(T.cn, 0).toLocaleString(), 'Coins counted') + tile(mmss(nz(T.ad, 0)), 'Average session');
     const dy = T.dy;
     if (Array.isArray(dy) && dy.length) { const td = dy[dy.length - 1]; k += tile(money(nz(td[0], 0) * cv), "Today's revenue") + tile(nz(td[1], 0).toLocaleString(), "Today's customers"); }
+    // restated old data (the spare ESP32_RESTATE board's Update button): shown NEXT TO what was really collected, never instead of it
+    const R = T.rs;
+    if (Array.isArray(R) && R.length >= 7) {
+      const cvOld = nz(R[6], 100) / 100, down = R[5] < 0, newCn = down ? 0 : nz(R[5], 0);
+      const collRev = nz(R[3], 0) * cvOld + newCn * cv, restRev = nz(R[4], 0) * cvOld + newCn * cv;
+      const when = R[1] ? new Date(R[1] * 1000).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : 'an unknown date';
+      if (R[7] === 1) {                                  // mode 1: the figures above ARE the corrected ones; only say so (and what they were)
+        const dt = R[1] ? new Date(R[1] * 1000).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : 'an unknown date';
+        k += `<div class="card empty" style="grid-column:1/-1;text-align:left">Statistics corrected (data up to ${esc(dt)}): the old price list charged more coins per minute than the new one, so the coins counted before then were restated at the new price list (${nz(R[3], 0).toLocaleString()} coins / ${money(nz(R[3], 0) * cvOld)} counted, restated to ${nz(R[4], 0).toLocaleString()} coins). The original figures are archived. Update #${R[0]}.</div>`;
+      } else {
+      k += tile(money(restRev), `Revenue restated at the new price list<small>collected: ${money(collRev)}</small>`)
+        + tile((nz(R[4], 0) + newCn).toLocaleString(), `Coins restated<small>collected: ${(nz(R[3], 0) + newCn).toLocaleString()}</small>`);
+      k += `<div class="card empty" style="grid-column:1/-1;text-align:left">Restated figures (update #${R[0]}): the old data up to ${esc(when)} (${nz(R[2], 0).toLocaleString()} customers, ${nz(R[3], 0).toLocaleString()} coins collected) is restated to ${nz(R[4], 0).toLocaleString()} coins at the new price list; everything sold after that is as collected. The coins really collected are never changed.${down ? ' <b>The LocalServer\'s statistics were reset after the capture, so the figures since then are not counted.</b>' : ''}</div>`;
+      }
+    }
     $('kpis').innerHTML = k;
   }
   // last finished sessions

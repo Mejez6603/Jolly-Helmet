@@ -7,6 +7,7 @@
 //  See ONLINE_WEB/DATA_CONTRACT.md for the JSON this builds.
 // =====================================================================
 #include "Shared_Common.h"
+#include "Restate_Common.h"
 
 static portMUX_TYPE snapMux = portMUX_INITIALIZER_UNLOCKED;
 #define SNAP_FRESH_MS 8000          // a board counts as "heard" if its last packet is younger than this (they all repeat every second or so)
@@ -14,6 +15,7 @@ static portMUX_TYPE snapMux = portMUX_INITIALIZER_UNLOCKED;
 struct SnapTerm { bool seen; uint32_t ms; uint32_t pulses; };
 struct SnapBox13 {                  // Box 1 (S3A, A1, A2, A3) or Box 3 (S3B, B1, B2, B3)
     bool s3Seen; uint32_t s3Ms; uint8_t s3State; uint32_t s3Timer;
+    uint32_t sessSeq; uint16_t sessDur, sessCoins;      // the brain's "completed sessions" counter and the last session (BoxStatusPacket)
     A2SensorPacket a2; bool a2Seen; uint32_t a2Ms;
     bool a3Seen; uint32_t a3Ms; uint16_t a3Mask;
     SnapTerm t;
@@ -21,6 +23,7 @@ struct SnapBox13 {                  // Box 1 (S3A, A1, A2, A3) or Box 3 (S3B, B1
 };
 struct SnapBox2 {                   // Box 2 (S3C, C1, C2)
     bool s3Seen; uint32_t s3Ms; uint8_t s3State; uint32_t s3Timer;
+    uint32_t sessSeq; uint16_t sessDur, sessCoins;
     TelemetryPacket c2; bool c2Seen; uint32_t c2Ms;
     SnapTerm t;
 };
@@ -32,6 +35,10 @@ static SnapBox2  snapC;
 static SnapAcs   snapA[2];          // [0] = ACS 1, [1] = ACS 2
 static SnapStats snapS;
 static uint32_t  snapPackets = 0;   // every packet of a known kind (diagnostic)
+// Restated old data from the spare ESP32_RESTATE board (its Update button). Kept in flash by loop() (snapRsDirty), so the board can be unplugged.
+static RestatePacket    snapRs;
+static bool             snapRsHave = false;
+static volatile bool    snapRsDirty = false;
 
 static void snapTerm(SnapTerm& t, const TelemetryPacket& p, uint32_t now) { t.seen = true; t.ms = now; t.pulses = p.pulseCount; }
 static bool snapFresh(bool seen, uint32_t ms, uint32_t now) { return seen && (now - ms) < SNAP_FRESH_MS; }
@@ -56,9 +63,12 @@ void onlineOnPacket(const uint8_t* d, int len) {
         BoxStatusPacket b;
         memcpy(&b, d, sizeof(b));
         portENTER_CRITICAL(&snapMux);
-        if (b.deviceID == DEVICE_S3A)      { snapB[0].s3Seen = true; snapB[0].s3Ms = now; snapB[0].s3State = b.machineState; snapB[0].s3Timer = b.activeTimer; }
-        else if (b.deviceID == DEVICE_S3B) { snapB[1].s3Seen = true; snapB[1].s3Ms = now; snapB[1].s3State = b.machineState; snapB[1].s3Timer = b.activeTimer; }
-        else if (b.deviceID == DEVICE_S3C) { snapC.s3Seen = true;    snapC.s3Ms = now;    snapC.s3State = b.machineState;    snapC.s3Timer = b.activeTimer; }
+        if (b.deviceID == DEVICE_S3A)      { snapB[0].s3Seen = true; snapB[0].s3Ms = now; snapB[0].s3State = b.machineState; snapB[0].s3Timer = b.activeTimer;
+                                             snapB[0].sessSeq = b.completedSessionSeq; snapB[0].sessDur = b.lastSessionDurationSec; snapB[0].sessCoins = b.lastSessionCoins; }
+        else if (b.deviceID == DEVICE_S3B) { snapB[1].s3Seen = true; snapB[1].s3Ms = now; snapB[1].s3State = b.machineState; snapB[1].s3Timer = b.activeTimer;
+                                             snapB[1].sessSeq = b.completedSessionSeq; snapB[1].sessDur = b.lastSessionDurationSec; snapB[1].sessCoins = b.lastSessionCoins; }
+        else if (b.deviceID == DEVICE_S3C) { snapC.s3Seen = true;    snapC.s3Ms = now;    snapC.s3State = b.machineState;    snapC.s3Timer = b.activeTimer;
+                                             snapC.sessSeq = b.completedSessionSeq;    snapC.sessDur = b.lastSessionDurationSec;    snapC.sessCoins = b.lastSessionCoins; }
         portEXIT_CRITICAL(&snapMux);
     } else if (len == (int)sizeof(A2SensorPacket)) {
         A2SensorPacket p;
@@ -100,6 +110,17 @@ void onlineOnPacket(const uint8_t* d, int len) {
         portENTER_CRITICAL(&snapMux);
         snapS.p = p; snapS.seen = true; snapS.ms = now;
         portEXIT_CRITICAL(&snapMux);
+    } else if (len == (int)sizeof(RestatePacket)) {                 // the Update button of the spare ESP32_RESTATE board
+        RestatePacket p;
+        memcpy(&p, d, sizeof(p));
+        if (p.deviceID != DEVICE_SERVER || p.magic != RESTATE_MAGIC) return;
+        portENTER_CRITICAL(&snapMux);
+        if (p.active != 1) {                                        // withdrawn
+            if (snapRsHave) { snapRsHave = false; memset(&snapRs, 0, sizeof(snapRs)); snapRsDirty = true; }
+        } else if (!snapRsHave || p.rev != snapRs.rev) {            // new (it is repeated every 10 s)
+            snapRs = p; snapRsHave = true; snapRsDirty = true;
+        }
+        portEXIT_CRITICAL(&snapMux);
     } else {
         return;
     }
@@ -112,12 +133,14 @@ void onlineOnPacket(const uint8_t* d, int len) {
 struct SnapAll {
     uint32_t now;
     SnapBox13 b[2]; SnapBox2 c; SnapAcs a[2]; SnapStats s;
+    RestatePacket rs; bool rsHave;  // the restated old data, if the spare board published it
     bool on[13];                    // A1, A2, A3, S3A, C1, C2, S3C, B1, B2, B3, S3B, ACS 1, ACS 2 (the Control Center Home order)
 };
 static void snapTake(SnapAll& s) {
     portENTER_CRITICAL(&snapMux);
     s.now = millis();
     memcpy(s.b, snapB, sizeof(snapB)); memcpy(&s.c, &snapC, sizeof(snapC)); memcpy(s.a, snapA, sizeof(snapA)); memcpy(&s.s, &snapS, sizeof(snapS));
+    memcpy(&s.rs, &snapRs, sizeof(snapRs)); s.rsHave = snapRsHave;
     portEXIT_CRITICAL(&snapMux);
     uint32_t n = s.now;
     s.on[0]  = snapFresh(s.b[0].t.seen, s.b[0].t.ms, n);  s.on[1]  = snapFresh(s.b[0].a2Seen, s.b[0].a2Ms, n);  s.on[2]  = snapFresh(s.b[0].a3Seen, s.b[0].a3Ms, n);
@@ -250,5 +273,22 @@ static size_t liveJson(const SnapAll& s, char* out, size_t cap, uint32_t seq, ui
         else               jadd(out, cap, len, "[0,0,0,0,0,0,0,0,0]");
     }
     jadd(out, cap, len, "]");
+    return len;
+}
+
+// ---------------------------------------------------------------------
+// The PUBLIC status (2026-10-10): a tiny JSON for a SECOND Blynk device whose token may be printed on a public customer page (status.html).
+// It carries only what a customer may see: for each box its step number, the seconds left and whether its brain is heard. Nothing else.
+//   {"seq":N,"ts":T,"iv":60,"b":[[step,secondsLeft,heard,sessions],[...],[...]]}      order: Box 1, Box 2, Box 3 (step numbers as in js/names.js)
+// "sessions" (added 2026-10-14) is the brain's completed-sessions counter: it goes up by one when a customer's cycle ends (finished or aborted). The
+// customer page ties an optional customer name to the counter it saw, so the name disappears the moment the cycle ends. 0 when the brain is not heard
+// (and back at 0 after the brain restarts). Older pages ignore the 4th number.
+// ---------------------------------------------------------------------
+static size_t publicJson(const SnapAll& s, char* out, size_t cap, uint32_t seq, uint32_t ts, uint32_t ivSec) {
+    size_t len = 0;
+    jadd(out, cap, len, "{\"seq\":%lu,\"ts\":%lu,\"iv\":%lu,\"b\":[", (unsigned long)seq, (unsigned long)ts, (unsigned long)ivSec);
+    jadd(out, cap, len, "[%u,%lu,%d,%lu],", s.on[3] ? (unsigned)s.b[0].s3State : 0u, s.on[3] ? (unsigned long)s.b[0].s3Timer : 0ul, s.on[3] ? 1 : 0, s.on[3] ? (unsigned long)s.b[0].sessSeq : 0ul);
+    jadd(out, cap, len, "[%u,%lu,%d,%lu],", s.on[6] ? (unsigned)s.c.s3State : 0u,    s.on[6] ? (unsigned long)s.c.s3Timer : 0ul,    s.on[6] ? 1 : 0, s.on[6] ? (unsigned long)s.c.sessSeq : 0ul);
+    jadd(out, cap, len, "[%u,%lu,%d,%lu]]}", s.on[10] ? (unsigned)s.b[1].s3State : 0u, s.on[10] ? (unsigned long)s.b[1].s3Timer : 0ul, s.on[10] ? 1 : 0, s.on[10] ? (unsigned long)s.b[1].sessSeq : 0ul);
     return len;
 }

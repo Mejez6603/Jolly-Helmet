@@ -7,12 +7,15 @@
 // =====================================================================
 // NODE C1 - BOX 2 (HEATER) TERMINAL. REBUILT 2026-10-03 from the finished Box 1 terminal (ESP32_A1.ino): same code, same pins, same
 // widgets (NR2 rating grid, NP numpad, PBAR progress bar, {STATUS} lines, {MINUTE}/{SECOND}/{TRY}/{MAXCOINS} tokens, coin diagnostics),
-// talking to S3C instead of S3A. Only the three hardware facts of THIS unit differ from A1: its device ID, its TFT is mounted upside down
-// (rotation 3) and its touch calibration. The previous C1 (before the widgets existed) is archived as ESP32_C1_LEGACY_pre_widgets.ino.txt.
+// talking to S3C instead of S3A. Only the hardware facts of THIS unit differ from A1: its device ID, its TFT is mounted upside down
+// (rotation 3), its touch calibration, and (since 2026-10-16) its coin pin (GPIO 32, see below). The previous C1 (before the widgets existed) is archived as ESP32_C1_LEGACY_pre_widgets.ino.txt.
 // =====================================================================
 
 // Hardware Pin Mappings
-#define PIN_COIN_SIGNAL 23
+// COIN SIGNAL MOVED 2026-10-16 from GPIO 23 to GPIO 32 (this unit only: A1 / B1 still use 23). GPIO 32 is a quiet, boot-safe pin: no strapping or boot-time function,
+// no PWM burst at power-up, not flash / PSRAM / UART / JTAG, not used by the display or touch, and it has an internal pull-up (INPUT_PULLUP below).
+// Full C1 map: TFT CS 15 / DC 2 / RST 4 / MOSI 13 / SCK 14 / MISO 12 (TFT_eSPI User_Setup.h), touch CS 27, buzzer 21, coin 32.
+#define PIN_COIN_SIGNAL 32
 #define PIN_BUZZER      21
 
 TFT_eSPI tft = TFT_eSPI();
@@ -841,7 +844,7 @@ void setup() {
 
     pinMode(PIN_COIN_SIGNAL, INPUT_PULLUP);
     attachInterrupt(digitalPinToInterrupt(PIN_COIN_SIGNAL), onCoinChangeISR, FALLING);
-    Serial.println("[C1] COIN SLOT: Pin 23 configured with INPUT_PULLUP and FALLING ISR.");
+    Serial.printf("[C1] COIN SLOT: Pin %d configured with INPUT_PULLUP and FALLING ISR.\n", PIN_COIN_SIGNAL);
 
     // Initialize ST7789 TFT on SPI (CS=15, DC=2, RST=4, SCK=14, MOSI=13)
     tft.init();

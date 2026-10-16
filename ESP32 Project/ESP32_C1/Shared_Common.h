@@ -449,7 +449,7 @@ struct BoxStatusPacket {
     bool     handshakeValid;         // door closed + helmet present, right now
     uint32_t completedSessionSeq;    // increments once per completed session
     uint16_t lastSessionDurationSec; // duration of the session completedSessionSeq refers to
-    uint16_t lastSessionCoins;       // coins used in that same session
+    uint16_t lastSessionCoins;       // coins of that same session (low 15 bits); bit 15 (SESSION_CANCELLED_FLAG) = aborted mid-cycle
 } __attribute__((packed));
 
 // Node A3 status (added 2026-10-02) - broadcast about once a second so S3A and Local Server can show
@@ -496,6 +496,23 @@ struct HubStatsPacket {
     uint16_t histDur[10];       // length in seconds of the last finished sessions
     uint16_t histCoins[10];     // coins used in those sessions
 } __attribute__((packed));      // 58 bytes - must stay different from every other packet's size
+
+// Booked coins (added 2026-10-13): Box 1's S3A and Box 3's S3B broadcast the running total of coins THEY accepted for paid sessions, about
+// once a second. A coin is "booked" when the S3 credited it AND the session was paid: the coins of the INSERT COIN screen are booked the
+// moment the payment is complete (a cancel on that screen books nothing), coins added during the cycle are booked one by one. The total is
+// cumulative and kept in the S3's flash, so a lost packet changes nothing: the LocalServer books the difference to the last value it saw
+// (same idea as the old raw pulse counter, but it can never contain noise, and it has no per-session reset). Box 2 does not send it.
+struct CoinBookPacket {
+    uint8_t  deviceID;          // DEVICE_S3A or DEVICE_S3B
+    uint8_t  magic;             // COINBOOK_MAGIC
+    uint32_t bookedCoins;       // cumulative, never reset by a session
+    uint16_t seq;               // +1 on every broadcast
+} __attribute__((packed));      // 8 bytes - must stay different from every other packet's size
+static const uint8_t COINBOOK_MAGIC = 0xC5;
+
+// A finished session's record rides in BoxStatusPacket::lastSessionCoins: bit 15 set = the customer ABORTED mid-cycle (shown as
+// "Cancelled" on the LocalServer), clear = the cycle ran to the end ("Finished"). The coin number is the low 15 bits.
+static const uint16_t SESSION_CANCELLED_FLAG = 0x8000;
 
 // Universal Command Packet
 struct CommandPacket {
@@ -581,5 +598,16 @@ static_assert(sizeof(HubStatsPacket) != sizeof(CommandPacket) &&
               sizeof(HubStatsPacket) != sizeof(A2SensorPacket) &&
               sizeof(HubStatsPacket) != sizeof(ACSStatusPacket),
               "HubStatsPacket collides in size with another packet type - onDataRecv() dispatch-by-length will misroute packets");
+static_assert(sizeof(CoinBookPacket) != sizeof(CommandPacket) &&
+              sizeof(CoinBookPacket) != sizeof(TelemetryPacket) &&
+              sizeof(CoinBookPacket) != sizeof(ACSTelemetryPacket) &&
+              sizeof(CoinBookPacket) != sizeof(Box1ConfigPacket) &&
+              sizeof(CoinBookPacket) != sizeof(Box2ConfigPacket) &&
+              sizeof(CoinBookPacket) != sizeof(BoxStatusPacket) &&
+              sizeof(CoinBookPacket) != sizeof(A3StatusPacket) &&
+              sizeof(CoinBookPacket) != sizeof(A2SensorPacket) &&
+              sizeof(CoinBookPacket) != sizeof(ACSStatusPacket) &&
+              sizeof(CoinBookPacket) != sizeof(HubStatsPacket),
+              "CoinBookPacket collides in size with another packet type - onDataRecv() dispatch-by-length will misroute packets");
 
 #endif // SHARED_COMMON_H

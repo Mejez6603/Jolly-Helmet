@@ -1,0 +1,1 @@
+Save your Cirkit Designer exports in this folder as cirkit_overview.png, cirkit_box1.png, cirkit_box2.png, cirkit_box3.png, cirkit_acs.png (or .jpg), then run rebuild_all.ps1 in the MANUAL folder.

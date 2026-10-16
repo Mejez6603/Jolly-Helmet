@@ -1,0 +1,371 @@
+<!-- Reference section content (flowcharts, safety, decision trees, settings, schematics, policies, glossary, version, index).
+     Put together into JollyHelmet_UserManual.html by assemble_tech.ps1, which replaces the double-at tokens below at build time
+     (FIG = the svg of that name in figs.html or figs_ref.html, CIRKIT = a picture from images/cirkit or a dashed slot, FWDATE, LIB, MD5, TODAY, INDEXTERMS). -->
+<section id="refFlow" hidden>
+
+<h1 id="r-safety" data-pb="hard">Safety and emergencies</h1>
+<p>The customer side of every machine is safe to use. The dangers are behind the panels: 220 V mains, UV-C light, a hot heater and flammable alcohol. Read this page before you open anything.</p>
+<h2>In an emergency</h2>
+<ol class="num">
+<li><b>Stop the run.</b> Touch <b>CANCEL</b>, then <b>CONFIRM</b>. The UV-C, the mist and the heater switch off. Box 2 and Box 3 then cool down for a while (Box 2 runs the fan, Box 3 lets everything rest). The coins are <b>not</b> refunded.</li>
+<li><b>If a door is forced open during a run</b>, the machine shows <b>SAFETY PAUSE</b> and switches the UV-C, the mist and the heater off at once. It carries on when the door is shut again with the helmet inside.</li>
+<li><b>Fire, smoke, burning smell, sparks or a person in danger:</b> switch the machine off at the wall socket or the main breaker, step back, and call for help. Do not use water on anything electrical.</li>
+<li><b>A helmet is stuck:</b> see the next block. Never force a door while the machine has power.</li>
+</ol>
+<div class="warn">The locks are <b>power-to-unlock</b>. With the power off, every door stays locked. So after switching off in an emergency, a helmet inside stays inside until power is back. <span class="cf">confirm</span> Fit a mechanical key release to each enclosure door if you want a helmet to be freeable without power.</div>
+<h2>A helmet is stuck inside</h2>
+<ol class="num">
+<li>Check that the machine has power. After a power cut, wait until the Control Center Home page shows the boards ONLINE again.</li>
+<li>Control Center, the box page, <b>Maintenance</b>, tap <b>ENCLOSURE LOCK</b>. The door unlocks for up to 60 seconds, then rests for 5 seconds. Tap <b>Maintenance</b> again when you are done.</li>
+<li>If the brain of the box stops answering for 15 seconds while a helmet is behind a closed door, the terminal board lets the enclosure lock go by itself.</li>
+<li>Still locked? Follow the decision tree <i>The door will not open</i> in this reference.</li>
+</ol>
+
+<h2>Dangers inside the machine</h2>
+<table data-w="22,30,48">
+<tr><th>Danger</th><th>Where</th><th>Rule</th></tr>
+<tr><td><b>220 V mains</b></td><td>UV-C lamps, heaters, power inlet, fuses</td><td>Only a qualified electrician works on the mains side. Unplug first and wait before touching anything. The relays switch the live wire, so a clicking relay does not mean the wire is dead.</td></tr>
+<tr><td><b>UV-C light</b></td><td>Box 1: 2 lamps, Box 2: 1, Box 3: 2</td><td>UV-C harms eyes and skin. Never look at a lit lamp. Test a lamp only with the door closed. A door switch that cuts the lamp when the door opens is recommended.</td></tr>
+<tr><td><b>Hot heater and air</b></td><td>Box 2 and Box 3</td><td>Let it cool (the machine runs a cool down). Never cover the air intakes. The heater switched on by hand in Maintenance turns itself off after 5 minutes.</td></tr>
+<tr><td><b>Alcohol</b></td><td>Containers in Box 1 and Box 3, ACS tanks</td><td>Flammable. Keep it away from the heater, sparks and flames. Keep the lids closed and wipe spills at once. Keep a fire extinguisher near the machines.</td></tr>
+<tr><td><b>Water and electricity</b></td><td>Pumps, mixers, humidifiers, drain</td><td>Fix leaks straight away. Keep tubes and containers away from the boards and relay modules.</td></tr>
+<tr><td><b>Door lock coils</b></td><td>11 solenoid locks, 12 V</td><td>A coil held on for a long time overheats (once it caused a fire-risk incident). The machine never holds one on for more than 60 seconds in a row.</td></tr>
+</table>
+<h2>Safety features built into the firmware</h2>
+<table data-w="34,66">
+<tr><th>Feature</th><th>What it does</th></tr>
+<tr><td><b>Door during a run</b></td><td>Door opened mid-run: SAFETY PAUSE, UV-C, mist and heater off. The run resumes when the door is closed and the helmet is still inside.</td></tr>
+<tr><td><b>Door shut, no helmet</b></td><td>While paused, if the door is shut with nothing inside, the lock is released so the door can be opened again.</td></tr>
+<tr><td><b>Lock duty cap</b></td><td>A lock is never on for more than 60 seconds in a row, then it rests for 5 seconds.</td></tr>
+<tr><td><b>Brain-loss watchdog</b></td><td>If a terminal hears nothing from its brain for 15 seconds, it switches the heater, UV-C, mist, pumps and coin power off.</td></tr>
+<tr><td><b>Hand-set limits</b></td><td>In Maintenance the heater stops after 5 minutes, locks after 60 seconds and the ACS pumps after 60 seconds.</td></tr>
+<tr><td><b>Cool down</b></td><td>After heating, Box 2 runs the fan only and Box 3 lets everything rest, for 60 seconds by default. Also after a cancel.</td></tr>
+<tr><td><b>Empty containers</b></td><td>With level checks on, a box with too little alcohol or scented liquid shows OUT OF ORDER (Box 3 keeps DRYING) and asks the ACS to refill.</td></tr>
+</table>
+<h2>First aid</h2>
+<ul>
+<li><b>Electric shock:</b> switch the power off first, then help. Do not touch the person while they are still in contact with a live part.</li>
+<li><b>UV-C in the eyes or on the skin:</b> move away from the light, and see a doctor if the eyes hurt or the skin is red.</li>
+<li><b>Alcohol or scented liquid in the eyes:</b> rinse with clean water for 15 minutes and get medical advice.</li>
+<li><b>Burn from the heater:</b> cool it under cool running water and cover it with a clean cloth.</li>
+</ul>
+<h2>Who to call</h2>
+<table data-w="34,36,30">
+<tr><th>Role</th><th>Name</th><th>Phone</th></tr>
+<tr><td>Owner or supervisor</td><td>[Name]</td><td>[Number]</td></tr>
+<tr><td>Technician (MEJEZ STUDIO)</td><td>[Name]</td><td>[Number]</td></tr>
+<tr><td>Electrician</td><td>[Name]</td><td>[Number]</td></tr>
+<tr><td>Fire department</td><td>[Local number]</td><td>[Number]</td></tr>
+<tr><td>Nearest clinic or hospital</td><td>[Name]</td><td>[Number]</td></tr>
+</table>
+
+<h1 id="r-flow" data-pb="hard">Box flowcharts</h1>
+<p>One chart per stage of a run, with the same screen names the customer sees. A dark rounded box is where a chart starts or ends. White boxes are screens or steps. <b>Green</b> boxes are where the machine is running. A <b>red</b> box is a fault. A yellow diamond is a decision. A blue pill says where the chart goes on. A dashed box is a note.</p>
+<table data-w="22,78">
+<tr><th>Box</th><th>Charts</th></tr>
+<tr><td><b>Box 1 Cleaner</b></td><td>1. From TAPS to INSERT COIN. 2. Open A, cleaning, open B, rating, free retry, finish.</td></tr>
+<tr><td><b>Box 2 Dryer</b></td><td>3. From TAPS to INSERT COIN and door A. 4. Heating, cool down, open B, rating, free retry, finish.</td></tr>
+<tr><td><b>Box 3 Cleaner + Dryer</b></td><td>5. From TAPS to INSERT COIN, with SELECT MODE. 6. Cleaning or drying, cool down, open B, rating, free retry, finish.</td></tr>
+</table>
+<h2 data-pb="hard">Box 1, chart 1: paying</h2>
+<figure class="fig chart">@@FIG:flow1@@<figcaption class="cap">Box 1: from TAPS to INSERT COIN. Containers are checked first; the ACS refills them if they are low.</figcaption></figure>
+<h2 data-pb="hard">Box 1, chart 2: the run</h2>
+<figure class="fig chart">@@FIG:flow2@@<figcaption class="cap">Box 1: cleaning, taking the helmet out, the second rating and the free retry.</figcaption></figure>
+<h2 data-pb="hard">Box 2, chart 3: paying</h2>
+<figure class="fig chart">@@FIG:flow3@@<figcaption class="cap">Box 2: from TAPS to the door. The box has no containers to check; it is out of order only if its terminal board stops answering.</figcaption></figure>
+<h2 data-pb="hard">Box 2, chart 4: the run</h2>
+<figure class="fig chart">@@FIG:flow4@@<figcaption class="cap">Box 2: heating, cool down with the fan, taking the helmet out and the free retry.</figcaption></figure>
+<h2 data-pb="hard">Box 3, chart 5: paying</h2>
+<figure class="fig chart">@@FIG:flow5@@<figcaption class="cap">Box 3: the customer chooses CLEANING or DRYING. If the refill gives up, CLEANING is greyed out and DRYING still works.</figcaption></figure>
+<h2 data-pb="hard">Box 3, chart 6: the run</h2>
+<figure class="fig chart">@@FIG:flow6@@<figcaption class="cap">Box 3: cleaning (UV-C and mist, heater in the last minute) or drying (heater and UV-C), then cool down, the second rating and the free retry.</figcaption></figure>
+
+<h1 id="r-trouble" data-pb="hard">Troubleshooting decision trees</h1>
+<p>Start at the dark box at the top. Answer each yellow question with yes or no and follow the arrow. Green boxes tell you what to do. These trees cover the problems that happen most; the tables in the Admin and Technician guides have the rest.</p>
+<table data-w="52,48">
+<tr><th>Symptom</th><th>Tree</th></tr>
+<tr><td>The screen says OUT OF ORDER</td><td>1. A box shows OUT OF ORDER</td></tr>
+<tr><td>A board is OFFLINE on the Home page</td><td>2. A board shows OFFLINE</td></tr>
+<tr><td>A coin goes in and nothing counts</td><td>3. Coin inserted, the count does not move</td></tr>
+<tr><td>A helmet is trapped, a door will not open</td><td>4. The door will not open</td></tr>
+<tr><td>The refill station does not fill</td><td>5. A mixer is LOW or a tank is EMPTY</td></tr>
+<tr><td>The web page shows old data or no link</td><td>6. The web page says OLD DATA or NO LINK</td></tr>
+<tr><td>The touch screen is white, blank or wrong</td><td>7. Screen white, blank or the touch is wrong</td></tr>
+</table>
+<h2 data-pb="hard">Tree 1: a box shows OUT OF ORDER</h2>
+<figure class="fig chart">@@FIG:tree1@@<figcaption class="cap">OUT OF ORDER means a container is too low and the refill gave up, or a board is missing.</figcaption></figure>
+<h2 data-pb="hard">Tree 2: a board shows OFFLINE</h2>
+<figure class="fig chart">@@FIG:tree2@@<figcaption class="cap">A board is OFFLINE when the LocalServer has heard nothing from it for a while.</figcaption></figure>
+<h2 data-pb="hard">Tree 3: coin inserted, nothing counts</h2>
+<figure class="fig chart">@@FIG:tree3@@<figcaption class="cap">In Box 1 and Box 3 the coin slot has power only while the screen shows INSERT COIN.</figcaption></figure>
+<h2 data-pb="hard">Tree 4: the door will not open</h2>
+<figure class="fig chart">@@FIG:tree4@@<figcaption class="cap">The locks are power-to-unlock: with no power a door stays shut. Switch the mains off before reaching in.</figcaption></figure>
+<h2 data-pb="hard">Tree 5: the refill station does not fill</h2>
+<figure class="fig chart">@@FIG:tree5@@<figcaption class="cap">The ACS reads "level did not rise" as "the supply tank is empty".</figcaption></figure>
+<h2 data-pb="hard">Tree 6: the web page shows old data</h2>
+<figure class="fig chart">@@FIG:tree6@@<figcaption class="cap">The web page is read only. It shows what the Online Server last sent to Blynk.</figcaption></figure>
+<h2 data-pb="hard">Tree 7: the touch screen is white or wrong</h2>
+<figure class="fig chart">@@FIG:tree7@@<figcaption class="cap">A white screen is almost always a supply dip when a heavy load switches. Force refresh re-initialises the screen.</figcaption></figure>
+
+<h1 id="r-settings" data-pb="hard">Settings reference</h1>
+<p>Every setting you can change, with the value the firmware starts with and the range it accepts (a value outside the range is refused). Write the value you use in the last column. The firmware defaults are what a freshly flashed board starts with; the machine you are looking at may have been changed. Settings are saved inside the boards, so they survive a power cut and a LocalServer swap. Where to change them: Control Center, the box page (or <b>/acs</b>).</p>
+<h2>Prices and time (Box 1, Box 2 and Box 3)</h2>
+<table data-w="26,30,16,16,12">
+<tr><th>Setting</th><th>What it does</th><th>Default</th><th>Allowed</th><th>Yours</th></tr>
+<tr><td><b>Rating bands</b> (4)</td><td>From and to rating, and the minutes suggested for that rating.</td><td>Box 1, 3: 1-5 = 5, 6-7 = 10, 8-9 = 15, 10 = 20 min. Box 2: 1-3 = 3, 4-6 = 5, 7-8 = 8, 9-10 = 10 min</td><td>Rating 1-10 (from not above to), 1-120 min</td><td></td></tr>
+<tr><td><b>Minimum time</b></td><td>Shortest session the customer can buy.</td><td>Box 1, 3: 5 min. Box 2: 3 min</td><td>1-120 min</td><td></td></tr>
+<tr><td><b>Coin rate</b></td><td>N coins buy X minutes (or seconds).</td><td>Box 1, 3: 15 coins = 5 min (20 s a coin). Box 2: 10 coins = 3 min (18 s a coin)</td><td>1-500 coins, 0.1-9999 time</td><td></td></tr>
+<tr><td><b>Most coins</b></td><td>Largest number of coins one session can take.</td><td>Box 1, 3: 90. Box 2: 100</td><td>1-999</td><td></td></tr>
+<tr><td><b>Free retry</b></td><td>One free run after the final rating.</td><td>On</td><td>On or off</td><td></td></tr>
+<tr><td><b>Free retry from rating</b></td><td>Lowest final rating that gets the free retry (1 = everyone).</td><td>1</td><td>1-10</td><td></td></tr>
+<tr><td><b>Free retry length</b></td><td>How long the free run lasts.</td><td>2 min</td><td>1-60 min</td><td></td></tr>
+<tr><td><b>Cool down</b> (Box 2, Box 3)</td><td>How long the cool down lasts, also after a cancel.</td><td>60 s</td><td>5-900 s</td><td></td></tr>
+</table>
+<h2>Containers and sensors (Box 1 and Box 3)</h2>
+<p>The distances are what the ultrasonic sensor on the main container reads, from the sensor down to the liquid. A <b>bigger</b> number means <b>emptier</b>. The defaults are placeholders: measure your real containers.</p>
+<table data-w="26,30,16,16,12">
+<tr><th>Setting</th><th>What it does</th><th>Default</th><th>Allowed</th><th>Yours</th></tr>
+<tr><td><b>Check levels</b></td><td>Refuse to run (OUT OF ORDER) when a container is low.</td><td>Off</td><td>On or off</td><td></td></tr>
+<tr><td><b>Alcohol low</b></td><td>At or over this distance the alcohol container is LOW.</td><td>20 cm</td><td>0-400 cm</td><td></td></tr>
+<tr><td><b>Alcohol full</b></td><td>At or under this distance it counts as refilled.</td><td>8 cm</td><td>0-400 cm</td><td></td></tr>
+<tr><td><b>Scented low</b></td><td>Same for the scented container.</td><td>20 cm</td><td>0-400 cm</td><td></td></tr>
+<tr><td><b>Scented full</b></td><td>Same for the scented container.</td><td>8 cm</td><td>0-400 cm</td><td></td></tr>
+<tr><td><b>Helmet detect</b></td><td>The helmet counts as inside when its sensor reads under this.</td><td>Box 1, 3: 15 cm. Box 2: 30 cm</td><td>1-200 cm</td><td></td></tr>
+<tr><td><b>Water sensor WET</b> (alcohol, scented)</td><td>Raw reading at which the sensor means wet.</td><td>600</td><td>0-4095</td><td></td></tr>
+<tr><td><b>Water sensor DRY</b> (alcohol, scented)</td><td>Raw reading at which it means dry again (the gap stops flicker).</td><td>400</td><td>0-4095</td><td></td></tr>
+<tr><td><b>Reading goes up when wet</b></td><td>Direction of the water sensor.</td><td>Yes</td><td>Yes or no</td><td></td></tr>
+<tr><td><b>Refill tries</b></td><td>Refill attempts before the box gives up.</td><td>10</td><td>1-99</td><td></td></tr>
+<tr><td><b>Refill interval</b></td><td>Seconds between tries.</td><td>10 s</td><td>1-250 s</td><td></td></tr>
+<tr><td><b>Ask the ACS to refill</b></td><td>Off: only count the tries. On: really send the refill request.</td><td>Off</td><td>On or off</td><td></td></tr>
+</table>
+<div class="tip">Check levels and Ask the ACS to refill are <b>off</b> when a board is flashed, so a box with uncalibrated sensors still serves customers. Measure the four distances, then switch both on.</div>
+<h2>Cleaning phases (Box 1 and Box 3)</h2>
+<p>A paid run is cut into a start part, a middle part (all that is left) and an end part. Each relay is on or off in each part. The lengths are in percent, seconds or minutes.</p>
+<table data-w="26,30,16,16,12">
+<tr><th>Setting</th><th>What it does</th><th>Default</th><th>Allowed</th><th>Yours</th></tr>
+<tr><td><b>Phases in a paid run</b></td><td>Use the start, middle and end parts.</td><td>On</td><td>On or off</td><td></td></tr>
+<tr><td><b>Phases in the free retry</b></td><td>Same, for the free run.</td><td>Box 1: off. Box 3: on</td><td>On or off</td><td></td></tr>
+<tr><td><b>Start part, end part</b></td><td>Length of the first and the last part.</td><td>1 min each</td><td>0-7200 (0-100 if percent)</td><td></td></tr>
+<tr><td><b>Humidifiers</b> (3)</td><td>Parts in which each mist maker runs.</td><td>Middle only (Box 3 free: start only)</td><td>Any of start, middle, end</td><td></td></tr>
+<tr><td><b>UV-C lamps</b> (2)</td><td>Parts in which each lamp is on.</td><td>Start and end (Box 3 free: all)</td><td>Any of start, middle, end</td><td></td></tr>
+<tr><td><b>Heater</b> (Box 3 only)</td><td>Parts in which the heater runs while cleaning.</td><td>End (also in the free retry)</td><td>Any of start, middle, end</td><td></td></tr>
+</table>
+<h2>Screen refresh (all boxes)</h2>
+<table data-w="26,30,16,16,12">
+<tr><th>Setting</th><th>What it does</th><th>Default</th><th>Allowed</th><th>Yours</th></tr>
+<tr><td><b>Refresh when a relay switches on or off</b></td><td>Which relay changes force a full re-initialisation of the touch screen (the white-screen cure). One tick per relay, for ON and for OFF.</td><td>Box 1, 2: when the enclosure lock turns off. Box 3: heater on; lock and heater off</td><td>Any relay</td><td></td></tr>
+<tr><td><b>Auto refresh</b></td><td>Every N seconds the box re-sends the current page as a full re-init. Screens where the customer types or picks a rating are skipped.</td><td>2 s</td><td>0 (never) to 60 s</td><td></td></tr>
+</table>
+<h2>Refill station (ACS 1 and ACS 2)</h2>
+<p>The ACS keeps two mixer containers (alcohol and scented) topped up from three supply tanks (water, alcohol, scented). Name in brackets: the name used on the /acs page and the serial console. A, S = the alcohol and the scented mixer. Distances are from the ultrasonic sensor down to the liquid.</p>
+<table data-w="26,30,16,16,12">
+<tr><th>Setting</th><th>What it does</th><th>Default</th><th>Allowed</th><th>Yours</th></tr>
+<tr><td><b>Empty</b> (emptyA, emptyS)</td><td>Sensor to the bottom of the mixer, for the level percent.</td><td>14 cm</td><td>5-300 cm</td><td></td></tr>
+<tr><td><b>Top-up at</b> (topupA, topupS)</td><td>Distance at which a top-up starts.</td><td>8 cm</td><td>1-300 cm</td><td></td></tr>
+<tr><td><b>Low</b> (lowA, lowS)</td><td>At or over this distance the mixer is LOW.</td><td>11 cm</td><td>1-300 cm</td><td></td></tr>
+<tr><td><b>Full</b> (fullA, fullS)</td><td>At or under this distance the mixer is FULL.</td><td>3.3 cm</td><td>1-300 cm</td><td></td></tr>
+<tr><td><b>Water share</b> (waterA, waterS)</td><td>Water part of each top-up.</td><td>Alcohol 30 %, scented 90 %</td><td>1-99 %</td><td></td></tr>
+<tr><td><b>No rise</b> (norise)</td><td>A pump runs this long and the level does not rise: that supply is called empty.</td><td>12 s</td><td>3-120 s</td><td></td></tr>
+<tr><td><b>Rise</b> (risecm)</td><td>How far the distance must shrink to count as a rise.</td><td>0.5 cm</td><td>0.1-5 cm</td><td></td></tr>
+<tr><td><b>Water rise</b> (wlrise)</td><td>How far the water-sensor reading must move to count as a rise.</td><td>150</td><td>20-4000</td><td></td></tr>
+<tr><td><b>Longest fill</b> (phasemax)</td><td>Hard limit for one fill pump run.</td><td>120 s</td><td>10-900 s</td><td></td></tr>
+<tr><td><b>Delivery shot</b> (deliver)</td><td>One delivery to the box.</td><td>6 s</td><td>1-60 s</td><td></td></tr>
+<tr><td><b>Try again after</b> (emptyhold)</td><td>An empty supply is tried again after this.</td><td>300 s</td><td>10-3600 s</td><td></td></tr>
+<tr><td><b>Request valid for</b> (reqhold)</td><td>A request from a box stays valid this long.</td><td>30 s</td><td>5-300 s</td><td></td></tr>
+<tr><td><b>Pause after a time limit</b> (holdoff)</td><td>Fills pause this long after a pump hit its time limit.</td><td>60 s</td><td>5-900 s</td><td></td></tr>
+<tr><td><b>Water WET, DRY</b> (wlenter, wlleave)</td><td>Raw readings for wet and dry on the mixer water sensor.</td><td>600, 400</td><td>0-4095</td><td></td></tr>
+<tr><td><b>Reading goes up when wet</b> (wlhigher)</td><td>Direction of that sensor.</td><td>Yes</td><td>Yes or no</td><td></td></tr>
+</table>
+<h2>LocalServer and Online Server</h2>
+<table data-w="26,30,16,16,12">
+<tr><th>Setting</th><th>What it does</th><th>Default</th><th>Allowed</th><th>Yours</th></tr>
+<tr><td><b>Control Center Wi-Fi</b></td><td>Name and password of the LocalServer Wi-Fi. Open 192.168.4.1.</td><td>JollyHelmet-Local, 12345678</td><td>Set in the firmware</td><td></td></tr>
+<tr><td><b>Coin value</b></td><td>Pesos one coin pulse adds to the revenue.</td><td>1.00</td><td>Any positive number</td><td></td></tr>
+<tr><td><b>Online Server setup Wi-Fi</b></td><td>Wi-Fi to open the setup page on.</td><td>JollyHelmet-Online, 12345678</td><td>Set in the firmware</td><td></td></tr>
+<tr><td><b>Send to Blynk every</b></td><td>How often the Online Server uploads.</td><td>1 minute</td><td>30 s, 1, 2 or 5 min</td><td></td></tr>
+<tr><td><b>Time zone</b></td><td>Hours from UTC, for the daily revenue.</td><td>As set in the portal</td><td>-12 to 14</td><td></td></tr>
+<tr><td><b>Extra datastreams, events, skip TLS check</b></td><td>V1 to V4, the alert event, and the certificate check.</td><td>Off, off, off</td><td>On or off</td><td></td></tr>
+<tr><td><b>Blynk server</b></td><td>Server name.</td><td>blynk.cloud</td><td>Text</td><td></td></tr>
+</table>
+<h2>Fixed values (not settings)</h2>
+<table data-w="40,60">
+<tr><th>Value</th><th>Where it comes from</th></tr>
+<tr><td><b>Radio channel 1</b></td><td>ESP-NOW and the Wi-Fi of the LocalServer must stay on channel 1.</td></tr>
+<tr><td><b>15 s watchdog</b></td><td>No sign of the brain for 15 s: relays off, a trapped helmet is released.</td></tr>
+<tr><td><b>60 s lock, 5 s rest</b></td><td>A lock never stays on longer than that.</td></tr>
+<tr><td><b>5 min heater, 60 s pumps</b></td><td>Limit of a hand-set heater, and of a hand-set ACS pump, in Maintenance.</td></tr>
+<tr><td><b>One free retry</b></td><td>A session can have only one.</td></tr>
+<tr><td><b>Coin signal on GPIO 23</b></td><td>On A1, B1 and C1.</td></tr>
+</table>
+
+<h1 id="r-circuit" data-pb="hard">Circuit schematics</h1>
+<p>The wiring of the machines was drawn in Cirkit Designer. The pictures below are exports of that drawing. Where a picture is missing a dashed box shows the file name to use: save the export in <b>MANUAL\images\cirkit</b> under that name, then rebuild the manual (see the README). The drawings in the Technician guide (power, relay stage, locks, coin slot, Online Server) are a simplified view of the same wiring.</p>
+<table data-w="32,42,26">
+<tr><th>Picture</th><th>Shows</th><th>File name</th></tr>
+<tr><td><b>Whole installation</b></td><td>All boards and how they are powered</td><td>cirkit_overview</td></tr>
+<tr><td><b>Box 1</b></td><td>A1, A2, A3, S3A</td><td>cirkit_box1</td></tr>
+<tr><td><b>Box 2</b></td><td>C1, C2, S3C</td><td>cirkit_box2</td></tr>
+<tr><td><b>Box 3</b></td><td>B1, B2, B3, S3B</td><td>cirkit_box3</td></tr>
+<tr><td><b>Refill station</b></td><td>ACS 1 and ACS 2: pumps, mixers, sensors</td><td>cirkit_acs</td></tr>
+</table>
+<div class="warn">The Cirkit drawing was checked against what was really built. Where the two differ, the pinout tables in the Technician guide are right (they come from the flashed firmware). Relay input numbers (IN1 ...) come from the drawing.</div>
+<h2 data-pb="hard">Whole installation</h2>
+@@CIRKIT:cirkit_overview|Whole installation (Cirkit Designer)@@
+<h2 data-pb="hard">Box 1: A1, A2, A3</h2>
+@@CIRKIT:cirkit_box1|Box 1 (Cirkit Designer)@@
+<h2 data-pb="hard">Box 2: C1, C2</h2>
+@@CIRKIT:cirkit_box2|Box 2 (Cirkit Designer)@@
+<h2 data-pb="hard">Box 3: B1, B2, B3</h2>
+@@CIRKIT:cirkit_box3|Box 3 (Cirkit Designer)@@
+<h2 data-pb="hard">Refill station: ACS 1 and ACS 2</h2>
+@@CIRKIT:cirkit_acs|Refill station (Cirkit Designer)@@
+
+<h1 id="r-policy" data-pb="hard">Policies</h1>
+<p>What the machine does is fixed by the firmware. The rules around it are the owner's decisions. Items marked <span class="cf">confirm</span> are proposals: edit them to match what the owner decides, then post the customer rules at the machine.</p>
+<h2>Coins and refunds</h2>
+<table data-w="30,34,36">
+<tr><th>Situation</th><th>What the machine does</th><th>Policy</th></tr>
+<tr><td><b>Customer cancels a run</b></td><td>Asks CONFIRM or RESUME and warns that coins will not be refunded. The coins are <b>not</b> refunded.</td><td>No refund after a run starts.</td></tr>
+<tr><td><b>Customer cancels while inserting coins</b></td><td>Asks YES or NO and warns that coins will not be refunded. The machine does not return coins already inserted.</td><td><span class="cf">confirm</span> Staff may return the coins on request.</td></tr>
+<tr><td><b>Fault or power cut during a run</b></td><td>The run stops, a trapped helmet is released, coins are not returned by the machine.</td><td><span class="cf">confirm</span> Staff offers a free run or a refund.</td></tr>
+<tr><td><b>Machine OUT OF ORDER</b></td><td>It does not take coins.</td><td>A sign: use another machine.</td></tr>
+<tr><td><b>Free retry</b></td><td>One free run after the final rating (default 2 minutes, for everyone). Not repeatable.</td><td>Set who gets it in Settings (lowest final rating).</td></tr>
+<tr><td><b>Too few or too many coins</b></td><td>The time allot screen asks again. The most that can be bought is 90 coins in Box 1 and Box 3, 100 in Box 2.</td><td>Posted on the machine.</td></tr>
+<tr><td><b>No change is given</b></td><td>The slot takes coins only.</td><td>Say so on the sign.</td></tr>
+</table>
+<h2>Using the machine</h2>
+<ul>
+<li><span class="cf">confirm</span> Motorcycle helmets only. Take out gloves, phones, cameras and speakers first.</li>
+<li><span class="cf">confirm</span> Children use the machine with an adult.</li>
+<li><span class="cf">confirm</span> The owner is not responsible for items left inside or for damage that comes from a helmet's own condition. Nothing is stored in the machine after a run.</li>
+<li>The machine cleans and dries. It does not guarantee that every smell or every drop of water is gone.</li>
+<li>Rating the helmet before and after is part of the run. The ratings are kept only as numbers.</li>
+</ul>
+<h2>Data and privacy</h2>
+<ul>
+<li>The machines have no camera and no microphone. They record only counts: sessions, coins, minutes, ratings and the state of each board.</li>
+<li>No names, no phone numbers and no payment cards are stored. Payment is coins only.</li>
+<li>The Online Server sends only totals and status to Blynk. The Blynk token is a secret: keep it out of the manual, the web page and any file that is shared.</li>
+<li>The Control Center and the setup Wi-Fi use a password printed in this manual. <span class="cf">confirm</span> Change both before the machines are used in public, and give the admin and technician parts of this manual only to the team.</li>
+</ul>
+<h2>Staff and safety</h2>
+<ul>
+<li>Only trained staff refill the containers, open the panels or use Maintenance.</li>
+<li>Mains work is for a qualified electrician (see Safety and emergencies).</li>
+<li>Run the weekly and monthly checks in the Maintenance chapter and write the date down.</li>
+<li><span class="cf">confirm</span> Alcohol and scented liquid: keep the supplier's safety data sheet near the ACS. Decide where the drain water may go.</li>
+</ul>
+<h2>Operating hours and notices</h2>
+<table data-w="34,66">
+<tr><th>Item</th><th>Decision</th></tr>
+<tr><td>Operating hours</td><td><span class="cf">confirm</span> [Hours]</td></tr>
+<tr><td>Where to report a fault or a lost item</td><td><span class="cf">confirm</span> [Place, phone, email]</td></tr>
+<tr><td>Price list posted at the machine</td><td>Prices and time chapter, or the printable panel cards.</td></tr>
+</table>
+
+<h1 id="r-glossary" data-pb="hard">Glossary</h1>
+<p>Words used in this manual, in plain language.</p>
+<table data-w="26,74">
+<tr><th>Term</th><th>Meaning</th></tr>
+<tr><td><b>ACS</b></td><td>Auto Container System. The refill station: pumps and two mixer containers that top up a box's alcohol and scented containers.</td></tr>
+<tr><td><b>Allan coin acceptor</b></td><td>The coin slot. It sends one pulse for each coin value it accepts.</td></tr>
+<tr><td><b>Blynk</b></td><td>The online service the Online Server sends its snapshot to. The web page reads it from there.</td></tr>
+<tr><td><b>Brain</b></td><td>The ESP32-S3 board of a box (S3A, S3B, S3C). It runs every step and keeps the settings. A box has one brain and several terminals.</td></tr>
+<tr><td><b>Captive portal</b></td><td>The page that opens by itself when a phone joins the setup Wi-Fi of the Online Server.</td></tr>
+<tr><td><b>Channel 1</b></td><td>The radio channel all the boards use for ESP-NOW. The LocalServer Wi-Fi stays on it too.</td></tr>
+<tr><td><b>Control Center</b></td><td>The pages of the LocalServer (Home, Box 1, Box 2, Box 3, ACS) where settings, calibration and Maintenance are done.</td></tr>
+<tr><td><b>Cool down</b></td><td>The time after heating when nothing heats and the helmet can cool. Box 2 runs the fan; Box 3 lets everything rest.</td></tr>
+<tr><td><b>Datastream</b></td><td>A named value in Blynk. This project uses V0 (a text) and, if you switch them on, V1 to V4.</td></tr>
+<tr><td><b>DC-DC module</b></td><td>The power module that turns 12 V into 5 V and 3.3 V for the boards, sensors and small loads.</td></tr>
+<tr><td><b>Enclosure lock</b></td><td>The solenoid lock of the main door of a box. It is the one released for a trapped helmet.</td></tr>
+<tr><td><b>ESP-NOW</b></td><td>The radio link the boards talk over. No router is needed.</td></tr>
+<tr><td><b>ESP32 and ESP32-S3</b></td><td>The two kinds of board. The plain ESP32 boards are terminals. The S3 boards are brains and servers.</td></tr>
+<tr><td><b>Free retry</b></td><td>One free run after the final rating (2 minutes by default).</td></tr>
+<tr><td><b>GPIO</b></td><td>A numbered pin of an ESP32 board.</td></tr>
+<tr><td><b>Humidifier</b></td><td>The ultrasonic mist maker that makes the alcohol and scented mist (5 V).</td></tr>
+<tr><td><b>Hysteresis</b></td><td>The gap between the WET and the DRY reading of a water sensor, so it does not flicker.</td></tr>
+<tr><td><b>JD-VCC</b></td><td>The separate power input of a relay module's coils, with a jumper to the logic supply.</td></tr>
+<tr><td><b>LocalServer</b></td><td>The board that makes the JollyHelmet-Local Wi-Fi and the Control Center, and counts the revenue.</td></tr>
+<tr><td><b>Maintenance mode</b></td><td>A page where a technician switches relays or pumps by hand. The machine shows MAINTENANCE.</td></tr>
+<tr><td><b>Mixer</b></td><td>One of the two containers of an ACS (alcohol, scented) where the recipe is made before it goes to a box.</td></tr>
+<tr><td><b>Mist</b></td><td>The alcohol or scented vapour used in cleaning. Mist method: balanced, more alcohol, more scented.</td></tr>
+<tr><td><b>NVS</b></td><td>The memory inside a board where settings are saved (they survive a power cut).</td></tr>
+<tr><td><b>Online Server</b></td><td>The ESP32-S3 that listens to the machines and sends a snapshot to Blynk. It never controls anything.</td></tr>
+<tr><td><b>OUT OF ORDER</b></td><td>The screen shown when a box cannot serve customers.</td></tr>
+<tr><td><b>Phase</b></td><td>A part of a cleaning run: start, middle or end. Each relay is on or off per part.</td></tr>
+<tr><td><b>Power-to-unlock</b></td><td>A lock that opens only while it has power. With no power the door stays locked.</td></tr>
+<tr><td><b>Rating</b></td><td>The 1 to 10 score the customer gives the helmet before and after: odor (Box 1 and cleaning in Box 3) or dryness (Box 2 and drying).</td></tr>
+<tr><td><b>Relay</b></td><td>An electrically operated switch. The boards use relays to switch locks, pumps, mist makers, lamps and the heater.</td></tr>
+<tr><td><b>SAFETY PAUSE</b></td><td>The screen shown when a door opens during a run. The loads switch off until the door is closed.</td></tr>
+<tr><td><b>Serial Monitor</b></td><td>The Arduino IDE window that shows what a board prints over USB (115200 baud).</td></tr>
+<tr><td><b>SoftAP</b></td><td>A Wi-Fi network made by a board itself (JollyHelmet-Local, JollyHelmet-Online).</td></tr>
+<tr><td><b>Terminal</b></td><td>A plain ESP32 board that holds a box's sensors, relays and display. It follows its brain.</td></tr>
+<tr><td><b>TFT</b></td><td>The 2.8 inch colour touch screen of a box.</td></tr>
+<tr><td><b>Time allot</b></td><td>The screen where the customer types the minutes to buy.</td></tr>
+<tr><td><b>Token</b></td><td>The secret key that lets the Online Server write to your Blynk template. Keep it private.</td></tr>
+<tr><td><b>Ultrasonic sensor</b></td><td>The HC-SR04. It measures the distance to the helmet or to the liquid in a container.</td></tr>
+<tr><td><b>UV-C lamp</b></td><td>The 220 V germicidal lamp. Never look at it when it is lit.</td></tr>
+<tr><td><b>Watchdog</b></td><td>A safety check: if a board stops hearing its brain for 15 seconds it switches its loads off.</td></tr>
+</table>
+
+<h1 id="r-version" data-pb="hard">Version and revisions</h1>
+<table data-w="34,66">
+<tr><th>Item</th><th>Value</th></tr>
+<tr><td><b>Manual</b></td><td>Jolly Helmet User Manual, revision 4, @@TODAY@@</td></tr>
+<tr><td><b>Made by</b></td><td>MEJEZ STUDIO</td></tr>
+<tr><td><b>Covers</b></td><td>Box 1, Box 2, Box 3, ACS 1, ACS 2, LocalServer, Online Server</td></tr>
+<tr><td><b>Protocol file</b></td><td>Shared_Common.h, identical in every sketch folder (checksum @@MD5:ESP32_S3A/Shared_Common.h@@)</td></tr>
+</table>
+<h2>Revision history</h2>
+<table data-w="10,18,72">
+<tr><th>Rev</th><th>Date</th><th>What changed</th></tr>
+<tr><td>1</td><td>2026-10-07</td><td>First manual: customer guide and admin guide for Box 1, 2 and 3, prices, Control Center, ACS. PDF and Word, new logo, Arial.</td></tr>
+<tr><td>2</td><td>2026-10-07</td><td>Technician guide: components, pinouts, circuit and wiring, firmware and flashing, maintenance, hardware troubleshooting. Corrected from the Cirkit Designer document to what was really built.</td></tr>
+<tr><td>3</td><td>2026-10-10</td><td>Online Server, Blynk setup and the web page. Real parts: UV-C 220 V lamps, HC-SR04, 5 V mist makers and pumps, DC-DC module. Team names on the cover.</td></tr>
+<tr><td>4</td><td>@@TODAY@@</td><td>Reference section: safety and emergencies, box flowcharts, troubleshooting decision trees, settings reference, schematic pages, policies, glossary, this page and the index.</td></tr>
+</table>
+<h2>Firmware in this manual</h2>
+<p>The date is when the sketch file was last saved. The board in the machine may carry an older build: compare with what it prints when it starts (Serial Monitor, 115200).</p>
+<table data-w="26,24,34,16">
+<tr><th>Sketch folder</th><th>Board</th><th>Role</th><th>File date</th></tr>
+<tr><td>ESP32_S3A</td><td>S3A</td><td>Box 1 brain</td><td>@@FWDATE:ESP32_S3A@@</td></tr>
+<tr><td>ESP32_A1</td><td>A1</td><td>Box 1 screen, coin, buzzer</td><td>@@FWDATE:ESP32_A1@@</td></tr>
+<tr><td>ESP32_A2</td><td>A2</td><td>Box 1 sensors</td><td>@@FWDATE:ESP32_A2@@</td></tr>
+<tr><td>ESP32_A3</td><td>A3</td><td>Box 1 relays</td><td>@@FWDATE:ESP32_A3@@</td></tr>
+<tr><td>ESP32_S3C</td><td>S3C</td><td>Box 2 brain</td><td>@@FWDATE:ESP32_S3C@@</td></tr>
+<tr><td>ESP32_C1</td><td>C1</td><td>Box 2 screen, coin, buzzer</td><td>@@FWDATE:ESP32_C1@@</td></tr>
+<tr><td>ESP32_C2</td><td>C2</td><td>Box 2 sensors and relays</td><td>@@FWDATE:ESP32_C2@@</td></tr>
+<tr><td>ESP32_S3B</td><td>S3B</td><td>Box 3 brain</td><td>@@FWDATE:ESP32_S3B@@</td></tr>
+<tr><td>ESP32_B1</td><td>B1</td><td>Box 3 screen, coin, buzzer</td><td>@@FWDATE:ESP32_B1@@</td></tr>
+<tr><td>ESP32_B2</td><td>B2</td><td>Box 3 sensors</td><td>@@FWDATE:ESP32_B2@@</td></tr>
+<tr><td>ESP32_B3</td><td>B3</td><td>Box 3 relays</td><td>@@FWDATE:ESP32_B3@@</td></tr>
+<tr><td>ESP32_ACS1</td><td>ACS 1</td><td>Box 1 refill station</td><td>@@FWDATE:ESP32_ACS1@@</td></tr>
+<tr><td>ESP32_ACS2</td><td>ACS 2</td><td>Box 3 refill station</td><td>@@FWDATE:ESP32_ACS2@@</td></tr>
+<tr><td>ESP32_LOCALSRV</td><td>LocalServer</td><td>Control Center, revenue</td><td>@@FWDATE:ESP32_LOCALSRV@@</td></tr>
+<tr><td>ESP32_ONLINESRV</td><td>Online Server</td><td>Blynk monitor</td><td>@@FWDATE:ESP32_ONLINESRV@@</td></tr>
+</table>
+<h2>Tools and libraries</h2>
+<table data-w="40,60">
+<tr><th>Item</th><th>Version</th></tr>
+<tr><td>Arduino IDE board package: esp32 by Espressif</td><td>@@LIB:core@@</td></tr>
+<tr><td>TFT_eSPI</td><td>@@LIB:TFT_eSPI@@</td></tr>
+<tr><td>ArduinoJson</td><td>@@LIB:ArduinoJson@@</td></tr>
+<tr><td>ESP_Async_WebServer</td><td>@@LIB:ESP_Async_WebServer@@</td></tr>
+<tr><td>Async_TCP</td><td>@@LIB:Async_TCP@@</td></tr>
+<tr><td>Blynk</td><td>Blynk Cloud HTTPS API (no library on the board)</td></tr>
+</table>
+<h2>Check before you hand over</h2>
+<ul>
+<li>Measure the real containers, enter the LEVELS distances and the ACS lines, then switch <b>Check levels</b> and <b>Ask the ACS to refill</b> on.</li>
+<li>Run every relay and every pump by hand in Maintenance before the first automatic run.</li>
+<li>Calibrate the touch screen of B1 (it still has the A1 numbers) with ESP32_C1_CALIBRATE.</li>
+<li>Online Server: after its first upload, the Control Center must still hear every board (13 of 13). If it does not, check the radio channel.</li>
+<li>Fill in the yellow <span class="cf">confirm</span> marks of the Technician guide and of this section, then add the Cirkit pictures and the photos.</li>
+</ul>
+
+<h1 id="r-index" data-pb="hard">Index</h1>
+<p>Page numbers refer to this manual. In the Word file, right-click the index and choose Update field to refresh it after editing.</p>
+<div id="indexSlot"></div>
+
+</section>
+<script type="application/json" id="idxTerms">@@INDEXTERMS@@</script>

@@ -1,10 +1,10 @@
-<!-- Technician guide content. Assembled into JollyHelmet_UserManual.html by buildssemble_tech.ps1 (a figure placeholder is replaced by the svg of the same name in figs.html). -->
+<!-- Technician guide content. Put together into JollyHelmet_UserManual.html by the script assemble_tech.ps1 in this folder (a figure placeholder is replaced by the svg of the same name in figs.html). -->
 <section id="techFlow" hidden>
 
 <h1 id="t-build" data-pb>How it is built</h1>
 <p>Each machine is a small team of ESP32 boards that talk by radio (ESP-NOW, channel 1). The only wires between the boards are power wires.</p>
-<figure class="fig">@@FIG:system@@<figcaption class="cap">The whole installation: three boxes, two refill stations and the LocalServer</figcaption></figure>
-<h2>The 14 boards</h2>
+<figure class="fig">@@FIG:system@@<figcaption class="cap">The whole installation: three boxes, two refill stations, the LocalServer and the Online Server</figcaption></figure>
+<h2>The 15 boards</h2>
 <table data-w="14,17,69">
 <tr><th>Board</th><th>Where</th><th>What it does (sketch folder)</th></tr>
 <tr><td><b>S3A</b></td><td>Box 1</td><td>Brain. Runs every step and keeps the settings. (ESP32_S3A)</td></tr>
@@ -20,13 +20,14 @@
 <tr><td><b>B3</b></td><td>Box 3</td><td>13 relays: same as A3 plus the heater. (ESP32_B3)</td></tr>
 <tr><td><b>ACS 1</b></td><td>Box 1 refill</td><td>6 pumps, 2 mixer containers (ultrasonic and water sensor each). (ESP32_ACS1)</td></tr>
 <tr><td><b>ACS 2</b></td><td>Box 3 refill</td><td>Same as ACS 1. (ESP32_ACS2)</td></tr>
-<tr><td><b>LocalServer</b></td><td>Control Center</td><td>Wi-Fi ESP32_LOCAL, settings pages, revenue. (ESP32_LOCALSRV)</td></tr>
+<tr><td><b>LocalServer</b></td><td>Control Center</td><td>Wi-Fi JollyHelmet-Local, settings pages, revenue. Also broadcasts its revenue totals for the Online Server. (ESP32_LOCALSRV)</td></tr>
+<tr><td><b>Online Server</b></td><td>Online</td><td>Listens to the machines and sends a snapshot to Blynk for the web page. Never controls anything. (ESP32_ONLINESRV)</td></tr>
 </table>
 <h2>Brains and terminals</h2>
 <ul>
-<li><b>Brains</b> (S3A, S3B, S3C, LocalServer) are ESP32-S3 boards with 16 MB flash and 8 MB PSRAM. Nothing is wired to them except power.</li>
+<li><b>Brains</b> (S3A, S3B, S3C, LocalServer, Online Server) are ESP32-S3 boards with 16 MB flash and 8 MB PSRAM. Nothing is wired to them except power.</li>
 <li><b>Terminals</b> (the A, B, C and ACS boards) are plain ESP32 (WROOM) boards on screw-terminal expansion boards. They hold every sensor, relay and display wire. A3 and B3 must not be WROVER (PSRAM) boards, because GPIO 16 and 17 are relays.</li>
-<li>Settings are saved inside the brains (S3A, S3B, S3C) and the ACS boards. The LocalServer only saves the revenue numbers.</li>
+<li>Settings are saved inside the brains (S3A, S3B, S3C) and the ACS boards. The LocalServer only saves the revenue numbers. The Online Server saves its own Wi-Fi, Blynk token and the daily revenue history.</li>
 <li>If a terminal hears nothing from its brain for 15 seconds, it switches its relays off (heater, UV, mist, pumps, coin power). If a helmet is stuck behind a closed door, it also lets the enclosure lock go.</li>
 </ul>
 
@@ -36,7 +37,7 @@
 <table data-w="52,8,40">
 <tr><th>Item</th><th>Qty</th><th>Used in</th></tr>
 <tr><td>ESP32 DevKit (ESP32-WROOM-32) with screw-terminal expansion board</td><td>10</td><td>A1 A2 A3 B1 B2 B3 C1 C2 ACS 1 ACS 2</td></tr>
-<tr><td>ESP32-S3 DevKit N16R8 (16 MB flash, 8 MB OPI PSRAM)</td><td>4</td><td>S3A S3B S3C LocalServer</td></tr>
+<tr><td>ESP32-S3 DevKit N16R8 (16 MB flash, 8 MB OPI PSRAM)</td><td>5</td><td>S3A S3B S3C LocalServer Online Server</td></tr>
 <tr><td>2.8 in SPI TFT with resistive touch (ST7789, 240 x 320)</td><td>3</td><td>A1, B1, C1</td></tr>
 <tr><td>Allan multi-coin acceptor, 12 V</td><td>3</td><td>One per box</td></tr>
 <tr><td>Active buzzer</td><td>3</td><td>A1, B1, C1</td></tr>
@@ -46,7 +47,7 @@
 <table data-w="40,8,52">
 <tr><th>Item</th><th>Qty</th><th>Used in</th></tr>
 <tr><td>MC-38 magnetic door sensor (reed)</td><td>11</td><td>Box 1: 4, Box 2: 3, Box 3: 4</td></tr>
-<tr><td>Ultrasonic distance sensor <span class="cf">confirm model</span></td><td>11</td><td>Helmet: 3 (one per box). Main containers: 4. ACS mixers: 4.</td></tr>
+<tr><td>Ultrasonic distance sensor HC-SR04 (5 V)</td><td>11</td><td>Helmet: 3 (one per box). Main containers: 4. ACS mixers: 4.</td></tr>
 <tr><td>Analog water-level sensor</td><td>8</td><td>Box 1: 2, Box 3: 2, ACS 1: 2, ACS 2: 2</td></tr>
 </table>
 <h2>Relay boards</h2>
@@ -60,20 +61,20 @@
 <table data-w="34,8,58">
 <tr><th>Item</th><th>Qty</th><th>Used in</th></tr>
 <tr><td>12 V solenoid door lock</td><td>11</td><td>Box 1: 4 (enclosure, panel, back, ACS side). Box 2: 3. Box 3: 4.</td></tr>
-<tr><td>Humidifier (mist maker), 5 V <span class="cf">confirm</span></td><td>6</td><td>Box 1: 3, Box 3: 3 (alcohol, scented, both)</td></tr>
-<tr><td>Drain pump, 5 V <span class="cf">confirm</span></td><td>4</td><td>Box 1: 2, Box 3: 2</td></tr>
-<tr><td>Refill pump, 5 V <span class="cf">confirm</span></td><td>12</td><td>ACS 1: 6, ACS 2: 6</td></tr>
-<tr><td>UV light, 12 V strip <span class="cf">confirm</span></td><td>5</td><td>Box 1: 2, Box 2: 1, Box 3: 2</td></tr>
+<tr><td>Humidifier (mist maker), 5 V</td><td>6</td><td>Box 1: 3, Box 3: 3 (alcohol, scented, both)</td></tr>
+<tr><td>Drain pump, 5 V</td><td>4</td><td>Box 1: 2, Box 3: 2</td></tr>
+<tr><td>Refill pump, 5 V</td><td>12</td><td>ACS 1: 6, ACS 2: 6</td></tr>
+<tr><td>UV-C germicidal disinfection lamp, 220 V</td><td>5</td><td>Box 1: 2, Box 2: 1, Box 3: 2</td></tr>
 <tr><td>Heater (hair dryer), 220 V</td><td>2</td><td>Box 2, Box 3</td></tr>
-<tr><td>Fan <span class="cf">confirm voltage</span></td><td>1</td><td>Box 2 cool-down</td></tr>
+<tr><td>Fan, 5 V</td><td>1</td><td>Box 2 cool-down</td></tr>
 </table>
 <h2>Power and protection</h2>
 <table data-w="40,12,48">
 <tr><th>Item</th><th>Qty</th><th>Used in</th></tr>
-<tr><td>12 V power supply</td><td><span class="cf">confirm</span></td><td>Locks, UV, coin slots and the 5 V converters</td></tr>
-<tr><td>DC-DC step-down, 12 V to 5 V</td><td><span class="cf">confirm</span></td><td>All ESP32 boards, screens, relay boards, sensors</td></tr>
+<tr><td>12 V power supply</td><td>5</td><td>Locks, coin slots and the DC-DC modules</td></tr>
+<tr><td>DC-DC power module, 12 V in, 3.3 V and 5 V out (multi output)</td><td>5</td><td>All ESP32 boards, screens, relay boards, sensors, mist makers, pumps</td></tr>
 <tr><td>Diode 1N4007</td><td>11 or more</td><td>One across every lock solenoid</td></tr>
-<tr><td>Fuses, 220 V inlet or outlets, earth</td><td><span class="cf">confirm</span></td><td>Mains side, heaters</td></tr>
+<tr><td>Fuses, 220 V inlet or outlets, earth</td><td>-</td><td>Mains side: UV-C lamps and heaters</td></tr>
 </table>
 <p>Not electrical: 2 main containers (alcohol, scented) in Box 1 and in Box 3. In each ACS: 3 supply tanks (water, alcohol, scented) and 2 mixer containers. Tubing and fittings.</p>
 <h2>What is in each unit</h2>
@@ -89,7 +90,7 @@
 <tr><td>Humidifiers</td><td>3</td><td>-</td><td>3</td><td>-</td><td>-</td></tr>
 <tr><td>Drain pumps</td><td>2</td><td>-</td><td>2</td><td>-</td><td>-</td></tr>
 <tr><td>Refill pumps</td><td>-</td><td>-</td><td>-</td><td>6</td><td>6</td></tr>
-<tr><td>UV lights</td><td>2</td><td>1</td><td>2</td><td>-</td><td>-</td></tr>
+<tr><td>UV-C lamps (220 V)</td><td>2</td><td>1</td><td>2</td><td>-</td><td>-</td></tr>
 <tr><td>Heater</td><td>-</td><td>1</td><td>1</td><td>-</td><td>-</td></tr>
 <tr><td>Fan</td><td>-</td><td>1</td><td>-</td><td>-</td><td>-</td></tr>
 </table>
@@ -151,13 +152,13 @@
 <tr><td>19</td><td>IN6</td><td>Humidifier 2 (scented)</td><td>5 V</td></tr>
 <tr><td>25</td><td>IN7</td><td>Humidifier 3 (both)</td><td>5 V</td></tr>
 <tr><td>22</td><td>IN9</td><td>Coin power (the coin slot's 12 V)</td><td>12 V</td></tr>
-<tr><td>27</td><td>IN10</td><td>UV 1</td><td>12 V</td></tr>
-<tr><td>21</td><td>IN11</td><td>UV 2</td><td>12 V</td></tr>
+<tr><td>27</td><td>IN10</td><td>UV-C lamp 1</td><td>220 V</td></tr>
+<tr><td>21</td><td>IN11</td><td>UV-C lamp 2</td><td>220 V</td></tr>
 <tr><td>33</td><td>IN12</td><td>Drain pump 1 (alcohol container)</td><td>5 V</td></tr>
 <tr><td>32</td><td>IN13</td><td>Drain pump 2 (scented container)</td><td>5 V</td></tr>
 </table>
 <ul>
-<li>Supply column: from the pin-sheet totals (12 V x 7, 5 V x 5). <span class="cf">confirm</span></li>
+<li>Supply column: what each load runs on. The UV-C lamps are 220 V: the relay contact switches the live wire (see <b>Switching 220 V loads</b>). Locks and the coin slot are 12 V, humidifiers and drain pumps 5 V.</li>
 <li>IN8 and IN14 to IN16 are not used. GPIO 2, 12 and 15 are left idle (boot pins).</li>
 </ul>
 <h2>B3 - Box 3 relays (16-channel board)</h2>
@@ -182,11 +183,11 @@
 <tr><td>16</td><td>IN2</td><td>Panel door lock</td><td>12 V</td></tr>
 <tr><td>17</td><td>IN3</td><td>Back door lock</td><td>12 V</td></tr>
 <tr><td>18</td><td>IN4</td><td>Heater (hair dryer)</td><td>220 V</td></tr>
-<tr><td>23</td><td>IN5</td><td>Fan</td><td><span class="cf">confirm</span></td></tr>
-<tr><td>5</td><td>IN6</td><td>UV strip light</td><td>12 V</td></tr>
+<tr><td>23</td><td>IN5</td><td>Fan</td><td>5 V</td></tr>
+<tr><td>5</td><td>IN6</td><td>UV-C lamp</td><td>220 V</td></tr>
 </table>
 <ul>
-<li>GPIO5 gives a short pulse when the board powers up, so the UV relay may click once. Harmless. Boot-safe spare pins: 13, 21, 22, 32, 33.</li>
+<li>GPIO5 gives a short pulse when the board powers up, so the UV relay may click once. Recommended: when you next reflash C2, move the UV relay to a boot-safe pin (13, 21, 22, 32 or 33) so a 220 V UV-C lamp can never flash at power-up.</li>
 </ul>
 <h2>ACS 1 and ACS 2 - refill stations</h2>
 <p>Identical wiring on both. Relays (8-channel module with JD-VCC, 6 used):</p>
@@ -211,20 +212,20 @@
 </table>
 <ul>
 <li>The three supply tanks (water, alcohol, scented) have no sensors. The ACS detects an empty tank when the mixer level does not rise.</li>
-<li>Pumps are 5 V <span class="cf">confirm</span>. Check each pump by hand in Maintenance before the first automatic run (the relay inputs were mixed up once).</li>
+<li>The pumps are 5 V. Check each pump by hand in Maintenance before the first automatic run (the relay inputs were mixed up once).</li>
 </ul>
 <h1 id="t-wiring" data-pb>Circuit and wiring</h1>
 <h2>Circuit summary</h2>
 <ul>
 <li>Every box and refill station is a group of ESP32 boards. They share only power and the radio channel.</li>
 <li>Every lock, lamp, pump and heater is switched by a relay contact. Every sensor is read directly by a terminal board.</li>
-<li>Voltages: 12 V (door locks, UV lights, coin slots), 5 V (ESP32 boards, screens, relay boards, ultrasonic sensors, humidifiers, pumps), 3.3 V (water-level sensors, from the ESP32 3V3 pin), 220 V (the heaters).</li>
+<li>Voltages: 12 V (door locks, coin slots), 5 V (ESP32 boards, screens, relay boards, HC-SR04 ultrasonic sensors, humidifiers, pumps), 3.3 V (water-level sensors, from the ESP32 3V3 pin or the DC-DC module), 220 V (the UV-C lamps and the heaters).</li>
 </ul>
 <h2>Power and grounding</h2>
 <ul>
-<li>Measure every DC-DC converter with a meter before you connect boards. Never put 12 V on an ESP32 pin or on the 5 V rail.</li>
+<li>Measure every output of the DC-DC module (5 V and 3.3 V) with a meter before you connect boards. Never put 12 V on an ESP32 pin or on the 5 V rail.</li>
 <li>Join all grounds: 12 V -, 5 V - and every ESP32 GND. Never join a 12 V + to a 5 V +.</li>
-<li>A relay module has a JD-VCC jumper. Jumper on: the coils run from the module's VCC (one 5 V supply, shared ground). Jumper off: feed JD-VCC and its GND from a separate 5 V supply. <span class="cf">confirm how each module is set</span></li>
+<li>A relay module has a JD-VCC jumper. Jumper on: the coils run from the module's VCC (one 5 V supply, shared ground). Jumper off: feed JD-VCC and its GND from a separate 5 V supply.</li>
 <li>Locks, pumps and heaters starting can pull the 5 V down. Symptoms: white screen, LocalServer restarts, odd resets. Cures: short thick 5 V wires, a 470 to 1000 µF capacitor next to the TFT and the ESP32, a separate 5 V for the relay coils. The firmware also switches relays on 25 ms apart.</li>
 <li>Put a fuse on every supply. Keep the 220 V wiring in its own enclosure, away from the boards.</li>
 </ul>
@@ -236,6 +237,14 @@
 <li>Relay pins avoid GPIO 0, 1, 2, 3, 5, 12, 14, 15 because they pulse at boot. Safe output pins: 4, 13, 16 to 19, 21 to 23, 25 to 27, 32, 33.</li>
 <li>GPIO 34, 35, 36 and 39 are input only.</li>
 </ul>
+<h2>Switching 220 V loads (UV-C lamps and heaters)</h2>
+<ul>
+<li>The UV-C germicidal lamps and the heaters (hair dryers) run on 220 V. The relay contact switches only the <b>live</b> wire. The neutral goes straight from the supply to the load. The relay board's low-voltage side (IN pins, VCC) stays on the ESP32 side.</li>
+<li>Use relay contacts rated for the load. Most relay boards are 10 A at 250 V AC. A hair dryer can draw 8 A or more (read its label). A UV-C lamp draws much less, but its ballast or driver can pull a high current at switch-on.</li>
+<li>Fuse the 220 V feed of each box. Connect the earth wire to every metal part. Use insulated terminal blocks, strain relief on every cable, and keep 220 V wires away from the low-voltage boards and the screen.</li>
+<li>Recommended: a door switch in series with the live wire of each UV-C lamp, so the lamp cannot be lit with a door open even if the firmware or a relay fails.</li>
+</ul>
+<div class="warn"><b>Never open a box with the 220 V connected.</b> Unplug it first.</div>
 <h2>Door locks</h2>
 <figure class="fig">@@FIG:lock@@<figcaption class="cap">A door lock with its flyback diode</figcaption></figure>
 <p>The locks are <b>power-to-unlock</b>: the relay is ON only while the door may open (the OPEN steps, Maintenance, or the trapped-helmet release). With no power the lock stays locked. The 1N4007 takes the voltage spike when the relay lets go of the coil. Without it the spike can reset the board and burn the relay contacts.</p>
@@ -250,9 +259,9 @@
 <h2>Sensors</h2>
 <table data-w="22,18,60">
 <tr><th>Sensor</th><th>Wire</th><th>Goes to</th></tr>
-<tr><td><b>Ultrasonic</b></td><td>VCC</td><td>5 V</td></tr>
+<tr><td><b>Ultrasonic HC-SR04</b></td><td>VCC</td><td>5 V</td></tr>
 <tr><td></td><td>TRIG</td><td>GPIO (output)</td></tr>
-<tr><td></td><td>ECHO</td><td>GPIO (input), through a divider if the module gives 5 V</td></tr>
+<tr><td></td><td>ECHO</td><td>GPIO (input), through a divider (the HC-SR04 gives 5 V)</td></tr>
 <tr><td></td><td>GND</td><td>GND</td></tr>
 <tr><td><b>Water-level</b></td><td>SIG</td><td>GPIO34 or GPIO35 (analog, input only)</td></tr>
 <tr><td></td><td>VCC</td><td>3.3 V</td></tr>
@@ -260,24 +269,24 @@
 <tr><td><b>MC-38 door</b></td><td>S</td><td>GPIO (INPUT_PULLUP). Magnet near = closed = LOW</td></tr>
 <tr><td></td><td>GND</td><td>GND</td></tr>
 </table>
-<div class="tip">ECHO divider: ECHO to 1 kΩ to the GPIO, and 2 kΩ from that GPIO to GND. A 3.3 V module (HC-SR04P, RCWL-1601) needs none. The pin sheet shows no divider, so check which modules you have. <span class="cf">confirm</span></div>
+<div class="tip">The HC-SR04 sends 5 V on ECHO and the ESP32 pins are not 5 V tolerant. Put a divider on every ECHO: ECHO to 1 kΩ to the GPIO, and 2 kΩ from that GPIO to GND. (A 3.3 V module such as the HC-SR04P needs none.) The pin sheet shows no divider, so check that every sensor has one. <span class="cf">confirm</span></div>
 <h2>Screen and touch</h2>
 <p>The display and the touch controller share the SPI lines MOSI (13) and SCK (14). Each has its own chip select (15 and 27). TFT_eSPI drives the display as an ST7789, 240 x 320. B1 is mounted upside down, so it runs setRotation(3).</p>
 <h2>Mains and UV safety</h2>
-<div class="warn"><b>Mains can kill.</b> Unplug the machine and wait before you open a box. Keep the heater wiring fused, earthed, in a closed enclosure with strain relief, away from the low-voltage boards.</div>
-<div class="warn"><b>UV light injures eyes and skin.</b> The firmware switches UV and mist off the moment a door opens, but firmware is not a safety device. Recommended: a door switch in series with the UV supply, so the light cannot be on with the door open, and a warning label.</div>
+<div class="warn"><b>Mains can kill.</b> The UV-C lamps and the heaters are on 220 V. Unplug the machine and wait before you open a box. Keep all 220 V wiring fused, earthed, in a closed enclosure with strain relief, away from the low-voltage boards.</div>
+<div class="warn"><b>UV-C light injures eyes and skin, even for a moment.</b> Never look at a lit lamp and never test it with the door open. The firmware switches UV and mist off the moment a door opens, but firmware is not a safety device. Recommended: a door switch in series with the lamp's live wire, so the lamp cannot be on with a door open, and a warning label on every box.</div>
 
 <h1 id="t-fw" data-pb>Firmware and flashing</h1>
 <h2>Arduino IDE settings</h2>
 <table data-w="30,70">
 <tr><th>Board type</th><th>Settings</th></tr>
 <tr><td><b>Terminals</b> (A, B, C, ACS)</td><td>Board: ESP32 Dev Module. esp32 core 3.3.7. Upload speed 921600. Other options default.</td></tr>
-<tr><td><b>Brains</b> (S3A, S3B, S3C) and <b>LocalServer</b></td><td>Board: ESP32S3 Dev Module. USB CDC On Boot: Enabled. CPU 240 MHz. Flash mode QIO 80 MHz. Flash size 16 MB. Partition: 16M Flash (3MB APP/9.9MB FATFS). PSRAM: OPI PSRAM. Upload speed 921600.</td></tr>
+<tr><td><b>Brains</b> (S3A, S3B, S3C), <b>LocalServer</b> and <b>Online Server</b></td><td>Board: ESP32S3 Dev Module. USB CDC On Boot: Enabled. CPU 240 MHz. Flash mode QIO 80 MHz. Flash size 16 MB. Partition: 16M Flash (3MB APP/9.9MB FATFS). PSRAM: OPI PSRAM. Upload speed 921600.</td></tr>
 </table>
 <h2>Libraries</h2>
 <ul>
 <li>TFT_eSPI 2.5.43: only A1, B1, C1 (edit its User_Setup.h, see below).</li>
-<li>ArduinoJson 7.4.3, Async TCP 3.5.0, ESP Async WebServer 3.12.0: only the LocalServer.</li>
+<li>ArduinoJson 7.4.3, Async TCP 3.5.0, ESP Async WebServer 3.12.0: only the LocalServer and the Online Server.</li>
 <li>Everything else (WiFi, ESP-NOW, Preferences) comes with the ESP32 core.</li>
 </ul>
 <h2>TFT_eSPI User_Setup.h</h2>
@@ -292,7 +301,7 @@
 </table>
 <h2>Flash a new or replacement board</h2>
 <ol class="num">
-<li>Find the board in the table <b>The 14 boards</b> and open its sketch folder in the Arduino IDE.</li>
+<li>Find the board in the table <b>The 15 boards</b> and open its sketch folder in the Arduino IDE.</li>
 <li>The folder must hold the same <b>Shared_Common.h</b> as ESP32_S3A (the master copy). Different copies make boards ignore each other's messages.</li>
 <li>Choose the settings above, plug in the USB cable and upload.</li>
 <li>Open the Serial Monitor at 115200 baud to read the board's log.</li>
@@ -317,17 +326,111 @@
 <li>Hand-set relays in Maintenance switch themselves off: heater after 5 minutes, locks after 60 seconds, ACS pumps after 60 seconds.</li>
 <li>The coin slot only has power while a payment is possible (Box 1 and Box 3).</li>
 </ul>
+<div class="tip">The LocalServer must be flashed with the version that broadcasts its revenue totals every 10 seconds, or the Online Server shows no analytics. No other board needs a reflash for the Online Server.</div>
+
+<h1 id="t-online" data-pb>Online monitoring</h1>
+<p>The <b>Online Server</b> is one more ESP32-S3 board. It listens to the machines (it never controls them), sends a snapshot to <b>Blynk</b> every minute, and a <b>web page</b> shows that snapshot from any phone or PC. Nothing on the web page can start, stop or change a machine.</p>
+<figure class="fig">@@FIG:online@@<figcaption class="cap">From the machines to the web page</figcaption></figure>
+<h2>What you need</h2>
+<ul>
+<li>The Online Server (ESP32_ONLINESRV), powered with 5 V, near the machines so it hears every board by radio.</li>
+<li>The LocalServer switched on and flashed with the new version. It sends the revenue totals. Without it the analytics stay empty (the live data still works).</li>
+<li>A 2.4 GHz Wi-Fi network with internet: the school Wi-Fi or a phone hotspot, on any channel.</li>
+<li>A Blynk account and the Blynk Console (blynk.cloud).</li>
+<li>The folder <b>ONLINE_WEB</b> (the web page): put it on any web host, or just open index.html from a PC.</li>
+</ul>
+<h2>Step 1 - Set up Blynk (once)</h2>
+<ol class="num">
+<li>Sign in to the Blynk Console. Open <b>Developer Zone</b>, then <b>My Templates</b>, then <b>New Template</b>.</li>
+<li>Name: Jolly Helmet Online Server. Hardware: ESP32. Connection type: Wi-Fi. Click <b>Done</b>.</li>
+<li>Open the <b>Datastreams</b> tab. Click <b>New Datastream</b>, then <b>Virtual Pin</b>. Fill in V0 as in the table below and click <b>Create</b>.</li>
+<li>Optional: make V1 to V4 the same way (single numbers for Blynk's own dashboard and phone app). Default value 0.</li>
+<li>Optional: open the <b>Events</b> tab, click <b>New Event</b>, code <b>alert</b> (exactly), type Warning or Critical, and switch on a notification (push or e-mail).</li>
+<li>Click <b>Save</b> at the top right of the template. Without Save the device does not see the new datastreams.</li>
+<li>Open <b>Devices</b>, click <b>New Device</b>, choose <b>From template</b>, pick your template, name it Online Server and click <b>Create</b>.</li>
+<li>Open the device, tab <b>Device info</b>, and copy the <b>Auth Token</b>. Keep it private.</li>
+</ol>
+<table data-w="15,9,13,13,18,32">
+<tr><th>Name</th><th>Pin</th><th>Type</th><th>Min</th><th>Max</th><th>Needed?</th></tr>
+<tr><td>live</td><td><b>V0</b></td><td>String</td><td>-</td><td>-</td><td><b>Yes.</b> The web page reads only this one.</td></tr>
+<tr><td>revenue</td><td>V1</td><td>Double</td><td>0</td><td>100000000</td><td>Optional (2 decimals)</td></tr>
+<tr><td>customers</td><td>V2</td><td>Integer</td><td>0</td><td>10000000</td><td>Optional</td></tr>
+<tr><td>alerts</td><td>V3</td><td>Integer</td><td>0</td><td>30</td><td>Optional</td></tr>
+<tr><td>running</td><td>V4</td><td>Integer</td><td>0</td><td>3</td><td>Optional</td></tr>
+</table>
+<h2>Step 2 - Set up the Online Server</h2>
+<ol class="num">
+<li>Flash <b>ESP32_ONLINESRV</b> (same settings as the LocalServer, see Firmware and flashing) and power it.</li>
+<li>On a phone, join the Wi-Fi <b>JollyHelmet-Online</b> (password 12345678). The setup page opens by itself. If it does not, open http://192.168.4.1.</li>
+<li>Tap <b>Search for networks</b> and tap your Wi-Fi, or type its name. Type its password.</li>
+<li>Paste the Blynk <b>Auth Token</b>.</li>
+<li>Choose how often to send. <b>1 minute</b> is a good start. Tick "single numbers V1 to V4" and "Blynk event" only if you made them in Blynk. Under <b>More settings</b>: the time zone (8 for the Philippines) and, if you want the quota bar on the web page, the number of Blynk messages your plan gives per month.</li>
+<li>Tap <b>Save and connect</b>. The board tests the Wi-Fi and Blynk at once. The setup page may stop answering for a few seconds: this is normal, the board moves to your router's channel. It reconnects by itself and shows the result.</li>
+</ol>
+<figure class="fig shots"><img src="images/online/setup_new.png" width="1000" height="1240" alt="Not set up yet"><img src="images/online/setup_ok.png" width="1000" height="1240" alt="Online"><img src="images/online/setup_bad.png" width="1000" height="1240" alt="Not connected (wrong password)"><figcaption class="cap">The setup page: not set up yet, online, not connected (wrong password)</figcaption></figure>
+<table data-w="30,70">
+<tr><th>On the setup page</th><th>Meaning</th></tr>
+<tr><td><b>ONLINE</b> (green)</td><td>The last upload to Blynk worked. It shows how many seconds ago.</td></tr>
+<tr><td><b>NOT SET UP</b> (amber)</td><td>No Wi-Fi or no token is saved yet.</td></tr>
+<tr><td><b>TESTING</b> (blue)</td><td>The board is joining the Wi-Fi and talking to Blynk.</td></tr>
+<tr><td><b>NOT CONNECTED</b> (red)</td><td>The Wi-Fi or Blynk failed. The reason is written under the badge.</td></tr>
+<tr><td>Machines heard</td><td>Must be 13 of 13 when every board is on.</td></tr>
+<tr><td>Revenue totals</td><td>"heard 4 s ago" means the LocalServer is on. "not heard yet": switch it on or reflash it.</td></tr>
+<tr><td>Clock</td><td>Set at the first successful upload. The day charts and the secure connection need it.</td></tr>
+</table>
+<div class="tip">While you use the setup page the board waits 90 seconds before its next upload, so the page does not drop while you type. A phone left connected to its Wi-Fi is disconnected for a moment at every upload.</div>
+<h2>Step 3 - Open the web page</h2>
+<ol class="num">
+<li>Put the folder <b>ONLINE_WEB</b> on a web host (GitHub Pages, Netlify, Cloudflare Pages, the school server) or open <b>index.html</b> on a PC.</li>
+<li>The first time, the page asks for the Blynk Auth Token. Paste it and click <b>Connect</b>. It is kept in that browser only. On a phone you can also open the page once as <i>index.html#token=THE_TOKEN</i>.</li>
+<li>To try the page without hardware, add <b>?demo</b> to the address (or <b>?demo=alerts</b> to see the warnings).</li>
+</ol>
+<figure class="fig shots2"><img src="images/online/monitor_desktop.png" width="2200" height="1800" alt="The web page on a PC"><img src="images/online/monitor_phone.png" width="1000" height="1700" alt="The same page on a phone"><figcaption class="cap">The web page on a PC and, on the right, on a phone with warnings (demo data)</figcaption></figure>
+<h2>Reading the web page</h2>
+<table data-w="26,74">
+<tr><th>Part</th><th>What it shows</th></tr>
+<tr><td><b>Badge</b> (top right)</td><td><b>LIVE</b> green: fresh data. <b>DELAYED</b> amber: a little late. <b>OLD DATA</b> red: nothing new for a long time. <b>BAD TOKEN</b> or <b>NO LINK</b>: the page cannot read Blynk. Next to it: "updated 5 s ago".</td></tr>
+<tr><td><b>Needs attention</b> (red box)</td><td>A box out of order, a container below 15 %, an empty ACS tank, a low mixer, a board that is not heard.</td></tr>
+<tr><td><b>Analytics</b></td><td>Customers served, revenue, coins, average session, today's revenue and customers.</td></tr>
+<tr><td><b>Machines</b></td><td>The step (green = running, blue = a customer is using it, amber = needs attention, red = out of order), time left, coins, helmet, doors, container levels with a small graph, water sensors and the relays that are ON.</td></tr>
+<tr><td><b>Refill stations</b></td><td>Step, mixer levels, EMPTY tanks, pumps running, warnings.</td></tr>
+<tr><td><b>Last 14 days, Last cycles</b></td><td>Revenue per day (today on the right) and the last 10 sessions (revenue and length).</td></tr>
+<tr><td><b>Boards and Online Server</b></td><td>Online or offline for the 13 boards, the Online Server's uptime, restart reason, Wi-Fi signal, free memory and uploads this month.</td></tr>
+<tr><td><b>Buttons</b></td><td>The half-moon switches light and dark. <b>Settings</b>: token, Blynk server and refresh time (5 seconds to 1 minute).</td></tr>
+</table>
+<div class="tip">If a box shows "sensor board offline", the page does not hear that board, so it hides that box's doors, helmet and levels instead of showing wrong numbers.</div>
+<h2>Good to know</h2>
+<ul>
+<li>The page only reads. A Blynk token can also write values, so do not publish it: leave it out of the page files and type it in the page.</li>
+<li>Blynk counts messages. One upload a minute is about 43,200 a month, plus one for V1 to V4 and one per alert event. Check your plan's limit.</li>
+<li>The Blynk Console may show the device as offline. This is normal: the board uses Blynk's web API, not a permanent connection. The page decides "alive" from the numbers inside the data.</li>
+<li>The board hears the machines on radio channel 1 and leaves it for about 5 to 10 seconds at every upload, so do not send faster than every 30 seconds.</li>
+<li>Only 2.4 GHz Wi-Fi works (the ESP32 cannot join 5 GHz).</li>
+</ul>
+<h2>Online troubleshooting</h2>
+<table data-w="32,30,38">
+<tr><th>Message</th><th>Meaning</th><th>What to do</th></tr>
+<tr><td>Requested datastream doesn't exist in the product</td><td>The template has no V0.</td><td>Create V0 (String) in the template and Save it.</td></tr>
+<tr><td>Invalid token, BAD TOKEN</td><td>The token is wrong or belongs to another device.</td><td>Copy it again from Device info.</td></tr>
+<tr><td>read Timeout, no answer</td><td>Blynk did not answer. The board tries once more with a shorter message.</td><td>Check that the Wi-Fi really has internet. Try your regional Blynk server in More settings. The status says if only the SHORT version went through.</td></tr>
+<tr><td>network not found, wrong password</td><td>The Wi-Fi cannot be joined.</td><td>Check the name and password. It must be 2.4 GHz.</td></tr>
+<tr><td>the clock could not be set</td><td>The Wi-Fi blocks the time servers (NTP).</td><td>Allow internet access. Last resort: tick "Skip the TLS certificate check".</td></tr>
+<tr><td>Machines heard stays low after an upload</td><td>The radio did not return to channel 1.</td><td>Switch the Online Server off and on, and tell the builder.</td></tr>
+<tr><td>Revenue totals not heard</td><td>The LocalServer is off or has the old version.</td><td>Switch it on, or reflash it.</td></tr>
+<tr><td>V1-V4 failed, event failed</td><td>The optional datastreams or the alert event are missing in the template.</td><td>Create them, or untick them in the setup page.</td></tr>
+<tr><td>The page says OLD DATA</td><td>The uploads stopped.</td><td>Open the board's setup page and read its status.</td></tr>
+</table>
 
 <h1 id="t-maint" data-pb>Maintenance</h1>
 <div class="warn">Before you open a box: finish or cancel any run, switch the machine off at the mains and unplug it. Wait for the heater to cool.</div>
 <h2>Schedule</h2>
 <table data-w="18,82">
 <tr><th>When</th><th>What to do</th></tr>
-<tr><td><b>Every day</b></td><td>Home page: every badge ONLINE and no red banner. Look at the 3 supply tanks in each ACS and the 2 main containers. Wipe the touch screens. Collect the coins and note the revenue.</td></tr>
-<tr><td><b>Every week</b></td><td>Wipe the helmet chamber and the door seals. Open each door during a run: SAFETY PAUSE must show. Listen for each lock clicking. Look for leaks at pump tubes and mixers. Check the UV lights glow and the humidifiers make mist.</td></tr>
+<tr><td><b>Every day</b></td><td>Home page: every badge ONLINE and no red banner. The online web page says LIVE. Look at the 3 supply tanks in each ACS and the 2 main containers. Wipe the touch screens. Collect the coins and note the revenue.</td></tr>
+<tr><td><b>Every week</b></td><td>Wipe the helmet chamber and the door seals. Open each door during a run: SAFETY PAUSE must show. Listen for each lock clicking. Look for leaks at pump tubes and mixers. Test each UV-C lamp in Maintenance with the door closed (the relay must click; never look at a lit lamp). Check the humidifiers make mist.</td></tr>
 <tr><td><b>Every month</b></td><td>Switch every relay by hand in Maintenance and listen for the click. Clean the ultrasonic sensor faces and the water-level probes. Compare each distance with a ruler (use live). Test the coin slot with every coin. Check screw terminals and plugs are tight and nothing is hot or discoloured. Clean the humidifier discs and the heater and fan air intakes.</td></tr>
 <tr><td><b>Every 3 months</b></td><td>Capture the water sensors again, dry and wet, with the real liquids. Check the touch accuracy. With the power off, check the mains wiring, earth and fuses. Take a screenshot of every Control Center settings page and keep it.</td></tr>
-<tr><td><b>Once a year or when worn</b></td><td>Replace UV lights at the end of their rated hours. Replace pump tubing and slow pumps. Replace any lock that sticks or gets hot. Replace humidifier discs.</td></tr>
+<tr><td><b>Once a year or when worn</b></td><td>Replace the UV-C lamps at the end of their rated hours (their output fades before they stop glowing). Replace pump tubing and slow pumps. Replace any lock that sticks or gets hot. Replace humidifier discs.</td></tr>
 </table>
 <h2>Calibrate</h2>
 <table data-w="30,70">
@@ -352,14 +455,14 @@
 <li>Move the wires one at a time to the same GPIO on the new board.</li>
 <li>Flash the right sketch (see Firmware and flashing). A3 and B3 must be plain ESP32 boards.</li>
 <li>Power on and wait for the ONLINE badge, then test each output by hand.</li>
-<li>Brain (S3) or ACS replaced: enter its settings again. LocalServer replaced: the revenue numbers start from zero.</li>
+<li>Brain (S3) or ACS replaced: enter its settings again. LocalServer replaced: the revenue numbers start from zero. Online Server replaced: join its Wi-Fi again and enter the Wi-Fi and the Blynk token; the 14-day history starts again.</li>
 </ol>
 <h2>Spare parts to keep</h2>
 <ul>
 <li>One spare ESP32 per role, flashed and labelled: A1, A2, A3, C1, C2, B1, B2, B3, ACS, plus one ESP32-S3.</li>
 <li>One spare relay board of each size, 2 MC-38 sensors, 2 ultrasonic sensors, 2 water-level sensors.</li>
 <li>One door lock solenoid, one 12 V supply, 2 DC-DC converters, fuses.</li>
-<li>Spare pumps and tubing, one UV light, one humidifier, a 10 pack of 1N4007 and 10 kΩ, a few 470 to 1000 µF capacitors.</li>
+<li>Spare pumps and tubing, one UV-C lamp, one humidifier, a 10 pack of 1N4007 and 10 kΩ, a few 470 to 1000 µF capacitors.</li>
 </ul>
 
 <h1 id="t-trouble" data-pb="hard">Hardware troubleshooting</h1>
@@ -377,6 +480,7 @@
 <tr><td>A pump runs but the wrong liquid moves</td><td>Relay wired to the wrong pump</td><td>Run each pump by hand in Maintenance and fix the wiring.</td></tr>
 <tr><td>A lock does not release</td><td>No 12 V at the solenoid, or the door presses on the latch</td><td>Measure the solenoid while its relay is ON. Push the door in a little.</td></tr>
 <tr><td>A lock is hot</td><td>It was powered too long</td><td>Check for a stuck relay. The firmware limits how long a lock stays energized.</td></tr>
+<tr><td>A UV-C lamp does not light</td><td>No click: relay or wire. Click but no light: fuse, door switch, lamp or its ballast</td><td>Test it in Maintenance. Then, with the power OFF and unplugged, check the fuse, the door switch and the lamp.</td></tr>
 <tr><td>Helmet stuck after a power cut</td><td>Locks are power-to-unlock</td><td>When power is back, use Maintenance, ENCLOSURE LOCK.</td></tr>
 </table>
 </section>

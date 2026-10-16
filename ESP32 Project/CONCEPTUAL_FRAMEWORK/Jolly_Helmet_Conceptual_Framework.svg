@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1700 960" width="1700" height="960" font-family="Arial, Helvetica, sans-serif">
+<defs><marker id="ah" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L12,6 L0,12 z" fill="#000"/></marker></defs>
+<rect width="1700" height="960" fill="#fff"/>
+<text x="850" y="52" font-size="30" font-weight="bold" text-anchor="middle" fill="#000" xml:space="preserve">JOLLY HELMET: CONCEPTUAL FRAMEWORK</text>
+<text x="850" y="82" font-size="18" font-weight="normal" text-anchor="middle" fill="#000" xml:space="preserve">Coin-operated automatic helmet cleaning and drying station with local and online monitoring</text>
+<rect x="40" y="120" width="470" height="620" fill="#fff" stroke="#000" stroke-width="3"/>
+<rect x="40" y="120" width="470" height="50" fill="#000"/>
+<text x="275" y="154" font-size="24" font-weight="bold" text-anchor="middle" fill="#fff" xml:space="preserve">INPUT</text>
+<rect x="600" y="120" width="560" height="620" fill="#fff" stroke="#000" stroke-width="3"/>
+<rect x="600" y="120" width="560" height="50" fill="#000"/>
+<text x="880" y="154" font-size="24" font-weight="bold" text-anchor="middle" fill="#fff" xml:space="preserve">PROCESS</text>
+<rect x="1250" y="120" width="410" height="620" fill="#fff" stroke="#000" stroke-width="3"/>
+<rect x="1250" y="120" width="410" height="50" fill="#000"/>
+<text x="1455" y="154" font-size="24" font-weight="bold" text-anchor="middle" fill="#fff" xml:space="preserve">OUTPUT</text>
+<text x="62" y="208" font-size="18" font-weight="bold" text-anchor="start" fill="#000" xml:space="preserve">Hardware and materials</text>
+<text x="76" y="238" font-size="16.5" font-weight="normal" text-anchor="start" fill="#000" xml:space="preserve">• ESP32 / ESP32-S3 microcontrollers</text>
+<text x="76" y="266" font-size="16.5" font-weight="normal" text-anchor="start" fill="#000" xml:space="preserve">• Touch screen and coin acceptor</text>
+<text x="76" y="294" font-size="16.5" font-weight="normal" text-anchor="start" fill="#000" xml:space="preserve">• Ultrasonic and water-level sensors</text>
+<text x="76" y="322" font-size="16.5" font-weight="normal" text-anchor="start" fill="#000" xml:space="preserve">• Relays, misting humidifiers, UV-C lamps,</text>
+<text x="92" y="344" font-size="16.5" font-weight="normal" text-anchor="start" fill="#000" xml:space="preserve">heater, fan and pumps</text>
+<text x="76" y="372" font-size="16.5" font-weight="normal" text-anchor="start" fill="#000" xml:space="preserve">• Solenoid door lock and safety slide</text>
+<text x="76" y="400" font-size="16.5" font-weight="normal" text-anchor="start" fill="#000" xml:space="preserve">• Alcohol, scented solution and water</text>
+<text x="76" y="428" font-size="16.5" font-weight="normal" text-anchor="start" fill="#000" xml:space="preserve">• 220 V mains and 12 V power supply</text>
+<text x="62" y="458" font-size="18" font-weight="bold" text-anchor="start" fill="#000" xml:space="preserve">Software and tools</text>
+<text x="76" y="488" font-size="16.5" font-weight="normal" text-anchor="start" fill="#000" xml:space="preserve">• Arduino IDE (C++ firmware), ESP-NOW radio</text>
+<text x="76" y="516" font-size="16.5" font-weight="normal" text-anchor="start" fill="#000" xml:space="preserve">• Blynk cloud and web page (HTML, JavaScript)</text>
+<text x="62" y="546" font-size="18" font-weight="bold" text-anchor="start" fill="#000" xml:space="preserve">User and administrator input</text>
+<text x="76" y="576" font-size="16.5" font-weight="normal" text-anchor="start" fill="#000" xml:space="preserve">• Helmet and coins</text>
+<text x="76" y="604" font-size="16.5" font-weight="normal" text-anchor="start" fill="#000" xml:space="preserve">• Mode choice: cleaning or drying</text>
+<text x="76" y="632" font-size="16.5" font-weight="normal" text-anchor="start" fill="#000" xml:space="preserve">• Satisfaction rating (1 to 10)</text>
+<text x="76" y="660" font-size="16.5" font-weight="normal" text-anchor="start" fill="#000" xml:space="preserve">• Price, time and refill settings</text>
+<rect x="620" y="185" width="520" height="188" fill="#efefef" stroke="#000" stroke-width="1.6"/>
+<text x="636" y="211" font-size="18" font-weight="bold" text-anchor="start" fill="#000" xml:space="preserve">A. System development (prototype model)</text>
+<text x="636" y="239" font-size="16.5" font-weight="normal" text-anchor="start" fill="#000" xml:space="preserve">1. Requirements and design of the three boxes</text>
+<text x="636" y="263" font-size="16.5" font-weight="normal" text-anchor="start" fill="#000" xml:space="preserve">2. Wiring, enclosure and sensor placement</text>
+<text x="636" y="287" font-size="16.5" font-weight="normal" text-anchor="start" fill="#000" xml:space="preserve">3. Firmware for each board (state machines)</text>
+<text x="636" y="311" font-size="16.5" font-weight="normal" text-anchor="start" fill="#000" xml:space="preserve">4. LocalServer Control Center and Online Server</text>
+<text x="636" y="335" font-size="16.5" font-weight="normal" text-anchor="start" fill="#000" xml:space="preserve">5. Bench testing and 3-week deployment</text>
+<text x="636" y="359" font-size="16.5" font-weight="normal" text-anchor="start" fill="#000" xml:space="preserve">6. Evaluation, correction and documentation</text>
+<rect x="620" y="388" width="520" height="205" fill="#efefef" stroke="#000" stroke-width="1.6"/>
+<text x="636" y="414" font-size="18" font-weight="bold" text-anchor="start" fill="#000" xml:space="preserve">B. Machine operation for each customer</text>
+<text x="636" y="442" font-size="16.5" font-weight="normal" text-anchor="start" fill="#000" xml:space="preserve">Tap to start  →  rate the helmet  →  insert coins</text>
+<text x="636" y="466" font-size="16.5" font-weight="normal" text-anchor="start" fill="#000" xml:space="preserve">→  sensors check the helmet and the containers</text>
+<text x="636" y="490" font-size="16.5" font-weight="normal" text-anchor="start" fill="#000" xml:space="preserve">→  CLEANING: alcohol or scented mist + UV-C</text>
+<text x="636" y="514" font-size="16.5" font-weight="normal" text-anchor="start" fill="#000" xml:space="preserve">      DRYING: heater + fan</text>
+<text x="636" y="538" font-size="16.5" font-weight="normal" text-anchor="start" fill="#000" xml:space="preserve">→  rate the result  →  one free retry if needed</text>
+<text x="636" y="562" font-size="16.5" font-weight="normal" text-anchor="start" fill="#000" xml:space="preserve">→  finish and open the door (safety slide as backup)</text>
+<rect x="620" y="608" width="520" height="118" fill="#efefef" stroke="#000" stroke-width="1.6"/>
+<text x="636" y="634" font-size="18" font-weight="bold" text-anchor="start" fill="#000" xml:space="preserve">C. Data flow</text>
+<text x="636" y="662" font-size="16.5" font-weight="normal" text-anchor="start" fill="#000" xml:space="preserve">Machine boards  →  (ESP-NOW)  →  LocalServer</text>
+<text x="636" y="686" font-size="16.5" font-weight="normal" text-anchor="start" fill="#000" xml:space="preserve">→  Online Server  →  (Blynk)  →  web monitor</text>
+<text x="636" y="710" font-size="16.5" font-weight="normal" text-anchor="start" fill="#000" xml:space="preserve">Statistics and alerts are kept on both servers</text>
+<text x="1272" y="208" font-size="18" font-weight="bold" text-anchor="start" fill="#000" xml:space="preserve">For the customer</text>
+<text x="1286" y="238" font-size="16.5" font-weight="normal" text-anchor="start" fill="#000" xml:space="preserve">• Cleaned, sanitized and dried helmet</text>
+<text x="1286" y="266" font-size="16.5" font-weight="normal" text-anchor="start" fill="#000" xml:space="preserve">• Status page: free, in use, out of order</text>
+<text x="1272" y="296" font-size="18" font-weight="bold" text-anchor="start" fill="#000" xml:space="preserve">For the owner and administrator</text>
+<text x="1286" y="326" font-size="16.5" font-weight="normal" text-anchor="start" fill="#000" xml:space="preserve">• Revenue and usage statistics</text>
+<text x="1302" y="348" font-size="16.5" font-weight="normal" text-anchor="start" fill="#000" xml:space="preserve">(customers, coins, session time)</text>
+<text x="1286" y="376" font-size="16.5" font-weight="normal" text-anchor="start" fill="#000" xml:space="preserve">• Real-time monitoring: Control Center</text>
+<text x="1302" y="398" font-size="16.5" font-weight="normal" text-anchor="start" fill="#000" xml:space="preserve">and online page</text>
+<text x="1286" y="426" font-size="16.5" font-weight="normal" text-anchor="start" fill="#000" xml:space="preserve">• Alerts: low containers, out of order,</text>
+<text x="1302" y="448" font-size="16.5" font-weight="normal" text-anchor="start" fill="#000" xml:space="preserve">door safety</text>
+<text x="1286" y="476" font-size="16.5" font-weight="normal" text-anchor="start" fill="#000" xml:space="preserve">• Reports (CSV, print) and checklist</text>
+<text x="1272" y="506" font-size="18" font-weight="bold" text-anchor="start" fill="#000" xml:space="preserve">For the team</text>
+<text x="1286" y="536" font-size="16.5" font-weight="normal" text-anchor="start" fill="#000" xml:space="preserve">• User manual and technician guide</text>
+<text x="1286" y="564" font-size="16.5" font-weight="normal" text-anchor="start" fill="#000" xml:space="preserve">• Tested and deployed prototype</text>
+<line x1="514" y1="430" x2="596" y2="430" stroke="#000" stroke-width="6" marker-end="url(#ah)"/>
+<line x1="1164" y1="430" x2="1246" y2="430" stroke="#000" stroke-width="6" marker-end="url(#ah)"/>
+<path d="M1455,742 V847 H275 V744" fill="none" stroke="#000" stroke-width="3.5" stroke-dasharray="14 8" marker-end="url(#ah)"/>
+<rect x="395" y="800" width="940" height="94" fill="#fff" stroke="#000" stroke-width="2"/>
+<text x="865" y="832" font-size="19" font-weight="bold" text-anchor="middle" fill="#000" xml:space="preserve">FEEDBACK</text>
+<text x="865" y="860" font-size="16.5" font-weight="normal" text-anchor="middle" fill="#000" xml:space="preserve">Customer ratings, sales statistics and fault alerts guide the price and time settings,</text>
+<text x="865" y="882" font-size="16.5" font-weight="normal" text-anchor="middle" fill="#000" xml:space="preserve">the refilling of the containers and the maintenance of the machine.</text>
+<text x="850" y="935" font-size="16" font-weight="normal" text-anchor="middle" fill="#000" xml:space="preserve">Figure 1. Conceptual framework of the Jolly Helmet system (Input, Process, Output and feedback)</text>
+</svg>

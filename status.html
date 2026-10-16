@@ -8,9 +8,11 @@
 <link rel="stylesheet" href="css/style.css">
 <link rel="stylesheet" href="css/status.css">
 <!--
-  JOLLY HELMET - CUSTOMER STATUS PAGE (read only, for the public).
+  JOLLY HELMET - CUSTOMER STATUS PAGE (for the public).
   Shows whether Box 1, Box 2 and Box 3 are free, in use (about how long) or out of order. Nothing else: no revenue, no settings, no alerts.
-  It reads the PUBLIC status Blynk device (a second Blynk device whose token may be public: it only holds those three boxes' step and time left).
+  A customer can also add an OPTIONAL name or nickname to the machine in use; it is shown to everybody on that machine's card and clears by itself when the
+  cycle ends. That name is the only thing this page ever writes, and only into the public device's names datastream (js/config.js: names, namesPin).
+  It reads the PUBLIC status Blynk device (a second Blynk device whose token may be public: it only holds those three boxes' step and time left, plus the names).
   Put its token in js/config.js (publicToken) or open this page as  status.html#t=THE_PUBLIC_TOKEN  (the QR code in the monitor does that).
   Try it:  status.html?demo     English / Filipino: the button at the top (the Filipino texts are in js/status.js: please have a native speaker check them).
 -->
@@ -28,7 +30,8 @@
   <h1 id="title">Which machine is free?</h1>
   <p class="upd" id="upd" aria-live="polite">&nbsp;</p>
   <div id="notice"></div>
-  <div id="boxes" class="sboxes" aria-live="polite"></div>
+  <div id="donebanner" aria-live="assertive"></div>
+  <div id="boxes" class="sboxes"></div>
 
   <section class="card how">
     <h2 id="howT">How it works</h2>

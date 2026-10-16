@@ -1,0 +1,45 @@
+/* Customer status page (status.html). Uses the colour tokens of style.css, so light and dark both work. */
+body.statuspage { padding-bottom:30px; }
+.shead { background:var(--top); color:#fff; box-shadow:0 2px 8px rgba(0,0,0,.25); }
+.shead-in { max-width:760px; margin:0 auto; padding:9px 16px; display:flex; align-items:center; gap:12px; }
+.smain { max-width:760px; margin:0 auto; padding:18px 16px; display:grid; gap:14px; }
+.smain h1 { font-size:26px; color:var(--head); line-height:1.15; }
+.upd { color:var(--muted); font-size:13px; margin-top:-8px; }
+.sboxes { display:grid; gap:12px; }
+.bx { display:flex; gap:16px; align-items:center; padding:18px 18px; border-radius:18px; background:var(--card); box-shadow:var(--shadow); border-left:10px solid var(--idle); }
+.bx .ic { flex:none; width:68px; height:68px; border-radius:50%; display:grid; place-items:center; font-size:34px; font-weight:800; background:var(--idlebg); color:var(--idle); }
+.bx .nm { font-size:15px; font-weight:800; color:var(--head); } .bx .nm small { font-weight:600; color:var(--muted); font-size:13px; margin-left:6px; }
+.bx .stt { font-size:30px; font-weight:900; letter-spacing:.3px; line-height:1.1; margin:2px 0; }
+.bx .hint { font-size:15px; color:var(--ink); } .bx .pr { font-size:13px; color:var(--muted); margin-top:4px; }
+.bx .tl { font-variant-numeric:tabular-nums; font-weight:800; }
+.bx .mid { flex:1 1 0%; min-width:0; }
+/* the optional customer name: shown on the card to everybody, edited in the box at the side (below the text on narrow screens) */
+.bx .own { display:inline-flex; align-items:center; gap:7px; margin-top:8px; padding:5px 12px; border-radius:99px; background:var(--usebg); color:var(--use); font-weight:800; font-size:16px; max-width:100%; overflow-wrap:anywhere; }
+.bx .who { flex:none; width:212px; display:grid; gap:6px; align-self:center; }
+.bx .who:empty { display:none; }
+.nbtn { text-align:left; border:2px dashed var(--use); background:transparent; color:var(--use); border-radius:12px; padding:10px 12px; font-weight:800; font-size:14.5px; line-height:1.25; min-height:44px; }
+.nbtn small { display:block; font-weight:600; color:var(--muted); font-size:12px; }
+.nbtn:hover, .nbtn:focus-visible { background:var(--usebg); }
+.nform { display:grid; gap:6px; }
+.nl { font-size:12px; color:var(--muted); line-height:1.3; }
+.nrow { display:flex; gap:6px; flex-wrap:wrap; }
+.nrow input { flex:1 1 110px; min-width:0; font:inherit; font-size:16px; padding:9px 10px; border:2px solid var(--use); border-radius:10px; background:var(--card); color:var(--ink); }
+.nsave { background:var(--use); color:var(--card); border:0; border-radius:10px; padding:9px 16px; font-weight:800; min-height:42px; }
+.ncan { background:transparent; border:1px solid var(--line); color:var(--muted); border-radius:10px; padding:9px 12px; min-height:42px; }
+.nown { font-size:13px; color:var(--muted); display:grid; gap:2px; } .nown b { color:var(--ink); overflow-wrap:anywhere; }
+.nlink { background:none; border:0; color:var(--use); font-weight:700; padding:6px 14px 6px 0; text-decoration:underline; font-size:13px; }
+.nmsg { font-size:12.5px; color:var(--muted); } .nmsg.err { color:var(--bad); font-weight:600; }
+#donebanner:empty { display:none; }
+.done { display:flex; align-items:center; gap:12px; padding:14px 16px; border-radius:16px; background:var(--okbg); color:var(--ok); border-left:10px solid var(--ok); box-shadow:var(--shadow); }
+.done .dtx { flex:1; display:grid; gap:2px; overflow-wrap:anywhere; } .done .dtx b { font-size:17px; } .done .dtx span { color:var(--ink); font-size:14px; }
+.dok { flex:none; background:var(--ok); color:var(--card); border:0; border-radius:10px; padding:10px 20px; font-weight:800; min-height:44px; }
+.bx.free { border-left-color:var(--ok); } .bx.free .ic { background:var(--okbg); color:var(--ok); } .bx.free .stt { color:var(--ok); }
+.bx.busy { border-left-color:var(--use); } .bx.busy .ic { background:var(--usebg); color:var(--use); } .bx.busy .stt { color:var(--use); }
+.bx.oos { border-left-color:var(--bad); background:var(--badbg); } .bx.oos .ic { background:var(--card); color:var(--bad); } .bx.oos .stt { color:var(--bad); }
+.bx.maint { border-left-color:var(--maint); } .bx.maint .ic { background:var(--maintbg); color:var(--maint); } .bx.maint .stt { color:var(--maint); }
+.bx.dryonly { border-left-color:var(--amber); } .bx.dryonly .ic { background:var(--warnbg); color:var(--warn); } .bx.dryonly .stt { color:var(--warn); }
+.bx.noinfo .stt { color:var(--idle); }
+.how h2 { font-size:15px; letter-spacing:.2px; text-transform:none; color:var(--head); margin:0 0 6px; }
+.how ol { margin:0 0 0 20px; display:grid; gap:5px; } .how p { color:var(--ink); }
+@media (max-width:600px) { .bx { flex-wrap:wrap; } .bx .who { flex:1 1 100%; width:auto; padding-left:84px; } }
+@media (max-width:480px) { .bx { padding:14px; gap:12px; } .bx .ic { width:54px; height:54px; font-size:28px; } .bx .stt { font-size:25px; } .smain h1 { font-size:22px; } .bx .who { padding-left:66px; } .done { flex-wrap:wrap; } }

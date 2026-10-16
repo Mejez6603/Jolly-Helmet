@@ -57,10 +57,26 @@
  .pill { display:inline-block; background:var(--navy); color:#fff; border-radius:9px; padding:1px 7px; font:800 8.2px Arial,Helvetica,sans-serif; }
  code { font:700 8.6px Consolas,monospace; background:rgba(255,255,255,.8); padding:0 3px; border-radius:3px; }
  .cf { background:#fff1b0; color:#8a4b00; font-weight:800; padding:0 3px; border-radius:3px; }
- #techFlow { display:none; }
+ #techFlow, #refFlow { display:none; }
+ .fig.chart { text-align:center; } .fig.chart svg { width:auto; max-width:100%; max-height:322px; margin:0 auto; border:1px solid #d6dbe6; }
+ .fig.cirkit img { display:block; width:100%; height:auto; max-height:318px; object-fit:contain; margin:0 auto; border:1px solid #d6dbe6; border-radius:6px; background:#fff; }
+ .fig.cirkit .ph { width:100%; }
+ table.idx { table-layout:fixed; } table.idx th { width:25%; } table.idx td { font-size:8.2px; padding:2px 4px; overflow-wrap:anywhere; }
+ table.idx td.pg { color:#56607a; font-weight:700; } table.idx td.t { font-weight:700; } table.idx th:nth-child(2) { border-right:2px solid #fff3cc; }
+ table.idx tr:nth-child(even) td { background:rgba(255,255,255,.55); }
+ .letters { font:800 9.5px Arial,Helvetica,sans-serif; color:var(--navy); }
  .fig { margin:5px 0 4px; } .fig svg, .figslot svg { display:block; width:100%; height:auto; border-radius:6px; }
  .figslot { margin-top:6px; }
  table.pin td:first-child { font-weight:800; white-space:nowrap; }
+ .shots { display:flex; flex-wrap:wrap; gap:5px; justify-content:center; }
+ .shots img { width:calc(33.3% - 4px); height:auto; border:1px solid #d6dbe6; border-radius:5px; }
+ .shots .cap { width:100%; }
+.shots2 { display:flex; gap:6px; flex-wrap:wrap; align-items:flex-start; justify-content:center; }
+ .shots2 img { height:auto; border:1px solid #d6dbe6; border-radius:5px; }
+ .shots2 img:nth-of-type(1) { width:63%; }
+ .shots2 img:nth-of-type(2) { width:32%; }
+ .shots2 .cap { width:100%; }
+ .shot1 img { display:block; width:auto; max-width:100%; max-height:290px; height:auto; margin:0 auto; border:1px solid #d6dbe6; border-radius:5px; }
 </style></head>
 <body>
 
@@ -75,7 +91,7 @@
   </div>
   <div style="position:absolute;left:0;right:0;top:268px;background:#fff;color:var(--ink);padding:12px 14px;text-align:center">
    <div style="font:800 10.5px/1.5 Arial,Helvetica,sans-serif">MEJEZ STUDIO</div>
-   <div style="font:700 8.6px/1.5 Arial,Helvetica,sans-serif">[Member Name 1], [Member Name 2],<br>[Member Name 3], [Member Name 4]</div>
+   <div style="font:700 8.6px/1.5 Arial,Helvetica,sans-serif">MEJES, JERAHMEEL ALZEL M.<br>CRUZ, DEAN RYAN P.<br>MENDOZA, RICAH S.<br>MARTOS, KRISTINA E.</div>
    <div style="font:700 7px Arial,Helvetica,sans-serif;color:#6b7280;margin-top:3px">DEVELOPERS AND DESIGNERS</div>
   </div>
   <div class="bar" style="bottom:0;background:var(--amber);color:var(--deep)">USER MANUAL</div>
@@ -110,12 +126,13 @@
    <div>Screen refresh and maintenance<i></i>27</div>
    <div>Refill station (ACS)<i></i>29</div>
    <div>Troubleshooting and care<i></i>33</div>
-   <div class="sec">FOR TECHNICIANS (Hardware)</div>
+   <div class="sec">FOR TECHNICIANS (Hardware and online)</div>
    <div>How it is built<i></i><span data-ref="t-build"></span></div>
    <div>Component list<i></i><span data-ref="t-parts"></span></div>
    <div>Pinouts<i></i><span data-ref="t-pins"></span></div>
    <div>Circuit and wiring<i></i><span data-ref="t-wiring"></span></div>
    <div>Firmware and flashing<i></i><span data-ref="t-fw"></span></div>
+   <div>Online monitoring (Blynk and web)<i></i><span data-ref="t-online"></span></div>
    <div>Maintenance<i></i><span data-ref="t-maint"></span></div>
    <div>Hardware troubleshooting<i></i><span data-ref="t-trouble"></span></div>
   </div>
@@ -123,10 +140,22 @@
  </div>
  <div class="page art">
   <div class="hdr"><img class="lg" src="images/logo.png" alt=""><div><b>Jolly Helmet</b><small>Make your Helmet Happy Again!</small></div></div>
-  <div style="position:absolute;left:0;right:0;top:70px;text-align:center">
-   <img src="images/logo.png" alt="" style="height:117px;width:auto;">
-   <div style="font:800 25px/1 Arial,Helvetica,sans-serif;color:var(--navy);margin-top:12px">Welcome to<br><span style="color:var(--amber)">Jolly Helmet!</span></div>
-   <div style="font:700 9.5px/1.4 Arial,Helvetica,sans-serif;color:var(--ink);margin:10px 24px 0">A self-service station that cleans and dries your motorcycle helmet while you wait.</div>
+  <div style="position:absolute;left:0;right:0;top:50px;text-align:center">
+   <img src="images/logo.png" alt="" style="height:84px;width:auto;">
+   <div style="font:800 21px/1 Arial,Helvetica,sans-serif;color:var(--navy);margin-top:7px">Welcome to <span style="color:var(--amber)">Jolly Helmet!</span></div>
+   <div style="font:700 9px/1.35 Arial,Helvetica,sans-serif;color:var(--ink);margin:5px 24px 0">A self-service station that cleans and dries your motorcycle helmet while you wait.</div>
+  </div>
+  <div class="body toc" style="top:222px">
+   <div class="sec" style="margin-top:0">REFERENCE (Charts, safety, settings, index)</div>
+   <div>Safety and emergencies<i></i><span data-ref="r-safety"></span></div>
+   <div>Box flowcharts<i></i><span data-ref="r-flow"></span></div>
+   <div>Troubleshooting decision trees<i></i><span data-ref="r-trouble"></span></div>
+   <div>Settings reference<i></i><span data-ref="r-settings"></span></div>
+   <div>Circuit schematics<i></i><span data-ref="r-circuit"></span></div>
+   <div>Policies<i></i><span data-ref="r-policy"></span></div>
+   <div>Glossary<i></i><span data-ref="r-glossary"></span></div>
+   <div>Version and revisions<i></i><span data-ref="r-version"></span></div>
+   <div>Index<i></i><span data-ref="r-index"></span></div>
   </div>
   <div class="bar">USER MANUAL</div><div class="pno">ii</div>
  </div>
@@ -488,7 +517,7 @@
    <p>The Control Center is a small web server (the <b>LocalServer</b>) inside the machine. You connect to it with a phone or laptop. It does not need internet.</p>
    <ol class="num">
     <li>Switch on the machine and wait about 30 seconds.</li>
-    <li>On your phone, join the Wi-Fi <code>ESP32_LOCAL</code>, password <code>12345678</code>.</li>
+    <li>On your phone, join the Wi-Fi <code>JollyHelmet-Local</code>, password <code>12345678</code>.</li>
     <li>Open a browser and go to <code>http://192.168.4.1</code> (the page often opens by itself).</li>
     <li>The Home page appears. Use the <b>menu button</b> (three lines, top left) to open the settings pages.</li>
    </ol>
@@ -739,7 +768,7 @@
   <div class="hdr"><img class="lg" src="images/logo.png" alt=""><div><b>Jolly Helmet</b><small>Make your Helmet Happy Again!</small></div></div>
   <div style="position:absolute;left:14px;right:14px;top:62px">
    <h1 style="text-align:center;font-size:22px">TECHNICIAN GUIDE</h1>
-   <div style="text-align:center;font:700 9px Arial,Helvetica,sans-serif;margin-bottom:8px">Hardware, pinouts, wiring and maintenance</div>
+   <div style="text-align:center;font:700 9px Arial,Helvetica,sans-serif;margin-bottom:8px">Hardware, wiring, online monitoring and maintenance</div>
    <div class="figslot"></div>
   </div>
   <div class="bar">USER MANUAL</div><div class="pno">35</div>
@@ -755,17 +784,20 @@
 </section>
 
 <!--TECH-FLOW-START-->
-<!-- Technician guide content. Assembled into JollyHelmet_UserManual.html by buildssemble_tech.ps1 (a figure placeholder is replaced by the svg of the same name in figs.html). -->
+<!-- Technician guide content. Put together into JollyHelmet_UserManual.html by the script assemble_tech.ps1 in this folder (a figure placeholder is replaced by the svg of the same name in figs.html). -->
 <section id="techFlow" hidden>
 
 <h1 id="t-build" data-pb>How it is built</h1>
 <p>Each machine is a small team of ESP32 boards that talk by radio (ESP-NOW, channel 1). The only wires between the boards are power wires.</p>
 <figure class="fig"><svg viewBox="0 0 420 322" xmlns="http://www.w3.org/2000/svg" font-family="Arial,Helvetica,sans-serif">
  <rect x="0" y="0" width="420" height="322" rx="8" fill="#ffffff" stroke="#d6dbe6"/>
- <rect x="110" y="8" width="200" height="38" rx="7" fill="#14325c"/>
- <text x="210" y="24" text-anchor="middle" font-size="11.5" font-weight="700" fill="#ffffff">LocalServer (ESP32-S3)</text>
- <text x="210" y="38" text-anchor="middle" font-size="8.5" fill="#ffd98a">Wi-Fi ESP32_LOCAL: phone or laptop</text>
- <path d="M210 46 V58 M70 58 H350 M70 58 V72 M210 58 V72 M350 58 V72" stroke="#6b7280" stroke-width="1.4" stroke-dasharray="4 3" fill="none"/>
+ <rect x="8" y="8" width="196" height="38" rx="7" fill="#14325c"/>
+ <text x="106" y="24" text-anchor="middle" font-size="11.5" font-weight="700" fill="#ffffff">LocalServer (ESP32-S3)</text>
+ <text x="106" y="38" text-anchor="middle" font-size="8.5" fill="#ffd98a">Control Center Wi-Fi: phone or laptop</text>
+ <rect x="216" y="8" width="196" height="38" rx="7" fill="#0f6b4b"/>
+ <text x="314" y="24" text-anchor="middle" font-size="11.5" font-weight="700" fill="#ffffff">Online Server (ESP32-S3)</text>
+ <text x="314" y="38" text-anchor="middle" font-size="8.5" fill="#d9f5e8">listens, sends to Blynk and the web</text>
+ <path d="M106 46 V58 M314 46 V58 M70 58 H350 M70 58 V72 M210 58 V72 M350 58 V72" stroke="#6b7280" stroke-width="1.4" stroke-dasharray="4 3" fill="none"/>
  <!-- Box 1 -->
  <rect x="8" y="72" width="124" height="184" rx="8" fill="#fff8e1" stroke="#f0d890"/>
  <text x="70" y="86" text-anchor="middle" font-size="9.5" font-weight="700" fill="#14325c">BOX 1 - CLEANER</text>
@@ -825,8 +857,8 @@
  <text x="188" y="286" font-size="8.3" fill="#1d2433">wireless (ESP-NOW)</text>
  <text x="156" y="299" font-size="8.3" fill="#1d2433">S3x = ESP32-S3 brain</text>
  <text x="156" y="311" font-size="8.3" fill="#1d2433">A, B, C, ACS = ESP32</text>
-</svg><figcaption class="cap">The whole installation: three boxes, two refill stations and the LocalServer</figcaption></figure>
-<h2>The 14 boards</h2>
+</svg><figcaption class="cap">The whole installation: three boxes, two refill stations, the LocalServer and the Online Server</figcaption></figure>
+<h2>The 15 boards</h2>
 <table data-w="14,17,69">
 <tr><th>Board</th><th>Where</th><th>What it does (sketch folder)</th></tr>
 <tr><td><b>S3A</b></td><td>Box 1</td><td>Brain. Runs every step and keeps the settings. (ESP32_S3A)</td></tr>
@@ -842,13 +874,14 @@
 <tr><td><b>B3</b></td><td>Box 3</td><td>13 relays: same as A3 plus the heater. (ESP32_B3)</td></tr>
 <tr><td><b>ACS 1</b></td><td>Box 1 refill</td><td>6 pumps, 2 mixer containers (ultrasonic and water sensor each). (ESP32_ACS1)</td></tr>
 <tr><td><b>ACS 2</b></td><td>Box 3 refill</td><td>Same as ACS 1. (ESP32_ACS2)</td></tr>
-<tr><td><b>LocalServer</b></td><td>Control Center</td><td>Wi-Fi ESP32_LOCAL, settings pages, revenue. (ESP32_LOCALSRV)</td></tr>
+<tr><td><b>LocalServer</b></td><td>Control Center</td><td>Wi-Fi JollyHelmet-Local, settings pages, revenue. Also broadcasts its revenue totals for the Online Server. (ESP32_LOCALSRV)</td></tr>
+<tr><td><b>Online Server</b></td><td>Online</td><td>Listens to the machines and sends a snapshot to Blynk for the web page. Never controls anything. (ESP32_ONLINESRV)</td></tr>
 </table>
 <h2>Brains and terminals</h2>
 <ul>
-<li><b>Brains</b> (S3A, S3B, S3C, LocalServer) are ESP32-S3 boards with 16 MB flash and 8 MB PSRAM. Nothing is wired to them except power.</li>
+<li><b>Brains</b> (S3A, S3B, S3C, LocalServer, Online Server) are ESP32-S3 boards with 16 MB flash and 8 MB PSRAM. Nothing is wired to them except power.</li>
 <li><b>Terminals</b> (the A, B, C and ACS boards) are plain ESP32 (WROOM) boards on screw-terminal expansion boards. They hold every sensor, relay and display wire. A3 and B3 must not be WROVER (PSRAM) boards, because GPIO 16 and 17 are relays.</li>
-<li>Settings are saved inside the brains (S3A, S3B, S3C) and the ACS boards. The LocalServer only saves the revenue numbers.</li>
+<li>Settings are saved inside the brains (S3A, S3B, S3C) and the ACS boards. The LocalServer only saves the revenue numbers. The Online Server saves its own Wi-Fi, Blynk token and the daily revenue history.</li>
 <li>If a terminal hears nothing from its brain for 15 seconds, it switches its relays off (heater, UV, mist, pumps, coin power). If a helmet is stuck behind a closed door, it also lets the enclosure lock go.</li>
 </ul>
 
@@ -858,7 +891,7 @@
 <table data-w="52,8,40">
 <tr><th>Item</th><th>Qty</th><th>Used in</th></tr>
 <tr><td>ESP32 DevKit (ESP32-WROOM-32) with screw-terminal expansion board</td><td>10</td><td>A1 A2 A3 B1 B2 B3 C1 C2 ACS 1 ACS 2</td></tr>
-<tr><td>ESP32-S3 DevKit N16R8 (16 MB flash, 8 MB OPI PSRAM)</td><td>4</td><td>S3A S3B S3C LocalServer</td></tr>
+<tr><td>ESP32-S3 DevKit N16R8 (16 MB flash, 8 MB OPI PSRAM)</td><td>5</td><td>S3A S3B S3C LocalServer Online Server</td></tr>
 <tr><td>2.8 in SPI TFT with resistive touch (ST7789, 240 x 320)</td><td>3</td><td>A1, B1, C1</td></tr>
 <tr><td>Allan multi-coin acceptor, 12 V</td><td>3</td><td>One per box</td></tr>
 <tr><td>Active buzzer</td><td>3</td><td>A1, B1, C1</td></tr>
@@ -868,7 +901,7 @@
 <table data-w="40,8,52">
 <tr><th>Item</th><th>Qty</th><th>Used in</th></tr>
 <tr><td>MC-38 magnetic door sensor (reed)</td><td>11</td><td>Box 1: 4, Box 2: 3, Box 3: 4</td></tr>
-<tr><td>Ultrasonic distance sensor <span class="cf">confirm model</span></td><td>11</td><td>Helmet: 3 (one per box). Main containers: 4. ACS mixers: 4.</td></tr>
+<tr><td>Ultrasonic distance sensor HC-SR04 (5 V)</td><td>11</td><td>Helmet: 3 (one per box). Main containers: 4. ACS mixers: 4.</td></tr>
 <tr><td>Analog water-level sensor</td><td>8</td><td>Box 1: 2, Box 3: 2, ACS 1: 2, ACS 2: 2</td></tr>
 </table>
 <h2>Relay boards</h2>
@@ -882,20 +915,20 @@
 <table data-w="34,8,58">
 <tr><th>Item</th><th>Qty</th><th>Used in</th></tr>
 <tr><td>12 V solenoid door lock</td><td>11</td><td>Box 1: 4 (enclosure, panel, back, ACS side). Box 2: 3. Box 3: 4.</td></tr>
-<tr><td>Humidifier (mist maker), 5 V <span class="cf">confirm</span></td><td>6</td><td>Box 1: 3, Box 3: 3 (alcohol, scented, both)</td></tr>
-<tr><td>Drain pump, 5 V <span class="cf">confirm</span></td><td>4</td><td>Box 1: 2, Box 3: 2</td></tr>
-<tr><td>Refill pump, 5 V <span class="cf">confirm</span></td><td>12</td><td>ACS 1: 6, ACS 2: 6</td></tr>
-<tr><td>UV light, 12 V strip <span class="cf">confirm</span></td><td>5</td><td>Box 1: 2, Box 2: 1, Box 3: 2</td></tr>
+<tr><td>Humidifier (mist maker), 5 V</td><td>6</td><td>Box 1: 3, Box 3: 3 (alcohol, scented, both)</td></tr>
+<tr><td>Drain pump, 5 V</td><td>4</td><td>Box 1: 2, Box 3: 2</td></tr>
+<tr><td>Refill pump, 5 V</td><td>12</td><td>ACS 1: 6, ACS 2: 6</td></tr>
+<tr><td>UV-C germicidal disinfection lamp, 220 V</td><td>5</td><td>Box 1: 2, Box 2: 1, Box 3: 2</td></tr>
 <tr><td>Heater (hair dryer), 220 V</td><td>2</td><td>Box 2, Box 3</td></tr>
-<tr><td>Fan <span class="cf">confirm voltage</span></td><td>1</td><td>Box 2 cool-down</td></tr>
+<tr><td>Fan, 5 V</td><td>1</td><td>Box 2 cool-down</td></tr>
 </table>
 <h2>Power and protection</h2>
 <table data-w="40,12,48">
 <tr><th>Item</th><th>Qty</th><th>Used in</th></tr>
-<tr><td>12 V power supply</td><td><span class="cf">confirm</span></td><td>Locks, UV, coin slots and the 5 V converters</td></tr>
-<tr><td>DC-DC step-down, 12 V to 5 V</td><td><span class="cf">confirm</span></td><td>All ESP32 boards, screens, relay boards, sensors</td></tr>
+<tr><td>12 V power supply</td><td>5</td><td>Locks, coin slots and the DC-DC modules</td></tr>
+<tr><td>DC-DC power module, 12 V in, 3.3 V and 5 V out (multi output)</td><td>5</td><td>All ESP32 boards, screens, relay boards, sensors, mist makers, pumps</td></tr>
 <tr><td>Diode 1N4007</td><td>11 or more</td><td>One across every lock solenoid</td></tr>
-<tr><td>Fuses, 220 V inlet or outlets, earth</td><td><span class="cf">confirm</span></td><td>Mains side, heaters</td></tr>
+<tr><td>Fuses, 220 V inlet or outlets, earth</td><td>-</td><td>Mains side: UV-C lamps and heaters</td></tr>
 </table>
 <p>Not electrical: 2 main containers (alcohol, scented) in Box 1 and in Box 3. In each ACS: 3 supply tanks (water, alcohol, scented) and 2 mixer containers. Tubing and fittings.</p>
 <h2>What is in each unit</h2>
@@ -911,7 +944,7 @@
 <tr><td>Humidifiers</td><td>3</td><td>-</td><td>3</td><td>-</td><td>-</td></tr>
 <tr><td>Drain pumps</td><td>2</td><td>-</td><td>2</td><td>-</td><td>-</td></tr>
 <tr><td>Refill pumps</td><td>-</td><td>-</td><td>-</td><td>6</td><td>6</td></tr>
-<tr><td>UV lights</td><td>2</td><td>1</td><td>2</td><td>-</td><td>-</td></tr>
+<tr><td>UV-C lamps (220 V)</td><td>2</td><td>1</td><td>2</td><td>-</td><td>-</td></tr>
 <tr><td>Heater</td><td>-</td><td>1</td><td>1</td><td>-</td><td>-</td></tr>
 <tr><td>Fan</td><td>-</td><td>1</td><td>-</td><td>-</td><td>-</td></tr>
 </table>
@@ -973,13 +1006,13 @@
 <tr><td>19</td><td>IN6</td><td>Humidifier 2 (scented)</td><td>5 V</td></tr>
 <tr><td>25</td><td>IN7</td><td>Humidifier 3 (both)</td><td>5 V</td></tr>
 <tr><td>22</td><td>IN9</td><td>Coin power (the coin slot's 12 V)</td><td>12 V</td></tr>
-<tr><td>27</td><td>IN10</td><td>UV 1</td><td>12 V</td></tr>
-<tr><td>21</td><td>IN11</td><td>UV 2</td><td>12 V</td></tr>
+<tr><td>27</td><td>IN10</td><td>UV-C lamp 1</td><td>220 V</td></tr>
+<tr><td>21</td><td>IN11</td><td>UV-C lamp 2</td><td>220 V</td></tr>
 <tr><td>33</td><td>IN12</td><td>Drain pump 1 (alcohol container)</td><td>5 V</td></tr>
 <tr><td>32</td><td>IN13</td><td>Drain pump 2 (scented container)</td><td>5 V</td></tr>
 </table>
 <ul>
-<li>Supply column: from the pin-sheet totals (12 V x 7, 5 V x 5). <span class="cf">confirm</span></li>
+<li>Supply column: what each load runs on. The UV-C lamps are 220 V: the relay contact switches the live wire (see <b>Switching 220 V loads</b>). Locks and the coin slot are 12 V, humidifiers and drain pumps 5 V.</li>
 <li>IN8 and IN14 to IN16 are not used. GPIO 2, 12 and 15 are left idle (boot pins).</li>
 </ul>
 <h2>B3 - Box 3 relays (16-channel board)</h2>
@@ -1004,11 +1037,11 @@
 <tr><td>16</td><td>IN2</td><td>Panel door lock</td><td>12 V</td></tr>
 <tr><td>17</td><td>IN3</td><td>Back door lock</td><td>12 V</td></tr>
 <tr><td>18</td><td>IN4</td><td>Heater (hair dryer)</td><td>220 V</td></tr>
-<tr><td>23</td><td>IN5</td><td>Fan</td><td><span class="cf">confirm</span></td></tr>
-<tr><td>5</td><td>IN6</td><td>UV strip light</td><td>12 V</td></tr>
+<tr><td>23</td><td>IN5</td><td>Fan</td><td>5 V</td></tr>
+<tr><td>5</td><td>IN6</td><td>UV-C lamp</td><td>220 V</td></tr>
 </table>
 <ul>
-<li>GPIO5 gives a short pulse when the board powers up, so the UV relay may click once. Harmless. Boot-safe spare pins: 13, 21, 22, 32, 33.</li>
+<li>GPIO5 gives a short pulse when the board powers up, so the UV relay may click once. Recommended: when you next reflash C2, move the UV relay to a boot-safe pin (13, 21, 22, 32 or 33) so a 220 V UV-C lamp can never flash at power-up.</li>
 </ul>
 <h2>ACS 1 and ACS 2 - refill stations</h2>
 <p>Identical wiring on both. Relays (8-channel module with JD-VCC, 6 used):</p>
@@ -1033,20 +1066,20 @@
 </table>
 <ul>
 <li>The three supply tanks (water, alcohol, scented) have no sensors. The ACS detects an empty tank when the mixer level does not rise.</li>
-<li>Pumps are 5 V <span class="cf">confirm</span>. Check each pump by hand in Maintenance before the first automatic run (the relay inputs were mixed up once).</li>
+<li>The pumps are 5 V. Check each pump by hand in Maintenance before the first automatic run (the relay inputs were mixed up once).</li>
 </ul>
 <h1 id="t-wiring" data-pb>Circuit and wiring</h1>
 <h2>Circuit summary</h2>
 <ul>
 <li>Every box and refill station is a group of ESP32 boards. They share only power and the radio channel.</li>
 <li>Every lock, lamp, pump and heater is switched by a relay contact. Every sensor is read directly by a terminal board.</li>
-<li>Voltages: 12 V (door locks, UV lights, coin slots), 5 V (ESP32 boards, screens, relay boards, ultrasonic sensors, humidifiers, pumps), 3.3 V (water-level sensors, from the ESP32 3V3 pin), 220 V (the heaters).</li>
+<li>Voltages: 12 V (door locks, coin slots), 5 V (ESP32 boards, screens, relay boards, HC-SR04 ultrasonic sensors, humidifiers, pumps), 3.3 V (water-level sensors, from the ESP32 3V3 pin or the DC-DC module), 220 V (the UV-C lamps and the heaters).</li>
 </ul>
 <h2>Power and grounding</h2>
 <ul>
-<li>Measure every DC-DC converter with a meter before you connect boards. Never put 12 V on an ESP32 pin or on the 5 V rail.</li>
+<li>Measure every output of the DC-DC module (5 V and 3.3 V) with a meter before you connect boards. Never put 12 V on an ESP32 pin or on the 5 V rail.</li>
 <li>Join all grounds: 12 V -, 5 V - and every ESP32 GND. Never join a 12 V + to a 5 V +.</li>
-<li>A relay module has a JD-VCC jumper. Jumper on: the coils run from the module's VCC (one 5 V supply, shared ground). Jumper off: feed JD-VCC and its GND from a separate 5 V supply. <span class="cf">confirm how each module is set</span></li>
+<li>A relay module has a JD-VCC jumper. Jumper on: the coils run from the module's VCC (one 5 V supply, shared ground). Jumper off: feed JD-VCC and its GND from a separate 5 V supply.</li>
 <li>Locks, pumps and heaters starting can pull the 5 V down. Symptoms: white screen, LocalServer restarts, odd resets. Cures: short thick 5 V wires, a 470 to 1000 µF capacitor next to the TFT and the ESP32, a separate 5 V for the relay coils. The firmware also switches relays on 25 ms apart.</li>
 <li>Put a fuse on every supply. Keep the 220 V wiring in its own enclosure, away from the boards.</li>
 </ul>
@@ -1055,34 +1088,30 @@
  <rect x="150" y="8" width="120" height="30" rx="6" fill="#fde8e6" stroke="#b3261e"/>
  <text x="210" y="21" text-anchor="middle" font-size="10" font-weight="700" fill="#b3261e">220 V mains</text>
  <text x="210" y="32" text-anchor="middle" font-size="8.2" fill="#b3261e">fuse + earth</text>
- <path d="M210 38 V50 M85 50 H335 M85 50 V62 M335 50 V62" stroke="#b3261e" stroke-width="1.6" fill="none"/>
+ <path d="M210 38 V50 M85 50 H332 M85 50 V62 M332 50 V62" stroke="#b3261e" stroke-width="1.6" fill="none"/>
  <rect x="20" y="62" width="130" height="36" rx="6" fill="#14325c"/>
  <text x="85" y="76" text-anchor="middle" font-size="10" font-weight="700" fill="#ffffff">12 V power supply</text>
  <text x="85" y="89" text-anchor="middle" font-size="8" fill="#ffd98a">sized for all relay loads</text>
- <rect x="270" y="62" width="130" height="36" rx="6" fill="#ffffff" stroke="#b3261e"/>
- <text x="335" y="76" text-anchor="middle" font-size="9.5" font-weight="700" fill="#b3261e">Heater relay</text>
- <text x="335" y="89" text-anchor="middle" font-size="8" fill="#b3261e">hair dryer 220 V (Box 2, 3)</text>
+ <rect x="252" y="62" width="160" height="36" rx="6" fill="#ffffff" stroke="#b3261e"/>
+ <text x="332" y="76" text-anchor="middle" font-size="9.5" font-weight="700" fill="#b3261e">Relays for 220 V loads</text>
+ <text x="332" y="89" text-anchor="middle" font-size="8" fill="#b3261e">UV-C lamps, heaters (hair dryers)</text>
  <path d="M85 98 V118" stroke="#14325c" stroke-width="1.6" fill="none"/>
  <path d="M20 118 H300" stroke="#14325c" stroke-width="3.5" fill="none"/>
  <text x="306" y="122" font-size="8.6" font-weight="700" fill="#14325c">12 V bus (+ and GND)</text>
- <path d="M53 118 V132 M127 118 V132 M201 118 V132 M275 118 V132" stroke="#14325c" stroke-width="1.6" fill="none"/>
- <rect x="20" y="132" width="66" height="44" rx="5" fill="#fff" stroke="#14325c"/>
- <text x="53" y="148" text-anchor="middle" font-size="9" font-weight="700" fill="#14325c">Door locks</text>
- <text x="53" y="160" text-anchor="middle" font-size="8" fill="#4b5563">via relays</text>
- <text x="53" y="170" text-anchor="middle" font-size="8" fill="#4b5563">12 V</text>
- <rect x="94" y="132" width="66" height="44" rx="5" fill="#fff" stroke="#14325c"/>
- <text x="127" y="148" text-anchor="middle" font-size="9" font-weight="700" fill="#14325c">UV lights</text>
- <text x="127" y="160" text-anchor="middle" font-size="8" fill="#4b5563">via relays</text>
- <text x="127" y="170" text-anchor="middle" font-size="8" fill="#4b5563">12 V</text>
- <rect x="168" y="132" width="66" height="44" rx="5" fill="#fff" stroke="#14325c"/>
- <text x="201" y="148" text-anchor="middle" font-size="9" font-weight="700" fill="#14325c">Coin slot</text>
- <text x="201" y="160" text-anchor="middle" font-size="8" fill="#4b5563">COIN POWER</text>
- <text x="201" y="170" text-anchor="middle" font-size="8" fill="#4b5563">relay, 12 V</text>
- <rect x="242" y="132" width="66" height="44" rx="5" fill="#fde9bf" stroke="#f59e0b"/>
- <text x="275" y="148" text-anchor="middle" font-size="9" font-weight="700" fill="#0c2340">DC-DC</text>
- <text x="275" y="160" text-anchor="middle" font-size="8" fill="#0c2340">step-down</text>
- <text x="275" y="170" text-anchor="middle" font-size="8" fill="#0c2340">12 V to 5 V</text>
- <path d="M275 176 V196" stroke="#f59e0b" stroke-width="1.6" fill="none"/>
+ <path d="M62 118 V132 M154 118 V132 M256 118 V132" stroke="#14325c" stroke-width="1.6" fill="none"/>
+ <rect x="20" y="132" width="84" height="44" rx="5" fill="#fff" stroke="#14325c"/>
+ <text x="62" y="148" text-anchor="middle" font-size="9" font-weight="700" fill="#14325c">Door locks</text>
+ <text x="62" y="160" text-anchor="middle" font-size="8" fill="#4b5563">via relays</text>
+ <text x="62" y="170" text-anchor="middle" font-size="8" fill="#4b5563">12 V</text>
+ <rect x="112" y="132" width="84" height="44" rx="5" fill="#fff" stroke="#14325c"/>
+ <text x="154" y="148" text-anchor="middle" font-size="9" font-weight="700" fill="#14325c">Coin slot</text>
+ <text x="154" y="160" text-anchor="middle" font-size="8" fill="#4b5563">COIN POWER</text>
+ <text x="154" y="170" text-anchor="middle" font-size="8" fill="#4b5563">relay, 12 V</text>
+ <rect x="204" y="132" width="104" height="44" rx="5" fill="#fde9bf" stroke="#f59e0b"/>
+ <text x="256" y="148" text-anchor="middle" font-size="9" font-weight="700" fill="#0c2340">DC-DC module</text>
+ <text x="256" y="160" text-anchor="middle" font-size="8" fill="#0c2340">12 V in, 5 V and</text>
+ <text x="256" y="170" text-anchor="middle" font-size="8" fill="#0c2340">3.3 V out</text>
+ <path d="M256 176 V196" stroke="#f59e0b" stroke-width="1.6" fill="none"/>
  <path d="M8 196 H412" stroke="#f59e0b" stroke-width="3.5" fill="none"/>
  <text x="10" y="190" font-size="8.6" font-weight="700" fill="#b26a00">5 V rail (+ and GND)</text>
  <path d="M45 196 V208 M127 196 V208 M209 196 V208 M291 196 V208 M373 196 V208" stroke="#f59e0b" stroke-width="1.6" fill="none"/>
@@ -1136,7 +1165,7 @@
  <path d="M280 84 H340" stroke="#14325c" stroke-width="2" fill="none"/>
  <rect x="340" y="68" width="72" height="50" rx="6" fill="#fff8e1" stroke="#14325c"/>
  <text x="376" y="90" text-anchor="middle" font-size="9.5" font-weight="700" fill="#14325c">Load</text>
- <text x="376" y="102" text-anchor="middle" font-size="8" fill="#4b5563">lock, UV, pump,</text>
+ <text x="376" y="102" text-anchor="middle" font-size="8" fill="#4b5563">lock, pump,</text>
  <text x="376" y="112" text-anchor="middle" font-size="8" fill="#4b5563">mist maker</text>
  <path d="M376 118 V166" stroke="#1d2433" stroke-width="2" fill="none"/>
  <text x="368" y="162" text-anchor="end" font-size="8.6" font-weight="700" fill="#1d2433">GND of that supply</text>
@@ -1148,6 +1177,14 @@
 <li>Relay pins avoid GPIO 0, 1, 2, 3, 5, 12, 14, 15 because they pulse at boot. Safe output pins: 4, 13, 16 to 19, 21 to 23, 25 to 27, 32, 33.</li>
 <li>GPIO 34, 35, 36 and 39 are input only.</li>
 </ul>
+<h2>Switching 220 V loads (UV-C lamps and heaters)</h2>
+<ul>
+<li>The UV-C germicidal lamps and the heaters (hair dryers) run on 220 V. The relay contact switches only the <b>live</b> wire. The neutral goes straight from the supply to the load. The relay board's low-voltage side (IN pins, VCC) stays on the ESP32 side.</li>
+<li>Use relay contacts rated for the load. Most relay boards are 10 A at 250 V AC. A hair dryer can draw 8 A or more (read its label). A UV-C lamp draws much less, but its ballast or driver can pull a high current at switch-on.</li>
+<li>Fuse the 220 V feed of each box. Connect the earth wire to every metal part. Use insulated terminal blocks, strain relief on every cable, and keep 220 V wires away from the low-voltage boards and the screen.</li>
+<li>Recommended: a door switch in series with the live wire of each UV-C lamp, so the lamp cannot be lit with a door open even if the firmware or a relay fails.</li>
+</ul>
+<div class="warn"><b>Never open a box with the 220 V connected.</b> Unplug it first.</div>
 <h2>Door locks</h2>
 <figure class="fig"><svg viewBox="0 0 420 184" xmlns="http://www.w3.org/2000/svg" font-family="Arial,Helvetica,sans-serif">
  <rect x="0" y="0" width="420" height="184" rx="8" fill="#ffffff" stroke="#d6dbe6"/>
@@ -1223,9 +1260,9 @@
 <h2>Sensors</h2>
 <table data-w="22,18,60">
 <tr><th>Sensor</th><th>Wire</th><th>Goes to</th></tr>
-<tr><td><b>Ultrasonic</b></td><td>VCC</td><td>5 V</td></tr>
+<tr><td><b>Ultrasonic HC-SR04</b></td><td>VCC</td><td>5 V</td></tr>
 <tr><td></td><td>TRIG</td><td>GPIO (output)</td></tr>
-<tr><td></td><td>ECHO</td><td>GPIO (input), through a divider if the module gives 5 V</td></tr>
+<tr><td></td><td>ECHO</td><td>GPIO (input), through a divider (the HC-SR04 gives 5 V)</td></tr>
 <tr><td></td><td>GND</td><td>GND</td></tr>
 <tr><td><b>Water-level</b></td><td>SIG</td><td>GPIO34 or GPIO35 (analog, input only)</td></tr>
 <tr><td></td><td>VCC</td><td>3.3 V</td></tr>
@@ -1233,24 +1270,24 @@
 <tr><td><b>MC-38 door</b></td><td>S</td><td>GPIO (INPUT_PULLUP). Magnet near = closed = LOW</td></tr>
 <tr><td></td><td>GND</td><td>GND</td></tr>
 </table>
-<div class="tip">ECHO divider: ECHO to 1 kΩ to the GPIO, and 2 kΩ from that GPIO to GND. A 3.3 V module (HC-SR04P, RCWL-1601) needs none. The pin sheet shows no divider, so check which modules you have. <span class="cf">confirm</span></div>
+<div class="tip">The HC-SR04 sends 5 V on ECHO and the ESP32 pins are not 5 V tolerant. Put a divider on every ECHO: ECHO to 1 kΩ to the GPIO, and 2 kΩ from that GPIO to GND. (A 3.3 V module such as the HC-SR04P needs none.) The pin sheet shows no divider, so check that every sensor has one. <span class="cf">confirm</span></div>
 <h2>Screen and touch</h2>
 <p>The display and the touch controller share the SPI lines MOSI (13) and SCK (14). Each has its own chip select (15 and 27). TFT_eSPI drives the display as an ST7789, 240 x 320. B1 is mounted upside down, so it runs setRotation(3).</p>
 <h2>Mains and UV safety</h2>
-<div class="warn"><b>Mains can kill.</b> Unplug the machine and wait before you open a box. Keep the heater wiring fused, earthed, in a closed enclosure with strain relief, away from the low-voltage boards.</div>
-<div class="warn"><b>UV light injures eyes and skin.</b> The firmware switches UV and mist off the moment a door opens, but firmware is not a safety device. Recommended: a door switch in series with the UV supply, so the light cannot be on with the door open, and a warning label.</div>
+<div class="warn"><b>Mains can kill.</b> The UV-C lamps and the heaters are on 220 V. Unplug the machine and wait before you open a box. Keep all 220 V wiring fused, earthed, in a closed enclosure with strain relief, away from the low-voltage boards.</div>
+<div class="warn"><b>UV-C light injures eyes and skin, even for a moment.</b> Never look at a lit lamp and never test it with the door open. The firmware switches UV and mist off the moment a door opens, but firmware is not a safety device. Recommended: a door switch in series with the lamp's live wire, so the lamp cannot be on with a door open, and a warning label on every box.</div>
 
 <h1 id="t-fw" data-pb>Firmware and flashing</h1>
 <h2>Arduino IDE settings</h2>
 <table data-w="30,70">
 <tr><th>Board type</th><th>Settings</th></tr>
 <tr><td><b>Terminals</b> (A, B, C, ACS)</td><td>Board: ESP32 Dev Module. esp32 core 3.3.7. Upload speed 921600. Other options default.</td></tr>
-<tr><td><b>Brains</b> (S3A, S3B, S3C) and <b>LocalServer</b></td><td>Board: ESP32S3 Dev Module. USB CDC On Boot: Enabled. CPU 240 MHz. Flash mode QIO 80 MHz. Flash size 16 MB. Partition: 16M Flash (3MB APP/9.9MB FATFS). PSRAM: OPI PSRAM. Upload speed 921600.</td></tr>
+<tr><td><b>Brains</b> (S3A, S3B, S3C), <b>LocalServer</b> and <b>Online Server</b></td><td>Board: ESP32S3 Dev Module. USB CDC On Boot: Enabled. CPU 240 MHz. Flash mode QIO 80 MHz. Flash size 16 MB. Partition: 16M Flash (3MB APP/9.9MB FATFS). PSRAM: OPI PSRAM. Upload speed 921600.</td></tr>
 </table>
 <h2>Libraries</h2>
 <ul>
 <li>TFT_eSPI 2.5.43: only A1, B1, C1 (edit its User_Setup.h, see below).</li>
-<li>ArduinoJson 7.4.3, Async TCP 3.5.0, ESP Async WebServer 3.12.0: only the LocalServer.</li>
+<li>ArduinoJson 7.4.3, Async TCP 3.5.0, ESP Async WebServer 3.12.0: only the LocalServer and the Online Server.</li>
 <li>Everything else (WiFi, ESP-NOW, Preferences) comes with the ESP32 core.</li>
 </ul>
 <h2>TFT_eSPI User_Setup.h</h2>
@@ -1265,7 +1302,7 @@
 </table>
 <h2>Flash a new or replacement board</h2>
 <ol class="num">
-<li>Find the board in the table <b>The 14 boards</b> and open its sketch folder in the Arduino IDE.</li>
+<li>Find the board in the table <b>The 15 boards</b> and open its sketch folder in the Arduino IDE.</li>
 <li>The folder must hold the same <b>Shared_Common.h</b> as ESP32_S3A (the master copy). Different copies make boards ignore each other's messages.</li>
 <li>Choose the settings above, plug in the USB cable and upload.</li>
 <li>Open the Serial Monitor at 115200 baud to read the board's log.</li>
@@ -1290,17 +1327,135 @@
 <li>Hand-set relays in Maintenance switch themselves off: heater after 5 minutes, locks after 60 seconds, ACS pumps after 60 seconds.</li>
 <li>The coin slot only has power while a payment is possible (Box 1 and Box 3).</li>
 </ul>
+<div class="tip">The LocalServer must be flashed with the version that broadcasts its revenue totals every 10 seconds, or the Online Server shows no analytics. No other board needs a reflash for the Online Server.</div>
+
+<h1 id="t-online" data-pb>Online monitoring</h1>
+<p>The <b>Online Server</b> is one more ESP32-S3 board. It listens to the machines (it never controls them), sends a snapshot to <b>Blynk</b> every minute, and a <b>web page</b> shows that snapshot from any phone or PC. Nothing on the web page can start, stop or change a machine.</p>
+<figure class="fig"><svg viewBox="0 0 420 138" xmlns="http://www.w3.org/2000/svg" font-family="Arial,Helvetica,sans-serif">
+ <rect x="0" y="0" width="420" height="138" rx="8" fill="#ffffff" stroke="#d6dbe6"/>
+ <rect x="6" y="12" width="78" height="56" rx="7" fill="#fff8e1" stroke="#14325c"/>
+ <text x="45" y="36" text-anchor="middle" font-size="10" font-weight="700" fill="#14325c">Machines</text>
+ <text x="45" y="49" text-anchor="middle" font-size="8.2" fill="#4b5563">and the</text>
+ <text x="45" y="60" text-anchor="middle" font-size="8.2" fill="#4b5563">LocalServer</text>
+ <rect x="114" y="12" width="78" height="56" rx="7" fill="#0f6b4b"/>
+ <text x="153" y="36" text-anchor="middle" font-size="10" font-weight="700" fill="#ffffff">Online</text>
+ <text x="153" y="49" text-anchor="middle" font-size="10" font-weight="700" fill="#ffffff">Server</text>
+ <text x="153" y="61" text-anchor="middle" font-size="8.2" fill="#d9f5e8">ESP32-S3</text>
+ <rect x="222" y="12" width="78" height="56" rx="7" fill="#e1eefb" stroke="#1c5fa8"/>
+ <text x="261" y="36" text-anchor="middle" font-size="10" font-weight="700" fill="#14325c">Blynk</text>
+ <text x="261" y="49" text-anchor="middle" font-size="10" font-weight="700" fill="#14325c">cloud</text>
+ <text x="261" y="61" text-anchor="middle" font-size="8.2" fill="#4b5563">datastream V0</text>
+ <rect x="330" y="12" width="78" height="56" rx="7" fill="#fde9bf" stroke="#f59e0b"/>
+ <text x="369" y="36" text-anchor="middle" font-size="10" font-weight="700" fill="#0c2340">Web page</text>
+ <text x="369" y="49" text-anchor="middle" font-size="8.2" fill="#0c2340">index.html on a</text>
+ <text x="369" y="60" text-anchor="middle" font-size="8.2" fill="#0c2340">phone or PC</text>
+ <g stroke="#1d2433" stroke-width="1.8" fill="none"><path d="M84 40 H110"/><path d="M192 40 H218"/><path d="M300 40 H326"/></g>
+ <g fill="#1d2433"><path d="M114 40 L106 36 L106 44 Z"/><path d="M222 40 L214 36 L214 44 Z"/><path d="M330 40 L322 36 L322 44 Z"/></g>
+ <g font-size="9" font-weight="700" fill="#ffffff"><circle cx="97" cy="22" r="8" fill="#14325c"/><text x="97" y="25.5" text-anchor="middle">1</text><circle cx="205" cy="22" r="8" fill="#14325c"/><text x="205" y="25.5" text-anchor="middle">2</text><circle cx="313" cy="22" r="8" fill="#14325c"/><text x="313" y="25.5" text-anchor="middle">3</text></g>
+ <text x="8" y="92" font-size="8.6" fill="#1d2433"><tspan font-weight="700">1</tspan>  The Online Server only listens to the machine radio (ESP-NOW, channel 1).</text>
+ <text x="8" y="108" font-size="8.6" fill="#1d2433"><tspan font-weight="700">2</tspan>  Every minute it joins your Wi-Fi and writes one JSON text to V0 (HTTPS).</text>
+ <text x="8" y="124" font-size="8.6" fill="#1d2433"><tspan font-weight="700">3</tspan>  The page reads V0 every 10 seconds. It never writes anything.</text>
+</svg><figcaption class="cap">From the machines to the web page</figcaption></figure>
+<h2>What you need</h2>
+<ul>
+<li>The Online Server (ESP32_ONLINESRV), powered with 5 V, near the machines so it hears every board by radio.</li>
+<li>The LocalServer switched on and flashed with the new version. It sends the revenue totals. Without it the analytics stay empty (the live data still works).</li>
+<li>A 2.4 GHz Wi-Fi network with internet: the school Wi-Fi or a phone hotspot, on any channel.</li>
+<li>A Blynk account and the Blynk Console (blynk.cloud).</li>
+<li>The folder <b>ONLINE_WEB</b> (the web page): put it on any web host, or just open index.html from a PC.</li>
+</ul>
+<h2>Step 1 - Set up Blynk (once)</h2>
+<ol class="num">
+<li>Sign in to the Blynk Console. Open <b>Developer Zone</b>, then <b>My Templates</b>, then <b>New Template</b>.</li>
+<li>Name: Jolly Helmet Online Server. Hardware: ESP32. Connection type: Wi-Fi. Click <b>Done</b>.</li>
+<li>Open the <b>Datastreams</b> tab. Click <b>New Datastream</b>, then <b>Virtual Pin</b>. Fill in V0 as in the table below and click <b>Create</b>.</li>
+<li>Optional: make V1 to V4 the same way (single numbers for Blynk's own dashboard and phone app). Default value 0.</li>
+<li>Optional: open the <b>Events</b> tab, click <b>New Event</b>, code <b>alert</b> (exactly), type Warning or Critical, and switch on a notification (push or e-mail).</li>
+<li>Click <b>Save</b> at the top right of the template. Without Save the device does not see the new datastreams.</li>
+<li>Open <b>Devices</b>, click <b>New Device</b>, choose <b>From template</b>, pick your template, name it Online Server and click <b>Create</b>.</li>
+<li>Open the device, tab <b>Device info</b>, and copy the <b>Auth Token</b>. Keep it private.</li>
+</ol>
+<table data-w="15,9,13,13,18,32">
+<tr><th>Name</th><th>Pin</th><th>Type</th><th>Min</th><th>Max</th><th>Needed?</th></tr>
+<tr><td>live</td><td><b>V0</b></td><td>String</td><td>-</td><td>-</td><td><b>Yes.</b> The web page reads only this one.</td></tr>
+<tr><td>revenue</td><td>V1</td><td>Double</td><td>0</td><td>100000000</td><td>Optional (2 decimals)</td></tr>
+<tr><td>customers</td><td>V2</td><td>Integer</td><td>0</td><td>10000000</td><td>Optional</td></tr>
+<tr><td>alerts</td><td>V3</td><td>Integer</td><td>0</td><td>30</td><td>Optional</td></tr>
+<tr><td>running</td><td>V4</td><td>Integer</td><td>0</td><td>3</td><td>Optional</td></tr>
+</table>
+<h2>Step 2 - Set up the Online Server</h2>
+<ol class="num">
+<li>Flash <b>ESP32_ONLINESRV</b> (same settings as the LocalServer, see Firmware and flashing) and power it.</li>
+<li>On a phone, join the Wi-Fi <b>JollyHelmet-Online</b> (password 12345678). The setup page opens by itself. If it does not, open http://192.168.4.1.</li>
+<li>Tap <b>Search for networks</b> and tap your Wi-Fi, or type its name. Type its password.</li>
+<li>Paste the Blynk <b>Auth Token</b>.</li>
+<li>Choose how often to send. <b>1 minute</b> is a good start. Tick "single numbers V1 to V4" and "Blynk event" only if you made them in Blynk. Under <b>More settings</b>: the time zone (8 for the Philippines) and, if you want the quota bar on the web page, the number of Blynk messages your plan gives per month.</li>
+<li>Tap <b>Save and connect</b>. The board tests the Wi-Fi and Blynk at once. The setup page may stop answering for a few seconds: this is normal, the board moves to your router's channel. It reconnects by itself and shows the result.</li>
+</ol>
+<figure class="fig shots"><img src="images/online/setup_new.png" width="1000" height="1240" alt="Not set up yet"><img src="images/online/setup_ok.png" width="1000" height="1240" alt="Online"><img src="images/online/setup_bad.png" width="1000" height="1240" alt="Not connected (wrong password)"><figcaption class="cap">The setup page: not set up yet, online, not connected (wrong password)</figcaption></figure>
+<table data-w="30,70">
+<tr><th>On the setup page</th><th>Meaning</th></tr>
+<tr><td><b>ONLINE</b> (green)</td><td>The last upload to Blynk worked. It shows how many seconds ago.</td></tr>
+<tr><td><b>NOT SET UP</b> (amber)</td><td>No Wi-Fi or no token is saved yet.</td></tr>
+<tr><td><b>TESTING</b> (blue)</td><td>The board is joining the Wi-Fi and talking to Blynk.</td></tr>
+<tr><td><b>NOT CONNECTED</b> (red)</td><td>The Wi-Fi or Blynk failed. The reason is written under the badge.</td></tr>
+<tr><td>Machines heard</td><td>Must be 13 of 13 when every board is on.</td></tr>
+<tr><td>Revenue totals</td><td>"heard 4 s ago" means the LocalServer is on. "not heard yet": switch it on or reflash it.</td></tr>
+<tr><td>Clock</td><td>Set at the first successful upload. The day charts and the secure connection need it.</td></tr>
+</table>
+<div class="tip">While you use the setup page the board waits 90 seconds before its next upload, so the page does not drop while you type. A phone left connected to its Wi-Fi is disconnected for a moment at every upload.</div>
+<h2>Step 3 - Open the web page</h2>
+<ol class="num">
+<li>Put the folder <b>ONLINE_WEB</b> on a web host (GitHub Pages, Netlify, Cloudflare Pages, the school server) or open <b>index.html</b> on a PC.</li>
+<li>The first time, the page asks for the Blynk Auth Token. Paste it and click <b>Connect</b>. It is kept in that browser only. On a phone you can also open the page once as <i>index.html#token=THE_TOKEN</i>.</li>
+<li>To try the page without hardware, add <b>?demo</b> to the address (or <b>?demo=alerts</b> to see the warnings).</li>
+</ol>
+<figure class="fig shots2"><img src="images/online/monitor_desktop.png" width="2200" height="1800" alt="The web page on a PC"><img src="images/online/monitor_phone.png" width="1000" height="1700" alt="The same page on a phone"><figcaption class="cap">The web page on a PC and, on the right, on a phone with warnings (demo data)</figcaption></figure>
+<h2>Reading the web page</h2>
+<table data-w="26,74">
+<tr><th>Part</th><th>What it shows</th></tr>
+<tr><td><b>Badge</b> (top right)</td><td><b>LIVE</b> green: fresh data. <b>DELAYED</b> amber: a little late. <b>OLD DATA</b> red: nothing new for a long time. <b>BAD TOKEN</b> or <b>NO LINK</b>: the page cannot read Blynk. Next to it: "updated 5 s ago".</td></tr>
+<tr><td><b>Needs attention</b> (red box)</td><td>A box out of order, a container below 15 %, an empty ACS tank, a low mixer, a board that is not heard.</td></tr>
+<tr><td><b>Analytics</b></td><td>Customers served, revenue, coins, average session, today's revenue and customers.</td></tr>
+<tr><td><b>Machines</b></td><td>The step (green = running, blue = a customer is using it, amber = needs attention, red = out of order), time left, coins, helmet, doors, container levels with a small graph, water sensors and the relays that are ON.</td></tr>
+<tr><td><b>Refill stations</b></td><td>Step, mixer levels, EMPTY tanks, pumps running, warnings.</td></tr>
+<tr><td><b>Last 14 days, Last cycles</b></td><td>Revenue per day (today on the right) and the last 10 sessions (revenue and length).</td></tr>
+<tr><td><b>Boards and Online Server</b></td><td>Online or offline for the 13 boards, the Online Server's uptime, restart reason, Wi-Fi signal, free memory and uploads this month.</td></tr>
+<tr><td><b>Buttons</b></td><td>The half-moon switches light and dark. <b>Settings</b>: token, Blynk server and refresh time (5 seconds to 1 minute).</td></tr>
+</table>
+<div class="tip">If a box shows "sensor board offline", the page does not hear that board, so it hides that box's doors, helmet and levels instead of showing wrong numbers.</div>
+<h2>Good to know</h2>
+<ul>
+<li>The page only reads. A Blynk token can also write values, so do not publish it: leave it out of the page files and type it in the page.</li>
+<li>Blynk counts messages. One upload a minute is about 43,200 a month, plus one for V1 to V4 and one per alert event. Check your plan's limit.</li>
+<li>The Blynk Console may show the device as offline. This is normal: the board uses Blynk's web API, not a permanent connection. The page decides "alive" from the numbers inside the data.</li>
+<li>The board hears the machines on radio channel 1 and leaves it for about 5 to 10 seconds at every upload, so do not send faster than every 30 seconds.</li>
+<li>Only 2.4 GHz Wi-Fi works (the ESP32 cannot join 5 GHz).</li>
+</ul>
+<h2>Online troubleshooting</h2>
+<table data-w="32,30,38">
+<tr><th>Message</th><th>Meaning</th><th>What to do</th></tr>
+<tr><td>Requested datastream doesn't exist in the product</td><td>The template has no V0.</td><td>Create V0 (String) in the template and Save it.</td></tr>
+<tr><td>Invalid token, BAD TOKEN</td><td>The token is wrong or belongs to another device.</td><td>Copy it again from Device info.</td></tr>
+<tr><td>read Timeout, no answer</td><td>Blynk did not answer. The board tries once more with a shorter message.</td><td>Check that the Wi-Fi really has internet. Try your regional Blynk server in More settings. The status says if only the SHORT version went through.</td></tr>
+<tr><td>network not found, wrong password</td><td>The Wi-Fi cannot be joined.</td><td>Check the name and password. It must be 2.4 GHz.</td></tr>
+<tr><td>the clock could not be set</td><td>The Wi-Fi blocks the time servers (NTP).</td><td>Allow internet access. Last resort: tick "Skip the TLS certificate check".</td></tr>
+<tr><td>Machines heard stays low after an upload</td><td>The radio did not return to channel 1.</td><td>Switch the Online Server off and on, and tell the builder.</td></tr>
+<tr><td>Revenue totals not heard</td><td>The LocalServer is off or has the old version.</td><td>Switch it on, or reflash it.</td></tr>
+<tr><td>V1-V4 failed, event failed</td><td>The optional datastreams or the alert event are missing in the template.</td><td>Create them, or untick them in the setup page.</td></tr>
+<tr><td>The page says OLD DATA</td><td>The uploads stopped.</td><td>Open the board's setup page and read its status.</td></tr>
+</table>
 
 <h1 id="t-maint" data-pb>Maintenance</h1>
 <div class="warn">Before you open a box: finish or cancel any run, switch the machine off at the mains and unplug it. Wait for the heater to cool.</div>
 <h2>Schedule</h2>
 <table data-w="18,82">
 <tr><th>When</th><th>What to do</th></tr>
-<tr><td><b>Every day</b></td><td>Home page: every badge ONLINE and no red banner. Look at the 3 supply tanks in each ACS and the 2 main containers. Wipe the touch screens. Collect the coins and note the revenue.</td></tr>
-<tr><td><b>Every week</b></td><td>Wipe the helmet chamber and the door seals. Open each door during a run: SAFETY PAUSE must show. Listen for each lock clicking. Look for leaks at pump tubes and mixers. Check the UV lights glow and the humidifiers make mist.</td></tr>
+<tr><td><b>Every day</b></td><td>Home page: every badge ONLINE and no red banner. The online web page says LIVE. Look at the 3 supply tanks in each ACS and the 2 main containers. Wipe the touch screens. Collect the coins and note the revenue.</td></tr>
+<tr><td><b>Every week</b></td><td>Wipe the helmet chamber and the door seals. Open each door during a run: SAFETY PAUSE must show. Listen for each lock clicking. Look for leaks at pump tubes and mixers. Test each UV-C lamp in Maintenance with the door closed (the relay must click; never look at a lit lamp). Check the humidifiers make mist.</td></tr>
 <tr><td><b>Every month</b></td><td>Switch every relay by hand in Maintenance and listen for the click. Clean the ultrasonic sensor faces and the water-level probes. Compare each distance with a ruler (use live). Test the coin slot with every coin. Check screw terminals and plugs are tight and nothing is hot or discoloured. Clean the humidifier discs and the heater and fan air intakes.</td></tr>
 <tr><td><b>Every 3 months</b></td><td>Capture the water sensors again, dry and wet, with the real liquids. Check the touch accuracy. With the power off, check the mains wiring, earth and fuses. Take a screenshot of every Control Center settings page and keep it.</td></tr>
-<tr><td><b>Once a year or when worn</b></td><td>Replace UV lights at the end of their rated hours. Replace pump tubing and slow pumps. Replace any lock that sticks or gets hot. Replace humidifier discs.</td></tr>
+<tr><td><b>Once a year or when worn</b></td><td>Replace the UV-C lamps at the end of their rated hours (their output fades before they stop glowing). Replace pump tubing and slow pumps. Replace any lock that sticks or gets hot. Replace humidifier discs.</td></tr>
 </table>
 <h2>Calibrate</h2>
 <table data-w="30,70">
@@ -1325,14 +1480,14 @@
 <li>Move the wires one at a time to the same GPIO on the new board.</li>
 <li>Flash the right sketch (see Firmware and flashing). A3 and B3 must be plain ESP32 boards.</li>
 <li>Power on and wait for the ONLINE badge, then test each output by hand.</li>
-<li>Brain (S3) or ACS replaced: enter its settings again. LocalServer replaced: the revenue numbers start from zero.</li>
+<li>Brain (S3) or ACS replaced: enter its settings again. LocalServer replaced: the revenue numbers start from zero. Online Server replaced: join its Wi-Fi again and enter the Wi-Fi and the Blynk token; the 14-day history starts again.</li>
 </ol>
 <h2>Spare parts to keep</h2>
 <ul>
 <li>One spare ESP32 per role, flashed and labelled: A1, A2, A3, C1, C2, B1, B2, B3, ACS, plus one ESP32-S3.</li>
 <li>One spare relay board of each size, 2 MC-38 sensors, 2 ultrasonic sensors, 2 water-level sensors.</li>
 <li>One door lock solenoid, one 12 V supply, 2 DC-DC converters, fuses.</li>
-<li>Spare pumps and tubing, one UV light, one humidifier, a 10 pack of 1N4007 and 10 kΩ, a few 470 to 1000 µF capacitors.</li>
+<li>Spare pumps and tubing, one UV-C lamp, one humidifier, a 10 pack of 1N4007 and 10 kΩ, a few 470 to 1000 µF capacitors.</li>
 </ul>
 
 <h1 id="t-trouble" data-pb="hard">Hardware troubleshooting</h1>
@@ -1350,10 +1505,384 @@
 <tr><td>A pump runs but the wrong liquid moves</td><td>Relay wired to the wrong pump</td><td>Run each pump by hand in Maintenance and fix the wiring.</td></tr>
 <tr><td>A lock does not release</td><td>No 12 V at the solenoid, or the door presses on the latch</td><td>Measure the solenoid while its relay is ON. Push the door in a little.</td></tr>
 <tr><td>A lock is hot</td><td>It was powered too long</td><td>Check for a stuck relay. The firmware limits how long a lock stays energized.</td></tr>
+<tr><td>A UV-C lamp does not light</td><td>No click: relay or wire. Click but no light: fuse, door switch, lamp or its ballast</td><td>Test it in Maintenance. Then, with the power OFF and unplugged, check the fuse, the door switch and the lamp.</td></tr>
 <tr><td>Helmet stuck after a power cut</td><td>Locks are power-to-unlock</td><td>When power is back, use Maintenance, ENCLOSURE LOCK.</td></tr>
 </table>
 </section>
 <!--TECH-FLOW-END-->
+<!--REF-FLOW-START-->
+<!-- Reference section content (flowcharts, safety, decision trees, settings, schematics, policies, glossary, version, index).
+     Put together into JollyHelmet_UserManual.html by assemble_tech.ps1, which replaces the double-at tokens below at build time
+     (FIG = the svg of that name in figs.html or figs_ref.html, CIRKIT = a picture from images/cirkit or a dashed slot, FWDATE, LIB, MD5, TODAY, INDEXTERMS). -->
+<section id="refFlow" hidden>
+
+<h1 id="r-safety" data-pb="hard">Safety and emergencies</h1>
+<p>The customer side of every machine is safe to use. The dangers are behind the panels: 220 V mains, UV-C light, a hot heater and flammable alcohol. Read this page before you open anything.</p>
+<h2>In an emergency</h2>
+<ol class="num">
+<li><b>Stop the run.</b> Touch <b>CANCEL</b>, then <b>CONFIRM</b>. The UV-C, the mist and the heater switch off. Box 2 and Box 3 then cool down for a while (Box 2 runs the fan, Box 3 lets everything rest). The coins are <b>not</b> refunded.</li>
+<li><b>If a door is forced open during a run</b>, the machine shows <b>SAFETY PAUSE</b> and switches the UV-C, the mist and the heater off at once. It carries on when the door is shut again with the helmet inside.</li>
+<li><b>Fire, smoke, burning smell, sparks or a person in danger:</b> switch the machine off at the wall socket or the main breaker, step back, and call for help. Do not use water on anything electrical.</li>
+<li><b>A helmet is stuck:</b> see the next block. Never force a door while the machine has power.</li>
+</ol>
+<div class="warn">The locks are <b>power-to-unlock</b>. With the power off, every door stays locked. So after switching off in an emergency, a helmet inside stays inside until power is back. <span class="cf">confirm</span> Fit a mechanical key release to each enclosure door if you want a helmet to be freeable without power.</div>
+<h2>A helmet is stuck inside</h2>
+<ol class="num">
+<li>Check that the machine has power. After a power cut, wait until the Control Center Home page shows the boards ONLINE again.</li>
+<li>Control Center, the box page, <b>Maintenance</b>, tap <b>ENCLOSURE LOCK</b>. The door unlocks for up to 60 seconds, then rests for 5 seconds. Tap <b>Maintenance</b> again when you are done.</li>
+<li>If the brain of the box stops answering for 15 seconds while a helmet is behind a closed door, the terminal board lets the enclosure lock go by itself.</li>
+<li>Still locked? Follow the decision tree <i>The door will not open</i> in this reference.</li>
+</ol>
+
+<h2>Dangers inside the machine</h2>
+<table data-w="22,30,48">
+<tr><th>Danger</th><th>Where</th><th>Rule</th></tr>
+<tr><td><b>220 V mains</b></td><td>UV-C lamps, heaters, power inlet, fuses</td><td>Only a qualified electrician works on the mains side. Unplug first and wait before touching anything. The relays switch the live wire, so a clicking relay does not mean the wire is dead.</td></tr>
+<tr><td><b>UV-C light</b></td><td>Box 1: 2 lamps, Box 2: 1, Box 3: 2</td><td>UV-C harms eyes and skin. Never look at a lit lamp. Test a lamp only with the door closed. A door switch that cuts the lamp when the door opens is recommended.</td></tr>
+<tr><td><b>Hot heater and air</b></td><td>Box 2 and Box 3</td><td>Let it cool (the machine runs a cool down). Never cover the air intakes. The heater switched on by hand in Maintenance turns itself off after 5 minutes.</td></tr>
+<tr><td><b>Alcohol</b></td><td>Containers in Box 1 and Box 3, ACS tanks</td><td>Flammable. Keep it away from the heater, sparks and flames. Keep the lids closed and wipe spills at once. Keep a fire extinguisher near the machines.</td></tr>
+<tr><td><b>Water and electricity</b></td><td>Pumps, mixers, humidifiers, drain</td><td>Fix leaks straight away. Keep tubes and containers away from the boards and relay modules.</td></tr>
+<tr><td><b>Door lock coils</b></td><td>11 solenoid locks, 12 V</td><td>A coil held on for a long time overheats (once it caused a fire-risk incident). The machine never holds one on for more than 60 seconds in a row.</td></tr>
+</table>
+<h2>Safety features built into the firmware</h2>
+<table data-w="34,66">
+<tr><th>Feature</th><th>What it does</th></tr>
+<tr><td><b>Door during a run</b></td><td>Door opened mid-run: SAFETY PAUSE, UV-C, mist and heater off. The run resumes when the door is closed and the helmet is still inside.</td></tr>
+<tr><td><b>Door shut, no helmet</b></td><td>While paused, if the door is shut with nothing inside, the lock is released so the door can be opened again.</td></tr>
+<tr><td><b>Lock duty cap</b></td><td>A lock is never on for more than 60 seconds in a row, then it rests for 5 seconds.</td></tr>
+<tr><td><b>Brain-loss watchdog</b></td><td>If a terminal hears nothing from its brain for 15 seconds, it switches the heater, UV-C, mist, pumps and coin power off.</td></tr>
+<tr><td><b>Hand-set limits</b></td><td>In Maintenance the heater stops after 5 minutes, locks after 60 seconds and the ACS pumps after 60 seconds.</td></tr>
+<tr><td><b>Cool down</b></td><td>After heating, Box 2 runs the fan only and Box 3 lets everything rest, for 60 seconds by default. Also after a cancel.</td></tr>
+<tr><td><b>Empty containers</b></td><td>With level checks on, a box with too little alcohol or scented liquid shows OUT OF ORDER (Box 3 keeps DRYING) and asks the ACS to refill.</td></tr>
+</table>
+<h2>First aid</h2>
+<ul>
+<li><b>Electric shock:</b> switch the power off first, then help. Do not touch the person while they are still in contact with a live part.</li>
+<li><b>UV-C in the eyes or on the skin:</b> move away from the light, and see a doctor if the eyes hurt or the skin is red.</li>
+<li><b>Alcohol or scented liquid in the eyes:</b> rinse with clean water for 15 minutes and get medical advice.</li>
+<li><b>Burn from the heater:</b> cool it under cool running water and cover it with a clean cloth.</li>
+</ul>
+<h2>Who to call</h2>
+<table data-w="34,36,30">
+<tr><th>Role</th><th>Name</th><th>Phone</th></tr>
+<tr><td>Owner or supervisor</td><td>[Name]</td><td>[Number]</td></tr>
+<tr><td>Technician (MEJEZ STUDIO)</td><td>[Name]</td><td>[Number]</td></tr>
+<tr><td>Electrician</td><td>[Name]</td><td>[Number]</td></tr>
+<tr><td>Fire department</td><td>[Local number]</td><td>[Number]</td></tr>
+<tr><td>Nearest clinic or hospital</td><td>[Name]</td><td>[Number]</td></tr>
+</table>
+
+<h1 id="r-flow" data-pb="hard">Box flowcharts</h1>
+<p>One chart per stage of a run, with the same screen names the customer sees. A dark rounded box is where a chart starts or ends. White boxes are screens or steps. <b>Green</b> boxes are where the machine is running. A <b>red</b> box is a fault. A yellow diamond is a decision. A blue pill says where the chart goes on. A dashed box is a note.</p>
+<table data-w="22,78">
+<tr><th>Box</th><th>Charts</th></tr>
+<tr><td><b>Box 1 Cleaner</b></td><td>1. From TAPS to INSERT COIN. 2. Open A, cleaning, open B, rating, free retry, finish.</td></tr>
+<tr><td><b>Box 2 Dryer</b></td><td>3. From TAPS to INSERT COIN and door A. 4. Heating, cool down, open B, rating, free retry, finish.</td></tr>
+<tr><td><b>Box 3 Cleaner + Dryer</b></td><td>5. From TAPS to INSERT COIN, with SELECT MODE. 6. Cleaning or drying, cool down, open B, rating, free retry, finish.</td></tr>
+</table>
+<h2 data-pb="hard">Box 1, chart 1: paying</h2>
+<figure class="fig chart"><svg viewBox="0 0 420 448" xmlns="http://www.w3.org/2000/svg" font-family="Arial,Helvetica,sans-serif"><defs><marker id="ahflow1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#1d2433"/></marker></defs><rect x="0" y="0" width="420" height="448" rx="8" fill="#ffffff" stroke="#d6dbe6"/><path d="M210.0 44.0 L210.0 57.0" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahflow1)"/><path d="M210.0 124.0 L210.0 142.3" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahflow1)"/><path d="M148.0 90.5 L118.0 90.5" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahflow1)"/><path d="M64.0 112.8 L64.0 137.0" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahflow1)"/><path d="M210.0 176.3 L210.0 194.5" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahflow1)"/><path d="M210.0 228.5 L210.0 241.5" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahflow1)"/><path d="M210.0 286.0 L210.0 304.3" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahflow1)"/><path d="M264.0 321.3 L302.0 321.3" fill="none" stroke="#1d2433" stroke-width="1.3" stroke-dasharray="3 3"/><path d="M210.0 338.3 L210.0 356.5" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahflow1)"/><path d="M210.0 401.0 L210.0 414.0" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahflow1)"/><rect x="156" y="10" width="108" height="34" rx="14" fill="#14325c" stroke="#14325c" stroke-width="1.2"/><text x="210" y="24.8" text-anchor="middle" font-size="8.3" font-weight="700" fill="#ffffff">TAPS</text><text x="210" y="35.3" text-anchor="middle" font-size="8.3"  fill="#ffffff">tap anywhere</text><path d="M210 57 L272 90.5 L210 124 L148 90.5 Z" fill="#fff1d0" stroke="#f59e0b" stroke-width="1.2"/><text x="210" y="83.0" text-anchor="middle" font-size="8.3" font-weight="700" fill="#5a3600">CHECKING</text><text x="210" y="93.5" text-anchor="middle" font-size="8.3"  fill="#5a3600">enough alcohol</text><text x="210" y="104.0" text-anchor="middle" font-size="8.3"  fill="#5a3600">and scented?</text><rect x="10" y="68.25" width="108" height="44.5" rx="6" fill="#ffffff" stroke="#14325c" stroke-width="1.2"/><text x="64" y="83.0" text-anchor="middle" font-size="8.3" font-weight="700" fill="#14325c">REFILL</text><text x="64" y="93.5" text-anchor="middle" font-size="8.3"  fill="#14325c">the ACS fills it,</text><text x="64" y="104.0" text-anchor="middle" font-size="8.3"  fill="#14325c">then it checks again</text><rect x="10" y="137" width="108" height="44.5" rx="6" fill="#fde8e6" stroke="#b3261e" stroke-width="1.2"/><text x="64" y="151.8" text-anchor="middle" font-size="8.3" font-weight="700" fill="#7a1812">OUT OF ORDER</text><text x="64" y="162.3" text-anchor="middle" font-size="8.3"  fill="#7a1812">refill gave up:</text><text x="64" y="172.8" text-anchor="middle" font-size="8.3"  fill="#7a1812">use another station</text><rect x="156" y="142.25" width="108" height="34" rx="6" fill="#ffffff" stroke="#14325c" stroke-width="1.2"/><text x="210" y="157.0" text-anchor="middle" font-size="8.3" font-weight="700" fill="#14325c">WELCOME</text><text x="210" y="167.5" text-anchor="middle" font-size="8.3"  fill="#14325c">Tap to START</text><rect x="156" y="194.5" width="108" height="34" rx="6" fill="#ffffff" stroke="#14325c" stroke-width="1.2"/><text x="210" y="209.3" text-anchor="middle" font-size="8.3" font-weight="700" fill="#14325c">RATE A</text><text x="210" y="219.8" text-anchor="middle" font-size="8.3"  fill="#14325c">odor 1 to 10, CONFIRM</text><rect x="156" y="241.5" width="108" height="44.5" rx="6" fill="#ffffff" stroke="#14325c" stroke-width="1.2"/><text x="210" y="256.3" text-anchor="middle" font-size="8.3" font-weight="700" fill="#14325c">METHOD</text><text x="210" y="266.8" text-anchor="middle" font-size="8.3"  fill="#14325c">balanced, alcohol</text><text x="210" y="277.3" text-anchor="middle" font-size="8.3"  fill="#14325c">or scented mist</text><rect x="156" y="304.25" width="108" height="34" rx="6" fill="#ffffff" stroke="#14325c" stroke-width="1.2"/><text x="210" y="319.0" text-anchor="middle" font-size="8.3" font-weight="700" fill="#14325c">TIME ALLOT</text><text x="210" y="329.5" text-anchor="middle" font-size="8.3"  fill="#14325c">type the time, OK</text><rect x="302" y="299" width="108" height="44.5" rx="6" fill="#ffffff" stroke="#6b7280" stroke-width="1.2" stroke-dasharray="3 3"/><text x="356" y="313.8" text-anchor="middle" font-size="8.3" font-weight="700" fill="#4b5563">Under the minimum or</text><text x="356" y="324.3" text-anchor="middle" font-size="8.3"  fill="#4b5563">over the maximum</text><text x="356" y="334.8" text-anchor="middle" font-size="8.3"  fill="#4b5563">coins: it asks again</text><rect x="156" y="356.5" width="108" height="44.5" rx="6" fill="#ffffff" stroke="#14325c" stroke-width="1.2"/><text x="210" y="371.3" text-anchor="middle" font-size="8.3" font-weight="700" fill="#14325c">INSERT COIN</text><text x="210" y="381.8" text-anchor="middle" font-size="8.3"  fill="#14325c">coins count up (CANCEL,</text><text x="210" y="392.3" text-anchor="middle" font-size="8.3"  fill="#14325c">YES: back to TAPS)</text><rect x="135.5" y="414" width="149" height="24" rx="12" fill="#e1eefb" stroke="#1c5fa8" stroke-width="1.2"/><text x="210" y="429.0" text-anchor="middle" font-size="8.3" font-weight="700" fill="#14325c">continues in chart 2: OPEN A</text><text x="214.0" y="136.1" text-anchor="start" font-size="8" font-weight="700" fill="#14325c" stroke="#ffffff" stroke-width="2.6" paint-order="stroke">yes</text><text x="133.0" y="87.0" text-anchor="middle" font-size="8" font-weight="700" fill="#14325c" stroke="#ffffff" stroke-width="2.6" paint-order="stroke">no</text><text x="68.0" y="126.8" text-anchor="start" font-size="8" font-weight="700" fill="#14325c" stroke="#ffffff" stroke-width="2.6" paint-order="stroke">gave up</text></svg><figcaption class="cap">Box 1: from TAPS to INSERT COIN. Containers are checked first; the ACS refills them if they are low.</figcaption></figure>
+<h2 data-pb="hard">Box 1, chart 2: the run</h2>
+<figure class="fig chart"><svg viewBox="0 0 420 388" xmlns="http://www.w3.org/2000/svg" font-family="Arial,Helvetica,sans-serif"><defs><marker id="ahflow2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#1d2433"/></marker></defs><rect x="0" y="0" width="420" height="388" rx="8" fill="#ffffff" stroke="#d6dbe6"/><path d="M210.0 54.5 L210.0 67.5" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahflow2)"/><path d="M275.0 84.5 L302.0 84.5" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahflow2)"/><path d="M356.0 67.5 L356.0 32.3 L264.0 32.3" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahflow2)"/><path d="M210.0 101.5 L210.0 114.5" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahflow2)"/><path d="M264.0 136.8 L302.0 136.8" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahflow2)" marker-start="url(#ahflow2)"/><path d="M156.0 136.8 L118.0 136.8" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahflow2)"/><path d="M64.0 159.0 L64.0 194.3 L156.0 194.3" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahflow2)"/><path d="M210.0 159.0 L210.0 172.0" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahflow2)"/><path d="M210.0 216.5 L210.0 229.5" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahflow2)"/><path d="M210.0 263.5 L210.0 276.5" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahflow2)"/><path d="M148.0 303.5 L122.0 303.5" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahflow2)"/><path d="M210.0 330.5 L210.0 343.5" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahflow2)"/><rect x="156" y="10" width="108" height="44.5" rx="6" fill="#ffffff" stroke="#14325c" stroke-width="1.2"/><text x="210" y="24.8" text-anchor="middle" font-size="8.3" font-weight="700" fill="#14325c">OPEN A</text><text x="210" y="35.3" text-anchor="middle" font-size="8.3"  fill="#14325c">the door unlocks,</text><text x="210" y="45.8" text-anchor="middle" font-size="8.3"  fill="#14325c">put the helmet in</text><rect x="145" y="67.5" width="130" height="34" rx="6" fill="#ffffff" stroke="#14325c" stroke-width="1.2"/><text x="210" y="82.3" text-anchor="middle" font-size="8.3" font-weight="700" fill="#14325c">SENSORS A, CLOSE DOOR A</text><text x="210" y="92.8" text-anchor="middle" font-size="8.3"  fill="#14325c">helmet seen, door shut</text><rect x="302" y="67.5" width="108" height="34" rx="6" fill="#ffffff" stroke="#14325c" stroke-width="1.2"/><text x="356" y="82.3" text-anchor="middle" font-size="8.3" font-weight="700" fill="#14325c">HELMET NO DETECTED</text><text x="356" y="92.8" text-anchor="middle" font-size="8.3"  fill="#14325c">open door again</text><rect x="156" y="114.5" width="108" height="44.5" rx="6" fill="#e2f3e7" stroke="#1b7f3b" stroke-width="1.2"/><text x="210" y="129.3" text-anchor="middle" font-size="8.3" font-weight="700" fill="#0f4d24">CLEANING</text><text x="210" y="139.8" text-anchor="middle" font-size="8.3"  fill="#0f4d24">UV and mist run,</text><text x="210" y="150.3" text-anchor="middle" font-size="8.3"  fill="#0f4d24">the time counts down</text><rect x="302" y="114.5" width="108" height="44.5" rx="6" fill="#ffffff" stroke="#14325c" stroke-width="1.2"/><text x="356" y="129.3" text-anchor="middle" font-size="8.3" font-weight="700" fill="#14325c">Door opened:</text><text x="356" y="139.8" text-anchor="middle" font-size="8.3"  fill="#14325c">SAFETY PAUSE, then</text><text x="356" y="150.3" text-anchor="middle" font-size="8.3"  fill="#14325c">it carries on</text><rect x="10" y="114.5" width="108" height="44.5" rx="6" fill="#ffffff" stroke="#14325c" stroke-width="1.2"/><text x="64" y="129.3" text-anchor="middle" font-size="8.3" font-weight="700" fill="#14325c">CANCEL, CONFIRM:</text><text x="64" y="139.8" text-anchor="middle" font-size="8.3"  fill="#14325c">stops early, coins</text><text x="64" y="150.3" text-anchor="middle" font-size="8.3"  fill="#14325c">are not refunded</text><rect x="156" y="172" width="108" height="44.5" rx="6" fill="#ffffff" stroke="#14325c" stroke-width="1.2"/><text x="210" y="186.8" text-anchor="middle" font-size="8.3" font-weight="700" fill="#14325c">OPEN B, SENSORS B</text><text x="210" y="197.3" text-anchor="middle" font-size="8.3"  fill="#14325c">take the helmet,</text><text x="210" y="207.8" text-anchor="middle" font-size="8.3"  fill="#14325c">close the door</text><rect x="156" y="229.5" width="108" height="34" rx="6" fill="#ffffff" stroke="#14325c" stroke-width="1.2"/><text x="210" y="244.3" text-anchor="middle" font-size="8.3" font-weight="700" fill="#14325c">RATE B</text><text x="210" y="254.8" text-anchor="middle" font-size="8.3"  fill="#14325c">odor 1 to 10, CONFIRM</text><path d="M210 276.5 L272 303.5 L210 330.5 L148 303.5 Z" fill="#fff1d0" stroke="#f59e0b" stroke-width="1.2"/><text x="210" y="301.3" text-anchor="middle" font-size="8.3" font-weight="700" fill="#5a3600">FREE RETRY</text><text x="210" y="311.8" text-anchor="middle" font-size="8.3"  fill="#5a3600">offered?</text><rect x="6" y="282.25" width="116" height="42.5" rx="14" fill="#e1eefb" stroke="#1c5fa8" stroke-width="1.2"/><text x="64" y="296.0" text-anchor="middle" font-size="8.3" font-weight="700" fill="#14325c">yes: FREE run</text><text x="64" y="306.5" text-anchor="middle" font-size="8.3"  fill="#14325c">(2 min), then</text><text x="64" y="317.0" text-anchor="middle" font-size="8.3"  fill="#14325c">back to OPEN A</text><rect x="156" y="343.5" width="108" height="34" rx="14" fill="#14325c" stroke="#14325c" stroke-width="1.2"/><text x="210" y="358.3" text-anchor="middle" font-size="8.3" font-weight="700" fill="#ffffff">FINISH</text><text x="210" y="368.8" text-anchor="middle" font-size="8.3"  fill="#ffffff">thank you, back to TAPS</text><text x="290.0" y="81.0" text-anchor="middle" font-size="8" font-weight="700" fill="#14325c" stroke="#ffffff" stroke-width="2.6" paint-order="stroke">no</text><text x="360.0" y="59.5" text-anchor="start" font-size="8" font-weight="700" fill="#14325c" stroke="#ffffff" stroke-width="2.6" paint-order="stroke">again</text><text x="137.0" y="133.3" text-anchor="middle" font-size="8" font-weight="700" fill="#14325c" stroke="#ffffff" stroke-width="2.6" paint-order="stroke">cancel</text><text x="214.0" y="168.5" text-anchor="start" font-size="8" font-weight="700" fill="#14325c" stroke="#ffffff" stroke-width="2.6" paint-order="stroke">time up</text><text x="133.0" y="300.0" text-anchor="middle" font-size="8" font-weight="700" fill="#14325c" stroke="#ffffff" stroke-width="2.6" paint-order="stroke">yes</text><text x="214.0" y="340.0" text-anchor="start" font-size="8" font-weight="700" fill="#14325c" stroke="#ffffff" stroke-width="2.6" paint-order="stroke">no</text></svg><figcaption class="cap">Box 1: cleaning, taking the helmet out, the second rating and the free retry.</figcaption></figure>
+<h2 data-pb="hard">Box 2, chart 3: paying</h2>
+<figure class="fig chart"><svg viewBox="0 0 420 368" xmlns="http://www.w3.org/2000/svg" font-family="Arial,Helvetica,sans-serif"><defs><marker id="ahflow3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#1d2433"/></marker></defs><rect x="0" y="0" width="420" height="368" rx="8" fill="#ffffff" stroke="#d6dbe6"/><path d="M156.0 32.3 L118.0 32.3" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahflow3)"/><path d="M210.0 49.3 L210.0 67.5" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahflow3)"/><path d="M210.0 101.5 L210.0 114.5" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahflow3)"/><path d="M210.0 148.5 L210.0 166.8" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahflow3)"/><path d="M264.0 183.8 L302.0 183.8" fill="none" stroke="#1d2433" stroke-width="1.3" stroke-dasharray="3 3"/><path d="M210.0 200.8 L210.0 219.0" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahflow3)"/><path d="M210.0 263.5 L210.0 276.5" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahflow3)"/><path d="M275.0 298.8 L302.0 298.8" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahflow3)" marker-start="url(#ahflow3)"/><path d="M210.0 321.0 L210.0 334.0" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahflow3)"/><rect x="156" y="15.25" width="108" height="34" rx="14" fill="#14325c" stroke="#14325c" stroke-width="1.2"/><text x="210" y="30.0" text-anchor="middle" font-size="8.3" font-weight="700" fill="#ffffff">TAPS</text><text x="210" y="40.5" text-anchor="middle" font-size="8.3"  fill="#ffffff">tap anywhere</text><rect x="10" y="10" width="108" height="44.5" rx="6" fill="#fde8e6" stroke="#b3261e" stroke-width="1.2"/><text x="64" y="24.8" text-anchor="middle" font-size="8.3" font-weight="700" fill="#7a1812">OUT OF ORDER</text><text x="64" y="35.3" text-anchor="middle" font-size="8.3"  fill="#7a1812">if board C2 does</text><text x="64" y="45.8" text-anchor="middle" font-size="8.3"  fill="#7a1812">not answer</text><rect x="156" y="67.5" width="108" height="34" rx="6" fill="#ffffff" stroke="#14325c" stroke-width="1.2"/><text x="210" y="82.3" text-anchor="middle" font-size="8.3" font-weight="700" fill="#14325c">WELCOME</text><text x="210" y="92.8" text-anchor="middle" font-size="8.3"  fill="#14325c">Tap to START</text><rect x="154.5" y="114.5" width="111" height="34" rx="6" fill="#ffffff" stroke="#14325c" stroke-width="1.2"/><text x="210" y="129.3" text-anchor="middle" font-size="8.3" font-weight="700" fill="#14325c">RATE A</text><text x="210" y="139.8" text-anchor="middle" font-size="8.3"  fill="#14325c">how wet 1 to 10, CONFIRM</text><rect x="156" y="166.75" width="108" height="34" rx="6" fill="#ffffff" stroke="#14325c" stroke-width="1.2"/><text x="210" y="181.5" text-anchor="middle" font-size="8.3" font-weight="700" fill="#14325c">TIME ALLOT</text><text x="210" y="192.0" text-anchor="middle" font-size="8.3"  fill="#14325c">type the time, OK</text><rect x="302" y="161.5" width="108" height="44.5" rx="6" fill="#ffffff" stroke="#6b7280" stroke-width="1.2" stroke-dasharray="3 3"/><text x="356" y="176.3" text-anchor="middle" font-size="8.3" font-weight="700" fill="#4b5563">Under the minimum or</text><text x="356" y="186.8" text-anchor="middle" font-size="8.3"  fill="#4b5563">over the maximum</text><text x="356" y="197.3" text-anchor="middle" font-size="8.3"  fill="#4b5563">coins: it asks again</text><rect x="156" y="219" width="108" height="44.5" rx="6" fill="#ffffff" stroke="#14325c" stroke-width="1.2"/><text x="210" y="233.8" text-anchor="middle" font-size="8.3" font-weight="700" fill="#14325c">INSERT COIN</text><text x="210" y="244.3" text-anchor="middle" font-size="8.3"  fill="#14325c">coins count up (CANCEL,</text><text x="210" y="254.8" text-anchor="middle" font-size="8.3"  fill="#14325c">YES: back to TAPS)</text><rect x="145" y="276.5" width="130" height="44.5" rx="6" fill="#ffffff" stroke="#14325c" stroke-width="1.2"/><text x="210" y="291.3" text-anchor="middle" font-size="8.3" font-weight="700" fill="#14325c">OPEN A, SENSORS A,</text><text x="210" y="301.8" text-anchor="middle" font-size="8.3"  fill="#14325c">CLOSE DOOR A</text><text x="210" y="312.3" text-anchor="middle" font-size="8.3"  fill="#14325c">helmet in, door shut</text><rect x="302" y="281.75" width="108" height="34" rx="6" fill="#ffffff" stroke="#14325c" stroke-width="1.2"/><text x="356" y="296.5" text-anchor="middle" font-size="8.3" font-weight="700" fill="#14325c">HELMET NO DETECTED</text><text x="356" y="307.0" text-anchor="middle" font-size="8.3"  fill="#14325c">open door again</text><rect x="131" y="334" width="158" height="24" rx="12" fill="#e1eefb" stroke="#1c5fa8" stroke-width="1.2"/><text x="210" y="349.0" text-anchor="middle" font-size="8.3" font-weight="700" fill="#14325c">continues in chart 4: HEATING</text><text x="290.0" y="295.3" text-anchor="middle" font-size="8" font-weight="700" fill="#14325c" stroke="#ffffff" stroke-width="2.6" paint-order="stroke">no</text></svg><figcaption class="cap">Box 2: from TAPS to the door. The box has no containers to check; it is out of order only if its terminal board stops answering.</figcaption></figure>
+<h2 data-pb="hard">Box 2, chart 4: the run</h2>
+<figure class="fig chart"><svg viewBox="0 0 420 341" xmlns="http://www.w3.org/2000/svg" font-family="Arial,Helvetica,sans-serif"><defs><marker id="ahflow4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#1d2433"/></marker></defs><rect x="0" y="0" width="420" height="341" rx="8" fill="#ffffff" stroke="#d6dbe6"/><path d="M210.0 54.5 L210.0 67.5" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahflow4)"/><path d="M264.0 32.3 L302.0 32.3" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahflow4)" marker-start="url(#ahflow4)"/><path d="M156.0 32.3 L118.0 32.3" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahflow4)"/><path d="M64.0 54.5 L64.0 89.8 L156.0 89.8" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahflow4)"/><path d="M210.0 112.0 L210.0 125.0" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahflow4)"/><path d="M210.0 169.5 L210.0 182.5" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahflow4)"/><path d="M210.0 216.5 L210.0 229.5" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahflow4)"/><path d="M148.0 256.5 L122.0 256.5" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahflow4)"/><path d="M210.0 283.5 L210.0 296.5" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahflow4)"/><rect x="156" y="10" width="108" height="44.5" rx="6" fill="#e2f3e7" stroke="#1b7f3b" stroke-width="1.2"/><text x="210" y="24.8" text-anchor="middle" font-size="8.3" font-weight="700" fill="#0f4d24">HEATING</text><text x="210" y="35.3" text-anchor="middle" font-size="8.3"  fill="#0f4d24">heater, UV and fan run,</text><text x="210" y="45.8" text-anchor="middle" font-size="8.3"  fill="#0f4d24">the time counts down</text><rect x="302" y="10" width="108" height="44.5" rx="6" fill="#ffffff" stroke="#14325c" stroke-width="1.2"/><text x="356" y="24.8" text-anchor="middle" font-size="8.3" font-weight="700" fill="#14325c">Door opened:</text><text x="356" y="35.3" text-anchor="middle" font-size="8.3"  fill="#14325c">SAFETY PAUSE, then</text><text x="356" y="45.8" text-anchor="middle" font-size="8.3"  fill="#14325c">it carries on</text><rect x="10" y="10" width="108" height="44.5" rx="6" fill="#ffffff" stroke="#14325c" stroke-width="1.2"/><text x="64" y="24.8" text-anchor="middle" font-size="8.3" font-weight="700" fill="#14325c">CANCEL, CONFIRM:</text><text x="64" y="35.3" text-anchor="middle" font-size="8.3"  fill="#14325c">COOL DOWN first,</text><text x="64" y="45.8" text-anchor="middle" font-size="8.3"  fill="#14325c">coins not refunded</text><rect x="156" y="67.5" width="108" height="44.5" rx="6" fill="#e2f3e7" stroke="#1b7f3b" stroke-width="1.2"/><text x="210" y="82.3" text-anchor="middle" font-size="8.3" font-weight="700" fill="#0f4d24">COOL DOWN</text><text x="210" y="92.8" text-anchor="middle" font-size="8.3"  fill="#0f4d24">only the fan runs</text><text x="210" y="103.3" text-anchor="middle" font-size="8.3"  fill="#0f4d24">(default 60 s)</text><rect x="156" y="125" width="108" height="44.5" rx="6" fill="#ffffff" stroke="#14325c" stroke-width="1.2"/><text x="210" y="139.8" text-anchor="middle" font-size="8.3" font-weight="700" fill="#14325c">OPEN B, SENSORS B</text><text x="210" y="150.3" text-anchor="middle" font-size="8.3"  fill="#14325c">take the helmet,</text><text x="210" y="160.8" text-anchor="middle" font-size="8.3"  fill="#14325c">close the door</text><rect x="156" y="182.5" width="108" height="34" rx="6" fill="#ffffff" stroke="#14325c" stroke-width="1.2"/><text x="210" y="197.3" text-anchor="middle" font-size="8.3" font-weight="700" fill="#14325c">RATE B</text><text x="210" y="207.8" text-anchor="middle" font-size="8.3"  fill="#14325c">how wet now, CONFIRM</text><path d="M210 229.5 L272 256.5 L210 283.5 L148 256.5 Z" fill="#fff1d0" stroke="#f59e0b" stroke-width="1.2"/><text x="210" y="254.3" text-anchor="middle" font-size="8.3" font-weight="700" fill="#5a3600">FREE RETRY</text><text x="210" y="264.8" text-anchor="middle" font-size="8.3"  fill="#5a3600">offered?</text><rect x="6" y="235.25" width="116" height="42.5" rx="14" fill="#e1eefb" stroke="#1c5fa8" stroke-width="1.2"/><text x="64" y="249.0" text-anchor="middle" font-size="8.3" font-weight="700" fill="#14325c">yes: FREE heating</text><text x="64" y="259.5" text-anchor="middle" font-size="8.3"  fill="#14325c">(2 min), then</text><text x="64" y="270.0" text-anchor="middle" font-size="8.3"  fill="#14325c">back to OPEN A</text><rect x="156" y="296.5" width="108" height="34" rx="14" fill="#14325c" stroke="#14325c" stroke-width="1.2"/><text x="210" y="311.3" text-anchor="middle" font-size="8.3" font-weight="700" fill="#ffffff">FINISH</text><text x="210" y="321.8" text-anchor="middle" font-size="8.3"  fill="#ffffff">thank you, back to TAPS</text><text x="214.0" y="64.0" text-anchor="start" font-size="8" font-weight="700" fill="#14325c" stroke="#ffffff" stroke-width="2.6" paint-order="stroke">time up</text><text x="137.0" y="28.8" text-anchor="middle" font-size="8" font-weight="700" fill="#14325c" stroke="#ffffff" stroke-width="2.6" paint-order="stroke">cancel</text><text x="133.0" y="253.0" text-anchor="middle" font-size="8" font-weight="700" fill="#14325c" stroke="#ffffff" stroke-width="2.6" paint-order="stroke">yes</text><text x="214.0" y="293.0" text-anchor="start" font-size="8" font-weight="700" fill="#14325c" stroke="#ffffff" stroke-width="2.6" paint-order="stroke">no</text></svg><figcaption class="cap">Box 2: heating, cool down with the fan, taking the helmet out and the free retry.</figcaption></figure>
+<h2 data-pb="hard">Box 3, chart 5: paying</h2>
+<figure class="fig chart"><svg viewBox="0 0 420 424" xmlns="http://www.w3.org/2000/svg" font-family="Arial,Helvetica,sans-serif"><defs><marker id="ahflow5" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#1d2433"/></marker></defs><rect x="0" y="0" width="420" height="424" rx="8" fill="#ffffff" stroke="#d6dbe6"/><path d="M210.0 44.0 L210.0 57.0" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahflow5)"/><path d="M210.0 124.0 L210.0 142.3" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahflow5)"/><path d="M148.0 90.5 L118.0 90.5" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahflow5)"/><path d="M64.0 112.8 L64.0 137.0" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahflow5)"/><path d="M210.0 176.3 L210.0 194.5" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahflow5)"/><path d="M147.0 228.0 L64.0 228.0 L64.0 274.5" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahflow5)"/><path d="M273.0 228.0 L356.0 228.0 L356.0 274.5" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahflow5)"/><path d="M64.0 319.0 L64.0 354.3 L156.0 354.3" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahflow5)"/><path d="M356.0 319.0 L356.0 354.3 L264.0 354.3" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahflow5)"/><path d="M210.0 376.5 L210.0 389.5" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahflow5)"/><rect x="156" y="10" width="108" height="34" rx="14" fill="#14325c" stroke="#14325c" stroke-width="1.2"/><text x="210" y="24.8" text-anchor="middle" font-size="8.3" font-weight="700" fill="#ffffff">TAPS</text><text x="210" y="35.3" text-anchor="middle" font-size="8.3"  fill="#ffffff">tap anywhere</text><path d="M210 57 L272 90.5 L210 124 L148 90.5 Z" fill="#fff1d0" stroke="#f59e0b" stroke-width="1.2"/><text x="210" y="83.0" text-anchor="middle" font-size="8.3" font-weight="700" fill="#5a3600">CHECKING</text><text x="210" y="93.5" text-anchor="middle" font-size="8.3"  fill="#5a3600">enough alcohol</text><text x="210" y="104.0" text-anchor="middle" font-size="8.3"  fill="#5a3600">and scented?</text><rect x="10" y="68.25" width="108" height="44.5" rx="6" fill="#ffffff" stroke="#14325c" stroke-width="1.2"/><text x="64" y="83.0" text-anchor="middle" font-size="8.3" font-weight="700" fill="#14325c">REFILL</text><text x="64" y="93.5" text-anchor="middle" font-size="8.3"  fill="#14325c">the ACS fills it,</text><text x="64" y="104.0" text-anchor="middle" font-size="8.3"  fill="#14325c">then it checks again</text><rect x="10" y="137" width="108" height="44.5" rx="6" fill="#ffffff" stroke="#6b7280" stroke-width="1.2" stroke-dasharray="3 3"/><text x="64" y="151.8" text-anchor="middle" font-size="8.3" font-weight="700" fill="#4b5563">Refill gave up:</text><text x="64" y="162.3" text-anchor="middle" font-size="8.3"  fill="#4b5563">CLEANING is greyed,</text><text x="64" y="172.8" text-anchor="middle" font-size="8.3"  fill="#4b5563">DRYING still works</text><rect x="156" y="142.25" width="108" height="34" rx="6" fill="#ffffff" stroke="#14325c" stroke-width="1.2"/><text x="210" y="157.0" text-anchor="middle" font-size="8.3" font-weight="700" fill="#14325c">WELCOME</text><text x="210" y="167.5" text-anchor="middle" font-size="8.3"  fill="#14325c">Tap to START</text><path d="M210 194.5 L273 228 L210 261.5 L147 228 Z" fill="#fff1d0" stroke="#f59e0b" stroke-width="1.2"/><text x="210" y="220.5" text-anchor="middle" font-size="8.3" font-weight="700" fill="#5a3600">SELECT MODE</text><text x="210" y="231.0" text-anchor="middle" font-size="8.3"  fill="#5a3600">CLEANING</text><text x="210" y="241.5" text-anchor="middle" font-size="8.3"  fill="#5a3600">or DRYING?</text><rect x="10" y="274.5" width="108" height="44.5" rx="6" fill="#ffffff" stroke="#14325c" stroke-width="1.2"/><text x="64" y="289.3" text-anchor="middle" font-size="8.3" font-weight="700" fill="#14325c">CLEANING</text><text x="64" y="299.8" text-anchor="middle" font-size="8.3"  fill="#14325c">RATE A (odor), METHOD,</text><text x="64" y="310.3" text-anchor="middle" font-size="8.3"  fill="#14325c">TIME ALLOT</text><rect x="302" y="274.5" width="108" height="44.5" rx="6" fill="#ffffff" stroke="#14325c" stroke-width="1.2"/><text x="356" y="289.3" text-anchor="middle" font-size="8.3" font-weight="700" fill="#14325c">DRYING</text><text x="356" y="299.8" text-anchor="middle" font-size="8.3"  fill="#14325c">RATE A (how wet),</text><text x="356" y="310.3" text-anchor="middle" font-size="8.3"  fill="#14325c">TIME ALLOT</text><rect x="156" y="332" width="108" height="44.5" rx="6" fill="#ffffff" stroke="#14325c" stroke-width="1.2"/><text x="210" y="346.8" text-anchor="middle" font-size="8.3" font-weight="700" fill="#14325c">INSERT COIN</text><text x="210" y="357.3" text-anchor="middle" font-size="8.3"  fill="#14325c">coins count up (CANCEL,</text><text x="210" y="367.8" text-anchor="middle" font-size="8.3"  fill="#14325c">YES: back to TAPS)</text><rect x="135.5" y="389.5" width="149" height="24" rx="12" fill="#e1eefb" stroke="#1c5fa8" stroke-width="1.2"/><text x="210" y="404.5" text-anchor="middle" font-size="8.3" font-weight="700" fill="#14325c">continues in chart 6: OPEN A</text><text x="214.0" y="136.1" text-anchor="start" font-size="8" font-weight="700" fill="#14325c" stroke="#ffffff" stroke-width="2.6" paint-order="stroke">yes</text><text x="133.0" y="87.0" text-anchor="middle" font-size="8" font-weight="700" fill="#14325c" stroke="#ffffff" stroke-width="2.6" paint-order="stroke">no</text><text x="68.0" y="126.8" text-anchor="start" font-size="8" font-weight="700" fill="#14325c" stroke="#ffffff" stroke-width="2.6" paint-order="stroke">gave up</text><text x="105.5" y="224.5" text-anchor="middle" font-size="8" font-weight="700" fill="#14325c" stroke="#ffffff" stroke-width="2.6" paint-order="stroke">cleaning</text><text x="314.5" y="224.5" text-anchor="middle" font-size="8" font-weight="700" fill="#14325c" stroke="#ffffff" stroke-width="2.6" paint-order="stroke">drying</text></svg><figcaption class="cap">Box 3: the customer chooses CLEANING or DRYING. If the refill gives up, CLEANING is greyed out and DRYING still works.</figcaption></figure>
+<h2 data-pb="hard">Box 3, chart 6: the run</h2>
+<figure class="fig chart"><svg viewBox="0 0 420 470" xmlns="http://www.w3.org/2000/svg" font-family="Arial,Helvetica,sans-serif"><defs><marker id="ahflow6" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#1d2433"/></marker></defs><rect x="0" y="0" width="420" height="470" rx="8" fill="#ffffff" stroke="#d6dbe6"/><path d="M210.0 54.5 L210.0 67.5" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahflow6)"/><path d="M148.0 91.5 L64.0 91.5 L64.0 128.5" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahflow6)"/><path d="M272.0 91.5 L356.0 91.5 L356.0 133.8" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahflow6)"/><path d="M356.0 167.8 L356.0 186.0" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahflow6)"/><path d="M64.0 173.0 L64.0 265.8 L156.0 265.8" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahflow6)"/><path d="M356.0 230.5 L356.0 265.8 L264.0 265.8" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahflow6)"/><path d="M210.0 288.0 L210.0 301.0" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahflow6)"/><path d="M210.0 345.5 L210.0 358.5" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahflow6)"/><path d="M148.0 385.5 L122.0 385.5" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahflow6)"/><path d="M210.0 412.5 L210.0 425.5" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahflow6)"/><rect x="145" y="10" width="130" height="44.5" rx="6" fill="#ffffff" stroke="#14325c" stroke-width="1.2"/><text x="210" y="24.8" text-anchor="middle" font-size="8.3" font-weight="700" fill="#14325c">OPEN A, SENSORS A,</text><text x="210" y="35.3" text-anchor="middle" font-size="8.3"  fill="#14325c">CLOSE DOOR A</text><text x="210" y="45.8" text-anchor="middle" font-size="8.3"  fill="#14325c">helmet in, door shut</text><path d="M210 67.5 L272 91.5 L210 115.5 L148 91.5 Z" fill="#fff1d0" stroke="#f59e0b" stroke-width="1.2"/><text x="210" y="94.5" text-anchor="middle" font-size="8.3" font-weight="700" fill="#5a3600">Which mode?</text><rect x="10" y="128.5" width="108" height="44.5" rx="6" fill="#e2f3e7" stroke="#1b7f3b" stroke-width="1.2"/><text x="64" y="143.3" text-anchor="middle" font-size="8.3" font-weight="700" fill="#0f4d24">CLEANING</text><text x="64" y="153.8" text-anchor="middle" font-size="8.3"  fill="#0f4d24">UV and mist, heater</text><text x="64" y="164.3" text-anchor="middle" font-size="8.3"  fill="#0f4d24">in the last minute</text><rect x="302" y="133.75" width="108" height="34" rx="6" fill="#e2f3e7" stroke="#1b7f3b" stroke-width="1.2"/><text x="356" y="148.5" text-anchor="middle" font-size="8.3" font-weight="700" fill="#0f4d24">DRYING</text><text x="356" y="159.0" text-anchor="middle" font-size="8.3"  fill="#0f4d24">heater and UV run</text><rect x="302" y="186" width="108" height="44.5" rx="6" fill="#ffffff" stroke="#14325c" stroke-width="1.2"/><text x="356" y="200.8" text-anchor="middle" font-size="8.3" font-weight="700" fill="#14325c">COOL DOWN</text><text x="356" y="211.3" text-anchor="middle" font-size="8.3"  fill="#14325c">nothing runs</text><text x="356" y="221.8" text-anchor="middle" font-size="8.3"  fill="#14325c">(default 60 s)</text><rect x="156" y="243.5" width="108" height="44.5" rx="6" fill="#ffffff" stroke="#14325c" stroke-width="1.2"/><text x="210" y="258.3" text-anchor="middle" font-size="8.3" font-weight="700" fill="#14325c">OPEN B, SENSORS B</text><text x="210" y="268.8" text-anchor="middle" font-size="8.3"  fill="#14325c">take the helmet,</text><text x="210" y="279.3" text-anchor="middle" font-size="8.3"  fill="#14325c">close the door</text><rect x="153.5" y="301" width="113" height="44.5" rx="6" fill="#ffffff" stroke="#14325c" stroke-width="1.2"/><text x="210" y="315.8" text-anchor="middle" font-size="8.3" font-weight="700" fill="#14325c">RATE B</text><text x="210" y="326.3" text-anchor="middle" font-size="8.3"  fill="#14325c">cleaning: how dry, then odor</text><text x="210" y="336.8" text-anchor="middle" font-size="8.3"  fill="#14325c">drying: how dry</text><path d="M210 358.5 L272 385.5 L210 412.5 L148 385.5 Z" fill="#fff1d0" stroke="#f59e0b" stroke-width="1.2"/><text x="210" y="383.3" text-anchor="middle" font-size="8.3" font-weight="700" fill="#5a3600">FREE RETRY</text><text x="210" y="393.8" text-anchor="middle" font-size="8.3"  fill="#5a3600">offered?</text><rect x="6" y="364.25" width="116" height="42.5" rx="14" fill="#e1eefb" stroke="#1c5fa8" stroke-width="1.2"/><text x="64" y="378.0" text-anchor="middle" font-size="8.3" font-weight="700" fill="#14325c">yes: FREE run</text><text x="64" y="388.5" text-anchor="middle" font-size="8.3"  fill="#14325c">(2 min), then</text><text x="64" y="399.0" text-anchor="middle" font-size="8.3"  fill="#14325c">back to OPEN A</text><rect x="156" y="425.5" width="108" height="34" rx="14" fill="#14325c" stroke="#14325c" stroke-width="1.2"/><text x="210" y="440.3" text-anchor="middle" font-size="8.3" font-weight="700" fill="#ffffff">FINISH</text><text x="210" y="450.8" text-anchor="middle" font-size="8.3"  fill="#ffffff">thank you, back to TAPS</text><text x="106.0" y="88.0" text-anchor="middle" font-size="8" font-weight="700" fill="#14325c" stroke="#ffffff" stroke-width="2.6" paint-order="stroke">cleaning</text><text x="314.0" y="88.0" text-anchor="middle" font-size="8" font-weight="700" fill="#14325c" stroke="#ffffff" stroke-width="2.6" paint-order="stroke">drying</text><text x="360.0" y="179.9" text-anchor="start" font-size="8" font-weight="700" fill="#14325c" stroke="#ffffff" stroke-width="2.6" paint-order="stroke">time up</text><text x="68.0" y="187.0" text-anchor="start" font-size="8" font-weight="700" fill="#14325c" stroke="#ffffff" stroke-width="2.6" paint-order="stroke">time up</text><text x="133.0" y="382.0" text-anchor="middle" font-size="8" font-weight="700" fill="#14325c" stroke="#ffffff" stroke-width="2.6" paint-order="stroke">yes</text><text x="214.0" y="422.0" text-anchor="start" font-size="8" font-weight="700" fill="#14325c" stroke="#ffffff" stroke-width="2.6" paint-order="stroke">no</text></svg><figcaption class="cap">Box 3: cleaning (UV-C and mist, heater in the last minute) or drying (heater and UV-C), then cool down, the second rating and the free retry.</figcaption></figure>
+
+<h1 id="r-trouble" data-pb="hard">Troubleshooting decision trees</h1>
+<p>Start at the dark box at the top. Answer each yellow question with yes or no and follow the arrow. Green boxes tell you what to do. These trees cover the problems that happen most; the tables in the Admin and Technician guides have the rest.</p>
+<table data-w="52,48">
+<tr><th>Symptom</th><th>Tree</th></tr>
+<tr><td>The screen says OUT OF ORDER</td><td>1. A box shows OUT OF ORDER</td></tr>
+<tr><td>A board is OFFLINE on the Home page</td><td>2. A board shows OFFLINE</td></tr>
+<tr><td>A coin goes in and nothing counts</td><td>3. Coin inserted, the count does not move</td></tr>
+<tr><td>A helmet is trapped, a door will not open</td><td>4. The door will not open</td></tr>
+<tr><td>The refill station does not fill</td><td>5. A mixer is LOW or a tank is EMPTY</td></tr>
+<tr><td>The web page shows old data or no link</td><td>6. The web page says OLD DATA or NO LINK</td></tr>
+<tr><td>The touch screen is white, blank or wrong</td><td>7. Screen white, blank or the touch is wrong</td></tr>
+</table>
+<h2 data-pb="hard">Tree 1: a box shows OUT OF ORDER</h2>
+<figure class="fig chart"><svg viewBox="0 0 420 327" xmlns="http://www.w3.org/2000/svg" font-family="Arial,Helvetica,sans-serif"><defs><marker id="ahtree1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#1d2433"/></marker></defs><rect x="0" y="0" width="420" height="327" rx="8" fill="#ffffff" stroke="#d6dbe6"/><path d="M210.0 44.0 L210.0 57.0" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahtree1)"/><path d="M148.0 84.0 L118.0 84.0" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahtree1)"/><path d="M210.0 111.0 L210.0 124.0" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahtree1)"/><path d="M137.0 157.5 L118.0 157.5" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahtree1)"/><path d="M210.0 191.0 L210.0 204.5" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahtree1)"/><path d="M272.0 231.5 L302.0 231.5" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahtree1)"/><path d="M210.0 258.5 L210.0 272.0" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahtree1)"/><rect x="156" y="10" width="108" height="34" rx="14" fill="#14325c" stroke="#14325c" stroke-width="1.2"/><text x="210" y="24.8" text-anchor="middle" font-size="8.3" font-weight="700" fill="#ffffff">A box shows</text><text x="210" y="35.3" text-anchor="middle" font-size="8.3"  fill="#ffffff">OUT OF ORDER</text><path d="M210 57 L272 84 L210 111 L148 84 Z" fill="#fff1d0" stroke="#f59e0b" stroke-width="1.2"/><text x="210" y="81.8" text-anchor="middle" font-size="8.3" font-weight="700" fill="#5a3600">Home page: is a</text><text x="210" y="92.3" text-anchor="middle" font-size="8.3"  fill="#5a3600">board OFFLINE?</text><rect x="10" y="61.75" width="108" height="44.5" rx="6" fill="#e2f3e7" stroke="#1b7f3b" stroke-width="1.2"/><text x="64" y="76.5" text-anchor="middle" font-size="8.3" font-weight="700" fill="#0f4d24">Fix that board first:</text><text x="64" y="87.0" text-anchor="middle" font-size="8.3"  fill="#0f4d24">see "A board shows</text><text x="64" y="97.5" text-anchor="middle" font-size="8.3"  fill="#0f4d24">OFFLINE"</text><path d="M210 124 L283 157.5 L210 191 L137 157.5 Z" fill="#fff1d0" stroke="#f59e0b" stroke-width="1.2"/><text x="210" y="150.0" text-anchor="middle" font-size="8.3" font-weight="700" fill="#5a3600">A container LOW,</text><text x="210" y="160.5" text-anchor="middle" font-size="8.3"  fill="#5a3600">or an ACS tank</text><text x="210" y="171.0" text-anchor="middle" font-size="8.3"  fill="#5a3600">EMPTY?</text><rect x="10" y="135.25" width="108" height="44.5" rx="6" fill="#e2f3e7" stroke="#1b7f3b" stroke-width="1.2"/><text x="64" y="150.0" text-anchor="middle" font-size="8.3" font-weight="700" fill="#0f4d24">Fill it. See "Refill</text><text x="64" y="160.5" text-anchor="middle" font-size="8.3"  fill="#0f4d24">station does not</text><text x="64" y="171.0" text-anchor="middle" font-size="8.3"  fill="#0f4d24">refill"</text><path d="M210 204.5 L272 231.5 L210 258.5 L148 231.5 Z" fill="#fff1d0" stroke="#f59e0b" stroke-width="1.2"/><text x="210" y="229.3" text-anchor="middle" font-size="8.3" font-weight="700" fill="#5a3600">Is the container</text><text x="210" y="239.8" text-anchor="middle" font-size="8.3"  fill="#5a3600">really low?</text><rect x="302" y="204" width="108" height="55" rx="6" fill="#e2f3e7" stroke="#1b7f3b" stroke-width="1.2"/><text x="356" y="218.8" text-anchor="middle" font-size="8.3" font-weight="700" fill="#0f4d24">No: the LEVELS lines</text><text x="356" y="229.3" text-anchor="middle" font-size="8.3"  fill="#0f4d24">are wrong. Use live</text><text x="356" y="239.8" text-anchor="middle" font-size="8.3"  fill="#0f4d24">again, or switch</text><text x="356" y="250.3" text-anchor="middle" font-size="8.3"  fill="#0f4d24">Check levels OFF</text><rect x="156" y="272" width="108" height="44.5" rx="14" fill="#14325c" stroke="#14325c" stroke-width="1.2"/><text x="210" y="286.8" text-anchor="middle" font-size="8.3" font-weight="700" fill="#ffffff">Still stuck?</text><text x="210" y="297.3" text-anchor="middle" font-size="8.3"  fill="#ffffff">Read the Serial log</text><text x="210" y="307.8" text-anchor="middle" font-size="8.3"  fill="#ffffff">of the box S3</text><text x="133.0" y="80.5" text-anchor="middle" font-size="8" font-weight="700" fill="#14325c" stroke="#ffffff" stroke-width="2.6" paint-order="stroke">yes</text><text x="214.0" y="120.5" text-anchor="start" font-size="8" font-weight="700" fill="#14325c" stroke="#ffffff" stroke-width="2.6" paint-order="stroke">no</text><text x="122.0" y="154.0" text-anchor="middle" font-size="8" font-weight="700" fill="#14325c" stroke="#ffffff" stroke-width="2.6" paint-order="stroke">yes</text><text x="214.0" y="200.8" text-anchor="start" font-size="8" font-weight="700" fill="#14325c" stroke="#ffffff" stroke-width="2.6" paint-order="stroke">no</text><text x="287.0" y="228.0" text-anchor="middle" font-size="8" font-weight="700" fill="#14325c" stroke="#ffffff" stroke-width="2.6" paint-order="stroke">no</text><text x="214.0" y="268.3" text-anchor="start" font-size="8" font-weight="700" fill="#14325c" stroke="#ffffff" stroke-width="2.6" paint-order="stroke">yes</text></svg><figcaption class="cap">OUT OF ORDER means a container is too low and the refill gave up, or a board is missing.</figcaption></figure>
+<h2 data-pb="hard">Tree 2: a board shows OFFLINE</h2>
+<figure class="fig chart"><svg viewBox="0 0 420 369" xmlns="http://www.w3.org/2000/svg" font-family="Arial,Helvetica,sans-serif"><defs><marker id="ahtree2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#1d2433"/></marker></defs><rect x="0" y="0" width="420" height="369" rx="8" fill="#ffffff" stroke="#d6dbe6"/><path d="M210.0 44.0 L210.0 57.0" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahtree2)"/><path d="M148.0 84.0 L118.0 84.0" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahtree2)"/><path d="M210.0 111.0 L210.0 124.0" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahtree2)"/><path d="M275.0 151.0 L302.0 151.0" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahtree2)"/><path d="M210.0 178.0 L210.0 191.0" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahtree2)"/><path d="M148.0 218.0 L118.0 218.0" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahtree2)"/><path d="M210.0 245.0 L210.0 258.0" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahtree2)"/><path d="M272.0 285.0 L302.0 285.0" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahtree2)"/><path d="M210.0 312.0 L210.0 325.0" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahtree2)"/><rect x="135" y="10" width="150" height="34" rx="14" fill="#14325c" stroke="#14325c" stroke-width="1.2"/><text x="210" y="24.8" text-anchor="middle" font-size="8.3" font-weight="700" fill="#ffffff">A board shows OFFLINE</text><text x="210" y="35.3" text-anchor="middle" font-size="8.3"  fill="#ffffff">(Control Center Home)</text><path d="M210 57 L272 84 L210 111 L148 84 Z" fill="#fff1d0" stroke="#f59e0b" stroke-width="1.2"/><text x="210" y="81.8" text-anchor="middle" font-size="8.3" font-weight="700" fill="#5a3600">Is the board</text><text x="210" y="92.3" text-anchor="middle" font-size="8.3"  fill="#5a3600">powered (5 V)?</text><rect x="10" y="61.75" width="108" height="44.5" rx="6" fill="#e2f3e7" stroke="#1b7f3b" stroke-width="1.2"/><text x="64" y="76.5" text-anchor="middle" font-size="8.3" font-weight="700" fill="#0f4d24">No: check the supply,</text><text x="64" y="87.0" text-anchor="middle" font-size="8.3"  fill="#0f4d24">fuse, cable and the</text><text x="64" y="97.5" text-anchor="middle" font-size="8.3"  fill="#0f4d24">DC-DC module</text><path d="M210 124 L275 151 L210 178 L145 151 Z" fill="#fff1d0" stroke="#f59e0b" stroke-width="1.2"/><text x="210" y="148.8" text-anchor="middle" font-size="8.3" font-weight="700" fill="#5a3600">All boards offline</text><text x="210" y="159.3" text-anchor="middle" font-size="8.3"  fill="#5a3600">at once?</text><rect x="302" y="128.75" width="108" height="44.5" rx="6" fill="#e2f3e7" stroke="#1b7f3b" stroke-width="1.2"/><text x="356" y="143.5" text-anchor="middle" font-size="8.3" font-weight="700" fill="#0f4d24">Yes: power-cycle the</text><text x="356" y="154.0" text-anchor="middle" font-size="8.3"  fill="#0f4d24">LocalServer, then the</text><text x="356" y="164.5" text-anchor="middle" font-size="8.3"  fill="#0f4d24">brains (S3)</text><path d="M210 191 L272 218 L210 245 L148 218 Z" fill="#fff1d0" stroke="#f59e0b" stroke-width="1.2"/><text x="210" y="215.8" text-anchor="middle" font-size="8.3" font-weight="700" fill="#5a3600">Just flashed or</text><text x="210" y="226.3" text-anchor="middle" font-size="8.3"  fill="#5a3600">replaced?</text><rect x="10" y="195.75" width="108" height="44.5" rx="6" fill="#e2f3e7" stroke="#1b7f3b" stroke-width="1.2"/><text x="64" y="210.5" text-anchor="middle" font-size="8.3" font-weight="700" fill="#0f4d24">Right sketch folder?</text><text x="64" y="221.0" text-anchor="middle" font-size="8.3"  fill="#0f4d24">Same Shared_Common.h</text><text x="64" y="231.5" text-anchor="middle" font-size="8.3"  fill="#0f4d24">as ESP32_S3A? Reflash</text><path d="M210 258 L272 285 L210 312 L148 285 Z" fill="#fff1d0" stroke="#f59e0b" stroke-width="1.2"/><text x="210" y="282.8" text-anchor="middle" font-size="8.3" font-weight="700" fill="#5a3600">A bench or test</text><text x="210" y="293.3" text-anchor="middle" font-size="8.3"  fill="#5a3600">sketch running?</text><rect x="302" y="268" width="108" height="34" rx="6" fill="#e2f3e7" stroke="#1b7f3b" stroke-width="1.2"/><text x="356" y="282.8" text-anchor="middle" font-size="8.3" font-weight="700" fill="#0f4d24">Switch it off: it</text><text x="356" y="293.3" text-anchor="middle" font-size="8.3"  fill="#0f4d24">fights the real board</text><rect x="153" y="325" width="114" height="34" rx="14" fill="#14325c" stroke="#14325c" stroke-width="1.2"/><text x="210" y="339.8" text-anchor="middle" font-size="8.3" font-weight="700" fill="#ffffff">Reset it, read the Serial</text><text x="210" y="350.3" text-anchor="middle" font-size="8.3"  fill="#ffffff">log (115200): brown-out?</text><text x="133.0" y="80.5" text-anchor="middle" font-size="8" font-weight="700" fill="#14325c" stroke="#ffffff" stroke-width="2.6" paint-order="stroke">no</text><text x="214.0" y="120.5" text-anchor="start" font-size="8" font-weight="700" fill="#14325c" stroke="#ffffff" stroke-width="2.6" paint-order="stroke">yes</text><text x="290.0" y="147.5" text-anchor="middle" font-size="8" font-weight="700" fill="#14325c" stroke="#ffffff" stroke-width="2.6" paint-order="stroke">yes</text><text x="214.0" y="187.5" text-anchor="start" font-size="8" font-weight="700" fill="#14325c" stroke="#ffffff" stroke-width="2.6" paint-order="stroke">no</text><text x="133.0" y="214.5" text-anchor="middle" font-size="8" font-weight="700" fill="#14325c" stroke="#ffffff" stroke-width="2.6" paint-order="stroke">yes</text><text x="214.0" y="254.5" text-anchor="start" font-size="8" font-weight="700" fill="#14325c" stroke="#ffffff" stroke-width="2.6" paint-order="stroke">no</text><text x="287.0" y="281.5" text-anchor="middle" font-size="8" font-weight="700" fill="#14325c" stroke="#ffffff" stroke-width="2.6" paint-order="stroke">yes</text><text x="214.0" y="321.5" text-anchor="start" font-size="8" font-weight="700" fill="#14325c" stroke="#ffffff" stroke-width="2.6" paint-order="stroke">no</text></svg><figcaption class="cap">A board is OFFLINE when the LocalServer has heard nothing from it for a while.</figcaption></figure>
+<h2 data-pb="hard">Tree 3: coin inserted, nothing counts</h2>
+<figure class="fig chart"><svg viewBox="0 0 420 339" xmlns="http://www.w3.org/2000/svg" font-family="Arial,Helvetica,sans-serif"><defs><marker id="ahtree3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#1d2433"/></marker></defs><rect x="0" y="0" width="420" height="339" rx="8" fill="#ffffff" stroke="#d6dbe6"/><path d="M210.0 44.0 L210.0 57.0" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahtree3)"/><path d="M148.0 84.0 L118.0 84.0" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahtree3)"/><path d="M210.0 111.0 L210.0 124.0" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahtree3)"/><path d="M140.0 157.5 L118.0 157.5" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahtree3)"/><path d="M210.0 191.0 L210.0 204.0" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahtree3)"/><path d="M145.5 237.5 L118.0 237.5" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahtree3)"/><path d="M210.0 271.0 L210.0 284.0" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahtree3)"/><rect x="156" y="10" width="108" height="34" rx="14" fill="#14325c" stroke="#14325c" stroke-width="1.2"/><text x="210" y="24.8" text-anchor="middle" font-size="8.3" font-weight="700" fill="#ffffff">Coin inserted, the</text><text x="210" y="35.3" text-anchor="middle" font-size="8.3"  fill="#ffffff">count does not move</text><path d="M210 57 L272 84 L210 111 L148 84 Z" fill="#fff1d0" stroke="#f59e0b" stroke-width="1.2"/><text x="210" y="81.8" text-anchor="middle" font-size="8.3" font-weight="700" fill="#5a3600">Is the screen on</text><text x="210" y="92.3" text-anchor="middle" font-size="8.3"  fill="#5a3600">INSERT COIN?</text><rect x="10" y="61.75" width="108" height="44.5" rx="6" fill="#e2f3e7" stroke="#1b7f3b" stroke-width="1.2"/><text x="64" y="76.5" text-anchor="middle" font-size="8.3" font-weight="700" fill="#0f4d24">No: normal. The coin</text><text x="64" y="87.0" text-anchor="middle" font-size="8.3"  fill="#0f4d24">slot only has power</text><text x="64" y="97.5" text-anchor="middle" font-size="8.3"  fill="#0f4d24">while paying</text><path d="M210 124 L280 157.5 L210 191 L140 157.5 Z" fill="#fff1d0" stroke="#f59e0b" stroke-width="1.2"/><text x="210" y="150.0" text-anchor="middle" font-size="8.3" font-weight="700" fill="#5a3600">12 V at the slot</text><text x="210" y="160.5" text-anchor="middle" font-size="8.3"  fill="#5a3600">during INSERT</text><text x="210" y="171.0" text-anchor="middle" font-size="8.3"  fill="#5a3600">COIN?</text><rect x="10" y="135.25" width="108" height="44.5" rx="6" fill="#e2f3e7" stroke="#1b7f3b" stroke-width="1.2"/><text x="64" y="150.0" text-anchor="middle" font-size="8.3" font-weight="700" fill="#0f4d24">No: COIN POWER relay</text><text x="64" y="160.5" text-anchor="middle" font-size="8.3"  fill="#0f4d24">(A3, B3), 12 V supply</text><text x="64" y="171.0" text-anchor="middle" font-size="8.3"  fill="#0f4d24">or its wiring</text><path d="M210 204 L274.5 237.5 L210 271 L145.5 237.5 Z" fill="#fff1d0" stroke="#f59e0b" stroke-width="1.2"/><text x="210" y="230.0" text-anchor="middle" font-size="8.3" font-weight="700" fill="#5a3600">Does the COIN</text><text x="210" y="240.5" text-anchor="middle" font-size="8.3"  fill="#5a3600">wire go LOW as</text><text x="210" y="251.0" text-anchor="middle" font-size="8.3"  fill="#5a3600">a coin passes?</text><rect x="10" y="210" width="108" height="55" rx="6" fill="#e2f3e7" stroke="#1b7f3b" stroke-width="1.2"/><text x="64" y="224.8" text-anchor="middle" font-size="8.3" font-weight="700" fill="#0f4d24">No: acceptor speed</text><text x="64" y="235.3" text-anchor="middle" font-size="8.3"  fill="#0f4d24">switch, coin path,</text><text x="64" y="245.8" text-anchor="middle" font-size="8.3"  fill="#0f4d24">COIN wire, 10 k</text><text x="64" y="256.3" text-anchor="middle" font-size="8.3"  fill="#0f4d24">resistor</text><rect x="153.5" y="284" width="113" height="44.5" rx="14" fill="#14325c" stroke="#14325c" stroke-width="1.2"/><text x="210" y="298.8" text-anchor="middle" font-size="8.3" font-weight="700" fill="#ffffff">Pulses arrive: check the</text><text x="210" y="309.3" text-anchor="middle" font-size="8.3"  fill="#ffffff">coin pin (GPIO23) and the</text><text x="210" y="319.8" text-anchor="middle" font-size="8.3"  fill="#ffffff">coins-per-pulse setting</text><text x="133.0" y="80.5" text-anchor="middle" font-size="8" font-weight="700" fill="#14325c" stroke="#ffffff" stroke-width="2.6" paint-order="stroke">no</text><text x="214.0" y="120.5" text-anchor="start" font-size="8" font-weight="700" fill="#14325c" stroke="#ffffff" stroke-width="2.6" paint-order="stroke">yes</text><text x="125.0" y="154.0" text-anchor="middle" font-size="8" font-weight="700" fill="#14325c" stroke="#ffffff" stroke-width="2.6" paint-order="stroke">no</text><text x="214.0" y="200.5" text-anchor="start" font-size="8" font-weight="700" fill="#14325c" stroke="#ffffff" stroke-width="2.6" paint-order="stroke">yes</text><text x="130.5" y="234.0" text-anchor="middle" font-size="8" font-weight="700" fill="#14325c" stroke="#ffffff" stroke-width="2.6" paint-order="stroke">no</text><text x="214.0" y="280.5" text-anchor="start" font-size="8" font-weight="700" fill="#14325c" stroke="#ffffff" stroke-width="2.6" paint-order="stroke">yes</text></svg><figcaption class="cap">In Box 1 and Box 3 the coin slot has power only while the screen shows INSERT COIN.</figcaption></figure>
+<h2 data-pb="hard">Tree 4: the door will not open</h2>
+<figure class="fig chart"><svg viewBox="0 0 420 340" xmlns="http://www.w3.org/2000/svg" font-family="Arial,Helvetica,sans-serif"><defs><marker id="ahtree4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#1d2433"/></marker></defs><rect x="0" y="0" width="420" height="340" rx="8" fill="#ffffff" stroke="#d6dbe6"/><path d="M210.0 44.0 L210.0 57.5" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahtree4)"/><path d="M148.0 84.5 L118.0 84.5" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahtree4)"/><path d="M210.0 111.5 L210.0 125.0" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahtree4)"/><path d="M272.0 158.5 L302.0 158.5" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahtree4)"/><path d="M210.0 192.0 L210.0 205.0" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahtree4)"/><path d="M145.0 238.5 L118.0 238.5" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahtree4)"/><path d="M210.0 272.0 L210.0 285.0" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahtree4)"/><rect x="156" y="10" width="108" height="34" rx="14" fill="#14325c" stroke="#14325c" stroke-width="1.2"/><text x="210" y="24.8" text-anchor="middle" font-size="8.3" font-weight="700" fill="#ffffff">The door will not open</text><text x="210" y="35.3" text-anchor="middle" font-size="8.3"  fill="#ffffff">(helmet stuck)</text><path d="M210 57.5 L272 84.5 L210 111.5 L148 84.5 Z" fill="#fff1d0" stroke="#f59e0b" stroke-width="1.2"/><text x="210" y="82.3" text-anchor="middle" font-size="8.3" font-weight="700" fill="#5a3600">Is the machine</text><text x="210" y="92.8" text-anchor="middle" font-size="8.3"  fill="#5a3600">switched on?</text><rect x="10" y="57" width="108" height="55" rx="6" fill="#e2f3e7" stroke="#1b7f3b" stroke-width="1.2"/><text x="64" y="71.8" text-anchor="middle" font-size="8.3" font-weight="700" fill="#0f4d24">No: locks need power</text><text x="64" y="82.3" text-anchor="middle" font-size="8.3"  fill="#0f4d24">to unlock. Power on,</text><text x="64" y="92.8" text-anchor="middle" font-size="8.3"  fill="#0f4d24">then Maintenance &gt;</text><text x="64" y="103.3" text-anchor="middle" font-size="8.3"  fill="#0f4d24">ENCLOSURE LOCK</text><path d="M210 125 L272 158.5 L210 192 L148 158.5 Z" fill="#fff1d0" stroke="#f59e0b" stroke-width="1.2"/><text x="210" y="151.0" text-anchor="middle" font-size="8.3" font-weight="700" fill="#5a3600">Does the lock</text><text x="210" y="161.5" text-anchor="middle" font-size="8.3"  fill="#5a3600">click in</text><text x="210" y="172.0" text-anchor="middle" font-size="8.3"  fill="#5a3600">Maintenance?</text><rect x="302" y="136.25" width="108" height="44.5" rx="6" fill="#e2f3e7" stroke="#1b7f3b" stroke-width="1.2"/><text x="356" y="151.0" text-anchor="middle" font-size="8.3" font-weight="700" fill="#0f4d24">Yes: mechanical. Push</text><text x="356" y="161.5" text-anchor="middle" font-size="8.3"  fill="#0f4d24">the door in a little,</text><text x="356" y="172.0" text-anchor="middle" font-size="8.3"  fill="#0f4d24">check the latch</text><path d="M210 205 L275 238.5 L210 272 L145 238.5 Z" fill="#fff1d0" stroke="#f59e0b" stroke-width="1.2"/><text x="210" y="231.0" text-anchor="middle" font-size="8.3" font-weight="700" fill="#5a3600">12 V at the</text><text x="210" y="241.5" text-anchor="middle" font-size="8.3"  fill="#5a3600">solenoid when the</text><text x="210" y="252.0" text-anchor="middle" font-size="8.3"  fill="#5a3600">relay is ON?</text><rect x="10" y="221.5" width="108" height="34" rx="6" fill="#e2f3e7" stroke="#1b7f3b" stroke-width="1.2"/><text x="64" y="236.3" text-anchor="middle" font-size="8.3" font-weight="700" fill="#0f4d24">No: relay, 12 V supply</text><text x="64" y="246.8" text-anchor="middle" font-size="8.3"  fill="#0f4d24">or wiring (A3, B3, C2)</text><rect x="156" y="285" width="108" height="44.5" rx="14" fill="#14325c" stroke="#14325c" stroke-width="1.2"/><text x="210" y="299.8" text-anchor="middle" font-size="8.3" font-weight="700" fill="#ffffff">The solenoid or its</text><text x="210" y="310.3" text-anchor="middle" font-size="8.3"  fill="#ffffff">diode is faulty:</text><text x="210" y="320.8" text-anchor="middle" font-size="8.3"  fill="#ffffff">replace it</text><text x="133.0" y="81.0" text-anchor="middle" font-size="8" font-weight="700" fill="#14325c" stroke="#ffffff" stroke-width="2.6" paint-order="stroke">no</text><text x="214.0" y="121.3" text-anchor="start" font-size="8" font-weight="700" fill="#14325c" stroke="#ffffff" stroke-width="2.6" paint-order="stroke">yes</text><text x="287.0" y="155.0" text-anchor="middle" font-size="8" font-weight="700" fill="#14325c" stroke="#ffffff" stroke-width="2.6" paint-order="stroke">yes</text><text x="214.0" y="201.5" text-anchor="start" font-size="8" font-weight="700" fill="#14325c" stroke="#ffffff" stroke-width="2.6" paint-order="stroke">no</text><text x="130.0" y="235.0" text-anchor="middle" font-size="8" font-weight="700" fill="#14325c" stroke="#ffffff" stroke-width="2.6" paint-order="stroke">no</text><text x="214.0" y="281.5" text-anchor="start" font-size="8" font-weight="700" fill="#14325c" stroke="#ffffff" stroke-width="2.6" paint-order="stroke">yes</text></svg><figcaption class="cap">The locks are power-to-unlock: with no power a door stays shut. Switch the mains off before reaching in.</figcaption></figure>
+<h2 data-pb="hard">Tree 5: the refill station does not fill</h2>
+<figure class="fig chart"><svg viewBox="0 0 420 408" xmlns="http://www.w3.org/2000/svg" font-family="Arial,Helvetica,sans-serif"><defs><marker id="ahtree5" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#1d2433"/></marker></defs><rect x="0" y="0" width="420" height="408" rx="8" fill="#ffffff" stroke="#d6dbe6"/><path d="M210.0 44.0 L210.0 57.0" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahtree5)"/><path d="M148.0 90.5 L118.0 90.5" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahtree5)"/><path d="M210.0 124.0 L210.0 137.0" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahtree5)"/><path d="M145.0 164.0 L118.0 164.0" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahtree5)"/><path d="M210.0 191.0 L210.0 204.0" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahtree5)"/><path d="M278.0 237.5 L302.0 237.5" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahtree5)"/><path d="M210.0 271.0 L210.0 284.0" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahtree5)"/><path d="M272.5 317.5 L302.0 317.5" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahtree5)"/><path d="M210.0 351.0 L210.0 364.0" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahtree5)"/><rect x="156" y="10" width="108" height="34" rx="14" fill="#14325c" stroke="#14325c" stroke-width="1.2"/><text x="210" y="24.8" text-anchor="middle" font-size="8.3" font-weight="700" fill="#ffffff">A mixer is LOW or a</text><text x="210" y="35.3" text-anchor="middle" font-size="8.3"  fill="#ffffff">tank is EMPTY</text><path d="M210 57 L272 90.5 L210 124 L148 90.5 Z" fill="#fff1d0" stroke="#f59e0b" stroke-width="1.2"/><text x="210" y="83.0" text-anchor="middle" font-size="8.3" font-weight="700" fill="#5a3600">Does the page</text><text x="210" y="93.5" text-anchor="middle" font-size="8.3"  fill="#5a3600">say a TANK is</text><text x="210" y="104.0" text-anchor="middle" font-size="8.3"  fill="#5a3600">EMPTY?</text><rect x="10" y="68.25" width="108" height="44.5" rx="6" fill="#e2f3e7" stroke="#1b7f3b" stroke-width="1.2"/><text x="64" y="83.0" text-anchor="middle" font-size="8.3" font-weight="700" fill="#0f4d24">Yes: fill that tank,</text><text x="64" y="93.5" text-anchor="middle" font-size="8.3"  fill="#0f4d24">then Retry now on</text><text x="64" y="104.0" text-anchor="middle" font-size="8.3"  fill="#0f4d24">the ACS page</text><path d="M210 137 L275 164 L210 191 L145 164 Z" fill="#fff1d0" stroke="#f59e0b" stroke-width="1.2"/><text x="210" y="161.8" text-anchor="middle" font-size="8.3" font-weight="700" fill="#5a3600">Is the ACS board</text><text x="210" y="172.3" text-anchor="middle" font-size="8.3"  fill="#5a3600">ONLINE on Home?</text><rect x="10" y="147" width="108" height="34" rx="6" fill="#e2f3e7" stroke="#1b7f3b" stroke-width="1.2"/><text x="64" y="161.8" text-anchor="middle" font-size="8.3" font-weight="700" fill="#0f4d24">No: see "A board</text><text x="64" y="172.3" text-anchor="middle" font-size="8.3"  fill="#0f4d24">shows OFFLINE"</text><path d="M210 204 L278 237.5 L210 271 L142 237.5 Z" fill="#fff1d0" stroke="#f59e0b" stroke-width="1.2"/><text x="210" y="230.0" text-anchor="middle" font-size="8.3" font-weight="700" fill="#5a3600">In Maintenance,</text><text x="210" y="240.5" text-anchor="middle" font-size="8.3"  fill="#5a3600">does each pump</text><text x="210" y="251.0" text-anchor="middle" font-size="8.3"  fill="#5a3600">move its liquid?</text><rect x="302" y="210" width="108" height="55" rx="6" fill="#e2f3e7" stroke="#1b7f3b" stroke-width="1.2"/><text x="356" y="224.8" text-anchor="middle" font-size="8.3" font-weight="700" fill="#0f4d24">No: wrong pump on</text><text x="356" y="235.3" text-anchor="middle" font-size="8.3"  fill="#0f4d24">the input, kinked</text><text x="356" y="245.8" text-anchor="middle" font-size="8.3"  fill="#0f4d24">tube, air, dead pump,</text><text x="356" y="256.3" text-anchor="middle" font-size="8.3"  fill="#0f4d24">5 V supply</text><path d="M210 284 L272.5 317.5 L210 351 L147.5 317.5 Z" fill="#fff1d0" stroke="#f59e0b" stroke-width="1.2"/><text x="210" y="310.0" text-anchor="middle" font-size="8.3" font-weight="700" fill="#5a3600">Does the mixer</text><text x="210" y="320.5" text-anchor="middle" font-size="8.3"  fill="#5a3600">level rise while</text><text x="210" y="331.0" text-anchor="middle" font-size="8.3"  fill="#5a3600">it fills?</text><rect x="302" y="290" width="108" height="55" rx="6" fill="#e2f3e7" stroke="#1b7f3b" stroke-width="1.2"/><text x="356" y="304.8" text-anchor="middle" font-size="8.3" font-weight="700" fill="#0f4d24">No: aim or calibrate</text><text x="356" y="315.3" text-anchor="middle" font-size="8.3"  fill="#0f4d24">the sensors (use live).</text><text x="356" y="325.8" text-anchor="middle" font-size="8.3"  fill="#0f4d24">No rise means "empty"</text><text x="356" y="336.3" text-anchor="middle" font-size="8.3"  fill="#0f4d24">to the ACS</text><rect x="154" y="364" width="112" height="34" rx="14" fill="#14325c" stroke="#14325c" stroke-width="1.2"/><text x="210" y="378.8" text-anchor="middle" font-size="8.3" font-weight="700" fill="#ffffff">Check the LEVELS lines</text><text x="210" y="389.3" text-anchor="middle" font-size="8.3"  fill="#ffffff">and the MIX water share</text><text x="133.0" y="87.0" text-anchor="middle" font-size="8" font-weight="700" fill="#14325c" stroke="#ffffff" stroke-width="2.6" paint-order="stroke">yes</text><text x="214.0" y="133.5" text-anchor="start" font-size="8" font-weight="700" fill="#14325c" stroke="#ffffff" stroke-width="2.6" paint-order="stroke">no</text><text x="130.0" y="160.5" text-anchor="middle" font-size="8" font-weight="700" fill="#14325c" stroke="#ffffff" stroke-width="2.6" paint-order="stroke">no</text><text x="214.0" y="200.5" text-anchor="start" font-size="8" font-weight="700" fill="#14325c" stroke="#ffffff" stroke-width="2.6" paint-order="stroke">yes</text><text x="293.0" y="234.0" text-anchor="middle" font-size="8" font-weight="700" fill="#14325c" stroke="#ffffff" stroke-width="2.6" paint-order="stroke">no</text><text x="214.0" y="280.5" text-anchor="start" font-size="8" font-weight="700" fill="#14325c" stroke="#ffffff" stroke-width="2.6" paint-order="stroke">yes</text><text x="287.5" y="314.0" text-anchor="middle" font-size="8" font-weight="700" fill="#14325c" stroke="#ffffff" stroke-width="2.6" paint-order="stroke">no</text><text x="214.0" y="360.5" text-anchor="start" font-size="8" font-weight="700" fill="#14325c" stroke="#ffffff" stroke-width="2.6" paint-order="stroke">yes</text></svg><figcaption class="cap">The ACS reads "level did not rise" as "the supply tank is empty".</figcaption></figure>
+<h2 data-pb="hard">Tree 6: the web page shows old data</h2>
+<figure class="fig chart"><svg viewBox="0 0 420 349" xmlns="http://www.w3.org/2000/svg" font-family="Arial,Helvetica,sans-serif"><defs><marker id="ahtree6" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#1d2433"/></marker></defs><rect x="0" y="0" width="420" height="349" rx="8" fill="#ffffff" stroke="#d6dbe6"/><path d="M210.0 44.0 L210.0 57.0" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahtree6)"/><path d="M140.0 90.5 L118.0 90.5" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahtree6)"/><path d="M210.0 124.0 L210.0 137.5" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahtree6)"/><path d="M148.0 164.5 L118.0 164.5" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahtree6)"/><path d="M210.0 191.5 L210.0 216.0" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahtree6)"/><path d="M272.0 243.0 L302.0 243.0" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahtree6)"/><path d="M210.0 270.0 L210.0 294.0" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahtree6)"/><rect x="156" y="10" width="108" height="34" rx="14" fill="#14325c" stroke="#14325c" stroke-width="1.2"/><text x="210" y="24.8" text-anchor="middle" font-size="8.3" font-weight="700" fill="#ffffff">The web page says</text><text x="210" y="35.3" text-anchor="middle" font-size="8.3"  fill="#ffffff">OLD DATA or NO LINK</text><path d="M210 57 L280 90.5 L210 124 L140 90.5 Z" fill="#fff1d0" stroke="#f59e0b" stroke-width="1.2"/><text x="210" y="83.0" text-anchor="middle" font-size="8.3" font-weight="700" fill="#5a3600">Does the Online</text><text x="210" y="93.5" text-anchor="middle" font-size="8.3"  fill="#5a3600">Server setup page</text><text x="210" y="104.0" text-anchor="middle" font-size="8.3"  fill="#5a3600">say ONLINE?</text><rect x="10" y="63" width="108" height="55" rx="6" fill="#e2f3e7" stroke="#1b7f3b" stroke-width="1.2"/><text x="64" y="77.8" text-anchor="middle" font-size="8.3" font-weight="700" fill="#0f4d24">Yes: the page token</text><text x="64" y="88.3" text-anchor="middle" font-size="8.3"  fill="#0f4d24">is wrong or the</text><text x="64" y="98.8" text-anchor="middle" font-size="8.3"  fill="#0f4d24">browser is offline.</text><text x="64" y="109.3" text-anchor="middle" font-size="8.3"  fill="#0f4d24">Check Settings</text><path d="M210 137.5 L272 164.5 L210 191.5 L148 164.5 Z" fill="#fff1d0" stroke="#f59e0b" stroke-width="1.2"/><text x="210" y="162.3" text-anchor="middle" font-size="8.3" font-weight="700" fill="#5a3600">Does it say the</text><text x="210" y="172.8" text-anchor="middle" font-size="8.3"  fill="#5a3600">Wi-Fi was joined?</text><rect x="10" y="137" width="108" height="55" rx="6" fill="#e2f3e7" stroke="#1b7f3b" stroke-width="1.2"/><text x="64" y="151.8" text-anchor="middle" font-size="8.3" font-weight="700" fill="#0f4d24">No: wrong password</text><text x="64" y="162.3" text-anchor="middle" font-size="8.3"  fill="#0f4d24">or not found. Use</text><text x="64" y="172.8" text-anchor="middle" font-size="8.3"  fill="#0f4d24">2.4 GHz and check</text><text x="64" y="183.3" text-anchor="middle" font-size="8.3"  fill="#0f4d24">the hotspot</text><path d="M210 216 L272 243 L210 270 L148 243 Z" fill="#fff1d0" stroke="#f59e0b" stroke-width="1.2"/><text x="210" y="240.8" text-anchor="middle" font-size="8.3" font-weight="700" fill="#5a3600">What does Blynk</text><text x="210" y="251.3" text-anchor="middle" font-size="8.3"  fill="#5a3600">upload say?</text><rect x="302" y="205" width="108" height="76" rx="6" fill="#e2f3e7" stroke="#1b7f3b" stroke-width="1.2"/><text x="356" y="219.8" text-anchor="middle" font-size="8.3" font-weight="700" fill="#0f4d24">datastream missing:</text><text x="356" y="230.3" text-anchor="middle" font-size="8.3"  fill="#0f4d24">make V0</text><text x="356" y="240.8" text-anchor="middle" font-size="8.3"  fill="#0f4d24">invalid token: copy</text><text x="356" y="251.3" text-anchor="middle" font-size="8.3"  fill="#0f4d24">it again</text><text x="356" y="261.8" text-anchor="middle" font-size="8.3"  fill="#0f4d24">read timeout: check</text><text x="356" y="272.3" text-anchor="middle" font-size="8.3"  fill="#0f4d24">the internet</text><rect x="156" y="294" width="108" height="44.5" rx="14" fill="#14325c" stroke="#14325c" stroke-width="1.2"/><text x="210" y="308.8" text-anchor="middle" font-size="8.3" font-weight="700" fill="#ffffff">OK but no data: is the</text><text x="210" y="319.3" text-anchor="middle" font-size="8.3"  fill="#ffffff">LocalServer on? Power-</text><text x="210" y="329.8" text-anchor="middle" font-size="8.3"  fill="#ffffff">cycle the Online Server</text><text x="125.0" y="87.0" text-anchor="middle" font-size="8" font-weight="700" fill="#14325c" stroke="#ffffff" stroke-width="2.6" paint-order="stroke">yes</text><text x="214.0" y="133.8" text-anchor="start" font-size="8" font-weight="700" fill="#14325c" stroke="#ffffff" stroke-width="2.6" paint-order="stroke">no</text><text x="133.0" y="161.0" text-anchor="middle" font-size="8" font-weight="700" fill="#14325c" stroke="#ffffff" stroke-width="2.6" paint-order="stroke">no</text><text x="214.0" y="205.5" text-anchor="start" font-size="8" font-weight="700" fill="#14325c" stroke="#ffffff" stroke-width="2.6" paint-order="stroke">yes</text><text x="287.0" y="239.5" text-anchor="middle" font-size="8" font-weight="700" fill="#14325c" stroke="#ffffff" stroke-width="2.6" paint-order="stroke">error</text><text x="214.0" y="284.0" text-anchor="start" font-size="8" font-weight="700" fill="#14325c" stroke="#ffffff" stroke-width="2.6" paint-order="stroke">OK</text></svg><figcaption class="cap">The web page is read only. It shows what the Online Server last sent to Blynk.</figcaption></figure>
+<h2 data-pb="hard">Tree 7: the touch screen is white or wrong</h2>
+<figure class="fig chart"><svg viewBox="0 0 420 337" xmlns="http://www.w3.org/2000/svg" font-family="Arial,Helvetica,sans-serif"><defs><marker id="ahtree7" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#1d2433"/></marker></defs><rect x="0" y="0" width="420" height="337" rx="8" fill="#ffffff" stroke="#d6dbe6"/><path d="M210.0 44.0 L210.0 57.0" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahtree7)"/><path d="M148.0 90.5 L118.0 90.5" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahtree7)"/><path d="M210.0 124.0 L210.0 137.0" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahtree7)"/><path d="M272.0 164.0 L302.0 164.0" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahtree7)"/><path d="M210.0 191.0 L210.0 197.5 L64.0 197.5 L64.0 204.0" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahtree7)"/><path d="M118.0 231.5 L302.0 231.5" fill="none" stroke="#1d2433" stroke-width="1.3" stroke-dasharray="3 3"/><path d="M64.0 259.0 L64.0 299.5 L147.5 299.5" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahtree7)"/><path d="M356.0 259.0 L356.0 299.5 L272.5 299.5" fill="none" stroke="#1d2433" stroke-width="1.3" marker-end="url(#ahtree7)"/><rect x="156" y="10" width="108" height="34" rx="14" fill="#14325c" stroke="#14325c" stroke-width="1.2"/><text x="210" y="24.8" text-anchor="middle" font-size="8.3" font-weight="700" fill="#ffffff">Screen white, blank</text><text x="210" y="35.3" text-anchor="middle" font-size="8.3"  fill="#ffffff">or the touch is wrong</text><path d="M210 57 L272 90.5 L210 124 L148 90.5 Z" fill="#fff1d0" stroke="#f59e0b" stroke-width="1.2"/><text x="210" y="83.0" text-anchor="middle" font-size="8.3" font-weight="700" fill="#5a3600">Does Force</text><text x="210" y="93.5" text-anchor="middle" font-size="8.3"  fill="#5a3600">refresh bring</text><text x="210" y="104.0" text-anchor="middle" font-size="8.3"  fill="#5a3600">it back?</text><rect x="10" y="63" width="108" height="55" rx="6" fill="#e2f3e7" stroke="#1b7f3b" stroke-width="1.2"/><text x="64" y="77.8" text-anchor="middle" font-size="8.3" font-weight="700" fill="#0f4d24">No: is the terminal</text><text x="64" y="88.3" text-anchor="middle" font-size="8.3"  fill="#0f4d24">ONLINE? If not, see</text><text x="64" y="98.8" text-anchor="middle" font-size="8.3"  fill="#0f4d24">"A board shows</text><text x="64" y="109.3" text-anchor="middle" font-size="8.3"  fill="#0f4d24">OFFLINE"</text><path d="M210 137 L272 164 L210 191 L148 164 Z" fill="#fff1d0" stroke="#f59e0b" stroke-width="1.2"/><text x="210" y="161.8" text-anchor="middle" font-size="8.3" font-weight="700" fill="#5a3600">Does it keep</text><text x="210" y="172.3" text-anchor="middle" font-size="8.3"  fill="#5a3600">coming back?</text><rect x="302" y="150" width="108" height="28" rx="6" fill="#e2f3e7" stroke="#1b7f3b" stroke-width="1.2"/><text x="356" y="167.0" text-anchor="middle" font-size="8.3" font-weight="700" fill="#0f4d24">No: fine. Watch it</text><rect x="10" y="204" width="108" height="55" rx="6" fill="#e2f3e7" stroke="#1b7f3b" stroke-width="1.2"/><text x="64" y="218.8" text-anchor="middle" font-size="8.3" font-weight="700" fill="#0f4d24">Tick the relay that</text><text x="64" y="229.3" text-anchor="middle" font-size="8.3"  fill="#0f4d24">causes it (Screen</text><text x="64" y="239.8" text-anchor="middle" font-size="8.3"  fill="#0f4d24">section), lower the</text><text x="64" y="250.3" text-anchor="middle" font-size="8.3"  fill="#0f4d24">auto refresh seconds</text><rect x="302" y="204" width="108" height="55" rx="6" fill="#e2f3e7" stroke="#1b7f3b" stroke-width="1.2"/><text x="356" y="218.8" text-anchor="middle" font-size="8.3" font-weight="700" fill="#0f4d24">Add a 470 to 1000 uF</text><text x="356" y="229.3" text-anchor="middle" font-size="8.3"  fill="#0f4d24">capacitor at the TFT</text><text x="356" y="239.8" text-anchor="middle" font-size="8.3"  fill="#0f4d24">supply, short thick</text><text x="356" y="250.3" text-anchor="middle" font-size="8.3"  fill="#0f4d24">5 V wires</text><rect x="147.5" y="272" width="125" height="55" rx="14" fill="#14325c" stroke="#14325c" stroke-width="1.2"/><text x="210" y="286.8" text-anchor="middle" font-size="8.3" font-weight="700" fill="#ffffff">Touch wrong: calibrate with</text><text x="210" y="297.3" text-anchor="middle" font-size="8.3"  fill="#ffffff">ESP32_C1_CALIBRATE.</text><text x="210" y="307.8" text-anchor="middle" font-size="8.3"  fill="#ffffff">Always white: check VCC,</text><text x="210" y="318.3" text-anchor="middle" font-size="8.3"  fill="#ffffff">GND, CS, DC, RST</text><text x="133.0" y="87.0" text-anchor="middle" font-size="8" font-weight="700" fill="#14325c" stroke="#ffffff" stroke-width="2.6" paint-order="stroke">no</text><text x="214.0" y="133.5" text-anchor="start" font-size="8" font-weight="700" fill="#14325c" stroke="#ffffff" stroke-width="2.6" paint-order="stroke">yes</text><text x="287.0" y="160.5" text-anchor="middle" font-size="8" font-weight="700" fill="#14325c" stroke="#ffffff" stroke-width="2.6" paint-order="stroke">no</text><text x="214.0" y="197.3" text-anchor="start" font-size="8" font-weight="700" fill="#14325c" stroke="#ffffff" stroke-width="2.6" paint-order="stroke">yes</text></svg><figcaption class="cap">A white screen is almost always a supply dip when a heavy load switches. Force refresh re-initialises the screen.</figcaption></figure>
+
+<h1 id="r-settings" data-pb="hard">Settings reference</h1>
+<p>Every setting you can change, with the value the firmware starts with and the range it accepts (a value outside the range is refused). Write the value you use in the last column. The firmware defaults are what a freshly flashed board starts with; the machine you are looking at may have been changed. Settings are saved inside the boards, so they survive a power cut and a LocalServer swap. Where to change them: Control Center, the box page (or <b>/acs</b>).</p>
+<h2>Prices and time (Box 1, Box 2 and Box 3)</h2>
+<table data-w="26,30,16,16,12">
+<tr><th>Setting</th><th>What it does</th><th>Default</th><th>Allowed</th><th>Yours</th></tr>
+<tr><td><b>Rating bands</b> (4)</td><td>From and to rating, and the minutes suggested for that rating.</td><td>Box 1, 3: 1-5 = 5, 6-7 = 10, 8-9 = 15, 10 = 20 min. Box 2: 1-3 = 3, 4-6 = 5, 7-8 = 8, 9-10 = 10 min</td><td>Rating 1-10 (from not above to), 1-120 min</td><td></td></tr>
+<tr><td><b>Minimum time</b></td><td>Shortest session the customer can buy.</td><td>Box 1, 3: 5 min. Box 2: 3 min</td><td>1-120 min</td><td></td></tr>
+<tr><td><b>Coin rate</b></td><td>N coins buy X minutes (or seconds).</td><td>Box 1, 3: 15 coins = 5 min (20 s a coin). Box 2: 10 coins = 3 min (18 s a coin)</td><td>1-500 coins, 0.1-9999 time</td><td></td></tr>
+<tr><td><b>Most coins</b></td><td>Largest number of coins one session can take.</td><td>Box 1, 3: 90. Box 2: 100</td><td>1-999</td><td></td></tr>
+<tr><td><b>Free retry</b></td><td>One free run after the final rating.</td><td>On</td><td>On or off</td><td></td></tr>
+<tr><td><b>Free retry from rating</b></td><td>Lowest final rating that gets the free retry (1 = everyone).</td><td>1</td><td>1-10</td><td></td></tr>
+<tr><td><b>Free retry length</b></td><td>How long the free run lasts.</td><td>2 min</td><td>1-60 min</td><td></td></tr>
+<tr><td><b>Cool down</b> (Box 2, Box 3)</td><td>How long the cool down lasts, also after a cancel.</td><td>60 s</td><td>5-900 s</td><td></td></tr>
+</table>
+<h2>Containers and sensors (Box 1 and Box 3)</h2>
+<p>The distances are what the ultrasonic sensor on the main container reads, from the sensor down to the liquid. A <b>bigger</b> number means <b>emptier</b>. The defaults are placeholders: measure your real containers.</p>
+<table data-w="26,30,16,16,12">
+<tr><th>Setting</th><th>What it does</th><th>Default</th><th>Allowed</th><th>Yours</th></tr>
+<tr><td><b>Check levels</b></td><td>Refuse to run (OUT OF ORDER) when a container is low.</td><td>Off</td><td>On or off</td><td></td></tr>
+<tr><td><b>Alcohol low</b></td><td>At or over this distance the alcohol container is LOW.</td><td>20 cm</td><td>0-400 cm</td><td></td></tr>
+<tr><td><b>Alcohol full</b></td><td>At or under this distance it counts as refilled.</td><td>8 cm</td><td>0-400 cm</td><td></td></tr>
+<tr><td><b>Scented low</b></td><td>Same for the scented container.</td><td>20 cm</td><td>0-400 cm</td><td></td></tr>
+<tr><td><b>Scented full</b></td><td>Same for the scented container.</td><td>8 cm</td><td>0-400 cm</td><td></td></tr>
+<tr><td><b>Helmet detect</b></td><td>The helmet counts as inside when its sensor reads under this.</td><td>Box 1, 3: 15 cm. Box 2: 30 cm</td><td>1-200 cm</td><td></td></tr>
+<tr><td><b>Water sensor WET</b> (alcohol, scented)</td><td>Raw reading at which the sensor means wet.</td><td>600</td><td>0-4095</td><td></td></tr>
+<tr><td><b>Water sensor DRY</b> (alcohol, scented)</td><td>Raw reading at which it means dry again (the gap stops flicker).</td><td>400</td><td>0-4095</td><td></td></tr>
+<tr><td><b>Reading goes up when wet</b></td><td>Direction of the water sensor.</td><td>Yes</td><td>Yes or no</td><td></td></tr>
+<tr><td><b>Refill tries</b></td><td>Refill attempts before the box gives up.</td><td>10</td><td>1-99</td><td></td></tr>
+<tr><td><b>Refill interval</b></td><td>Seconds between tries.</td><td>10 s</td><td>1-250 s</td><td></td></tr>
+<tr><td><b>Ask the ACS to refill</b></td><td>Off: only count the tries. On: really send the refill request.</td><td>Off</td><td>On or off</td><td></td></tr>
+</table>
+<div class="tip">Check levels and Ask the ACS to refill are <b>off</b> when a board is flashed, so a box with uncalibrated sensors still serves customers. Measure the four distances, then switch both on.</div>
+<h2>Cleaning phases (Box 1 and Box 3)</h2>
+<p>A paid run is cut into a start part, a middle part (all that is left) and an end part. Each relay is on or off in each part. The lengths are in percent, seconds or minutes.</p>
+<table data-w="26,30,16,16,12">
+<tr><th>Setting</th><th>What it does</th><th>Default</th><th>Allowed</th><th>Yours</th></tr>
+<tr><td><b>Phases in a paid run</b></td><td>Use the start, middle and end parts.</td><td>On</td><td>On or off</td><td></td></tr>
+<tr><td><b>Phases in the free retry</b></td><td>Same, for the free run.</td><td>Box 1: off. Box 3: on</td><td>On or off</td><td></td></tr>
+<tr><td><b>Start part, end part</b></td><td>Length of the first and the last part.</td><td>1 min each</td><td>0-7200 (0-100 if percent)</td><td></td></tr>
+<tr><td><b>Humidifiers</b> (3)</td><td>Parts in which each mist maker runs.</td><td>Middle only (Box 3 free: start only)</td><td>Any of start, middle, end</td><td></td></tr>
+<tr><td><b>UV-C lamps</b> (2)</td><td>Parts in which each lamp is on.</td><td>Start and end (Box 3 free: all)</td><td>Any of start, middle, end</td><td></td></tr>
+<tr><td><b>Heater</b> (Box 3 only)</td><td>Parts in which the heater runs while cleaning.</td><td>End (also in the free retry)</td><td>Any of start, middle, end</td><td></td></tr>
+</table>
+<h2>Screen refresh (all boxes)</h2>
+<table data-w="26,30,16,16,12">
+<tr><th>Setting</th><th>What it does</th><th>Default</th><th>Allowed</th><th>Yours</th></tr>
+<tr><td><b>Refresh when a relay switches on or off</b></td><td>Which relay changes force a full re-initialisation of the touch screen (the white-screen cure). One tick per relay, for ON and for OFF.</td><td>Box 1, 2: when the enclosure lock turns off. Box 3: heater on; lock and heater off</td><td>Any relay</td><td></td></tr>
+<tr><td><b>Auto refresh</b></td><td>Every N seconds the box re-sends the current page as a full re-init. Screens where the customer types or picks a rating are skipped.</td><td>2 s</td><td>0 (never) to 60 s</td><td></td></tr>
+</table>
+<h2>Refill station (ACS 1 and ACS 2)</h2>
+<p>The ACS keeps two mixer containers (alcohol and scented) topped up from three supply tanks (water, alcohol, scented). Name in brackets: the name used on the /acs page and the serial console. A, S = the alcohol and the scented mixer. Distances are from the ultrasonic sensor down to the liquid.</p>
+<table data-w="26,30,16,16,12">
+<tr><th>Setting</th><th>What it does</th><th>Default</th><th>Allowed</th><th>Yours</th></tr>
+<tr><td><b>Empty</b> (emptyA, emptyS)</td><td>Sensor to the bottom of the mixer, for the level percent.</td><td>14 cm</td><td>5-300 cm</td><td></td></tr>
+<tr><td><b>Top-up at</b> (topupA, topupS)</td><td>Distance at which a top-up starts.</td><td>8 cm</td><td>1-300 cm</td><td></td></tr>
+<tr><td><b>Low</b> (lowA, lowS)</td><td>At or over this distance the mixer is LOW.</td><td>11 cm</td><td>1-300 cm</td><td></td></tr>
+<tr><td><b>Full</b> (fullA, fullS)</td><td>At or under this distance the mixer is FULL.</td><td>3.3 cm</td><td>1-300 cm</td><td></td></tr>
+<tr><td><b>Water share</b> (waterA, waterS)</td><td>Water part of each top-up.</td><td>Alcohol 30 %, scented 90 %</td><td>1-99 %</td><td></td></tr>
+<tr><td><b>No rise</b> (norise)</td><td>A pump runs this long and the level does not rise: that supply is called empty.</td><td>12 s</td><td>3-120 s</td><td></td></tr>
+<tr><td><b>Rise</b> (risecm)</td><td>How far the distance must shrink to count as a rise.</td><td>0.5 cm</td><td>0.1-5 cm</td><td></td></tr>
+<tr><td><b>Water rise</b> (wlrise)</td><td>How far the water-sensor reading must move to count as a rise.</td><td>150</td><td>20-4000</td><td></td></tr>
+<tr><td><b>Longest fill</b> (phasemax)</td><td>Hard limit for one fill pump run.</td><td>120 s</td><td>10-900 s</td><td></td></tr>
+<tr><td><b>Delivery shot</b> (deliver)</td><td>One delivery to the box.</td><td>6 s</td><td>1-60 s</td><td></td></tr>
+<tr><td><b>Try again after</b> (emptyhold)</td><td>An empty supply is tried again after this.</td><td>300 s</td><td>10-3600 s</td><td></td></tr>
+<tr><td><b>Request valid for</b> (reqhold)</td><td>A request from a box stays valid this long.</td><td>30 s</td><td>5-300 s</td><td></td></tr>
+<tr><td><b>Pause after a time limit</b> (holdoff)</td><td>Fills pause this long after a pump hit its time limit.</td><td>60 s</td><td>5-900 s</td><td></td></tr>
+<tr><td><b>Water WET, DRY</b> (wlenter, wlleave)</td><td>Raw readings for wet and dry on the mixer water sensor.</td><td>600, 400</td><td>0-4095</td><td></td></tr>
+<tr><td><b>Reading goes up when wet</b> (wlhigher)</td><td>Direction of that sensor.</td><td>Yes</td><td>Yes or no</td><td></td></tr>
+</table>
+<h2>LocalServer and Online Server</h2>
+<table data-w="26,30,16,16,12">
+<tr><th>Setting</th><th>What it does</th><th>Default</th><th>Allowed</th><th>Yours</th></tr>
+<tr><td><b>Control Center Wi-Fi</b></td><td>Name and password of the LocalServer Wi-Fi. Open 192.168.4.1.</td><td>JollyHelmet-Local, 12345678</td><td>Set in the firmware</td><td></td></tr>
+<tr><td><b>Coin value</b></td><td>Pesos one coin pulse adds to the revenue.</td><td>1.00</td><td>Any positive number</td><td></td></tr>
+<tr><td><b>Online Server setup Wi-Fi</b></td><td>Wi-Fi to open the setup page on.</td><td>JollyHelmet-Online, 12345678</td><td>Set in the firmware</td><td></td></tr>
+<tr><td><b>Send to Blynk every</b></td><td>How often the Online Server uploads.</td><td>1 minute</td><td>30 s, 1, 2 or 5 min</td><td></td></tr>
+<tr><td><b>Time zone</b></td><td>Hours from UTC, for the daily revenue.</td><td>As set in the portal</td><td>-12 to 14</td><td></td></tr>
+<tr><td><b>Extra datastreams, events, skip TLS check</b></td><td>V1 to V4, the alert event, and the certificate check.</td><td>Off, off, off</td><td>On or off</td><td></td></tr>
+<tr><td><b>Blynk server</b></td><td>Server name.</td><td>blynk.cloud</td><td>Text</td><td></td></tr>
+</table>
+<h2>Fixed values (not settings)</h2>
+<table data-w="40,60">
+<tr><th>Value</th><th>Where it comes from</th></tr>
+<tr><td><b>Radio channel 1</b></td><td>ESP-NOW and the Wi-Fi of the LocalServer must stay on channel 1.</td></tr>
+<tr><td><b>15 s watchdog</b></td><td>No sign of the brain for 15 s: relays off, a trapped helmet is released.</td></tr>
+<tr><td><b>60 s lock, 5 s rest</b></td><td>A lock never stays on longer than that.</td></tr>
+<tr><td><b>5 min heater, 60 s pumps</b></td><td>Limit of a hand-set heater, and of a hand-set ACS pump, in Maintenance.</td></tr>
+<tr><td><b>One free retry</b></td><td>A session can have only one.</td></tr>
+<tr><td><b>Coin signal on GPIO 23</b></td><td>On A1, B1 and C1.</td></tr>
+</table>
+
+<h1 id="r-circuit" data-pb="hard">Circuit schematics</h1>
+<p>The wiring of the machines was drawn in Cirkit Designer. The pictures below are exports of that drawing. Where a picture is missing a dashed box shows the file name to use: save the export in <b>MANUAL\images\cirkit</b> under that name, then rebuild the manual (see the README). The drawings in the Technician guide (power, relay stage, locks, coin slot, Online Server) are a simplified view of the same wiring.</p>
+<table data-w="32,42,26">
+<tr><th>Picture</th><th>Shows</th><th>File name</th></tr>
+<tr><td><b>Whole installation</b></td><td>All boards and how they are powered</td><td>cirkit_overview</td></tr>
+<tr><td><b>Box 1</b></td><td>A1, A2, A3, S3A</td><td>cirkit_box1</td></tr>
+<tr><td><b>Box 2</b></td><td>C1, C2, S3C</td><td>cirkit_box2</td></tr>
+<tr><td><b>Box 3</b></td><td>B1, B2, B3, S3B</td><td>cirkit_box3</td></tr>
+<tr><td><b>Refill station</b></td><td>ACS 1 and ACS 2: pumps, mixers, sensors</td><td>cirkit_acs</td></tr>
+</table>
+<div class="warn">The Cirkit drawing was checked against what was really built. Where the two differ, the pinout tables in the Technician guide are right (they come from the flashed firmware). Relay input numbers (IN1 ...) come from the drawing.</div>
+<h2 data-pb="hard">Whole installation</h2>
+<figure class="fig cirkit"><div class="ph" style="height:250px">Cirkit Designer picture goes here<br>Save the export as images\cirkit\cirkit_overview.png, then rebuild</div><figcaption class="cap">Whole installation (Cirkit Designer)</figcaption></figure>
+<h2 data-pb="hard">Box 1: A1, A2, A3</h2>
+<figure class="fig cirkit"><div class="ph" style="height:250px">Cirkit Designer picture goes here<br>Save the export as images\cirkit\cirkit_box1.png, then rebuild</div><figcaption class="cap">Box 1 (Cirkit Designer)</figcaption></figure>
+<h2 data-pb="hard">Box 2: C1, C2</h2>
+<figure class="fig cirkit"><div class="ph" style="height:250px">Cirkit Designer picture goes here<br>Save the export as images\cirkit\cirkit_box2.png, then rebuild</div><figcaption class="cap">Box 2 (Cirkit Designer)</figcaption></figure>
+<h2 data-pb="hard">Box 3: B1, B2, B3</h2>
+<figure class="fig cirkit"><div class="ph" style="height:250px">Cirkit Designer picture goes here<br>Save the export as images\cirkit\cirkit_box3.png, then rebuild</div><figcaption class="cap">Box 3 (Cirkit Designer)</figcaption></figure>
+<h2 data-pb="hard">Refill station: ACS 1 and ACS 2</h2>
+<figure class="fig cirkit"><div class="ph" style="height:250px">Cirkit Designer picture goes here<br>Save the export as images\cirkit\cirkit_acs.png, then rebuild</div><figcaption class="cap">Refill station (Cirkit Designer)</figcaption></figure>
+
+<h1 id="r-policy" data-pb="hard">Policies</h1>
+<p>What the machine does is fixed by the firmware. The rules around it are the owner's decisions. Items marked <span class="cf">confirm</span> are proposals: edit them to match what the owner decides, then post the customer rules at the machine.</p>
+<h2>Coins and refunds</h2>
+<table data-w="30,34,36">
+<tr><th>Situation</th><th>What the machine does</th><th>Policy</th></tr>
+<tr><td><b>Customer cancels a run</b></td><td>Asks CONFIRM or RESUME and warns that coins will not be refunded. The coins are <b>not</b> refunded.</td><td>No refund after a run starts.</td></tr>
+<tr><td><b>Customer cancels while inserting coins</b></td><td>Asks YES or NO and warns that coins will not be refunded. The machine does not return coins already inserted.</td><td><span class="cf">confirm</span> Staff may return the coins on request.</td></tr>
+<tr><td><b>Fault or power cut during a run</b></td><td>The run stops, a trapped helmet is released, coins are not returned by the machine.</td><td><span class="cf">confirm</span> Staff offers a free run or a refund.</td></tr>
+<tr><td><b>Machine OUT OF ORDER</b></td><td>It does not take coins.</td><td>A sign: use another machine.</td></tr>
+<tr><td><b>Free retry</b></td><td>One free run after the final rating (default 2 minutes, for everyone). Not repeatable.</td><td>Set who gets it in Settings (lowest final rating).</td></tr>
+<tr><td><b>Too few or too many coins</b></td><td>The time allot screen asks again. The most that can be bought is 90 coins in Box 1 and Box 3, 100 in Box 2.</td><td>Posted on the machine.</td></tr>
+<tr><td><b>No change is given</b></td><td>The slot takes coins only.</td><td>Say so on the sign.</td></tr>
+</table>
+<h2>Using the machine</h2>
+<ul>
+<li><span class="cf">confirm</span> Motorcycle helmets only. Take out gloves, phones, cameras and speakers first.</li>
+<li><span class="cf">confirm</span> Children use the machine with an adult.</li>
+<li><span class="cf">confirm</span> The owner is not responsible for items left inside or for damage that comes from a helmet's own condition. Nothing is stored in the machine after a run.</li>
+<li>The machine cleans and dries. It does not guarantee that every smell or every drop of water is gone.</li>
+<li>Rating the helmet before and after is part of the run. The ratings are kept only as numbers.</li>
+</ul>
+<h2>Data and privacy</h2>
+<ul>
+<li>The machines have no camera and no microphone. They record only counts: sessions, coins, minutes, ratings and the state of each board.</li>
+<li>No names, no phone numbers and no payment cards are stored. Payment is coins only.</li>
+<li>The Online Server sends only totals and status to Blynk. The Blynk token is a secret: keep it out of the manual, the web page and any file that is shared.</li>
+<li>The Control Center and the setup Wi-Fi use a password printed in this manual. <span class="cf">confirm</span> Change both before the machines are used in public, and give the admin and technician parts of this manual only to the team.</li>
+</ul>
+<h2>Staff and safety</h2>
+<ul>
+<li>Only trained staff refill the containers, open the panels or use Maintenance.</li>
+<li>Mains work is for a qualified electrician (see Safety and emergencies).</li>
+<li>Run the weekly and monthly checks in the Maintenance chapter and write the date down.</li>
+<li><span class="cf">confirm</span> Alcohol and scented liquid: keep the supplier's safety data sheet near the ACS. Decide where the drain water may go.</li>
+</ul>
+<h2>Operating hours and notices</h2>
+<table data-w="34,66">
+<tr><th>Item</th><th>Decision</th></tr>
+<tr><td>Operating hours</td><td><span class="cf">confirm</span> [Hours]</td></tr>
+<tr><td>Where to report a fault or a lost item</td><td><span class="cf">confirm</span> [Place, phone, email]</td></tr>
+<tr><td>Price list posted at the machine</td><td>Prices and time chapter, or the printable panel cards.</td></tr>
+</table>
+
+<h1 id="r-glossary" data-pb="hard">Glossary</h1>
+<p>Words used in this manual, in plain language.</p>
+<table data-w="26,74">
+<tr><th>Term</th><th>Meaning</th></tr>
+<tr><td><b>ACS</b></td><td>Auto Container System. The refill station: pumps and two mixer containers that top up a box's alcohol and scented containers.</td></tr>
+<tr><td><b>Allan coin acceptor</b></td><td>The coin slot. It sends one pulse for each coin value it accepts.</td></tr>
+<tr><td><b>Blynk</b></td><td>The online service the Online Server sends its snapshot to. The web page reads it from there.</td></tr>
+<tr><td><b>Brain</b></td><td>The ESP32-S3 board of a box (S3A, S3B, S3C). It runs every step and keeps the settings. A box has one brain and several terminals.</td></tr>
+<tr><td><b>Captive portal</b></td><td>The page that opens by itself when a phone joins the setup Wi-Fi of the Online Server.</td></tr>
+<tr><td><b>Channel 1</b></td><td>The radio channel all the boards use for ESP-NOW. The LocalServer Wi-Fi stays on it too.</td></tr>
+<tr><td><b>Control Center</b></td><td>The pages of the LocalServer (Home, Box 1, Box 2, Box 3, ACS) where settings, calibration and Maintenance are done.</td></tr>
+<tr><td><b>Cool down</b></td><td>The time after heating when nothing heats and the helmet can cool. Box 2 runs the fan; Box 3 lets everything rest.</td></tr>
+<tr><td><b>Datastream</b></td><td>A named value in Blynk. This project uses V0 (a text) and, if you switch them on, V1 to V4.</td></tr>
+<tr><td><b>DC-DC module</b></td><td>The power module that turns 12 V into 5 V and 3.3 V for the boards, sensors and small loads.</td></tr>
+<tr><td><b>Enclosure lock</b></td><td>The solenoid lock of the main door of a box. It is the one released for a trapped helmet.</td></tr>
+<tr><td><b>ESP-NOW</b></td><td>The radio link the boards talk over. No router is needed.</td></tr>
+<tr><td><b>ESP32 and ESP32-S3</b></td><td>The two kinds of board. The plain ESP32 boards are terminals. The S3 boards are brains and servers.</td></tr>
+<tr><td><b>Free retry</b></td><td>One free run after the final rating (2 minutes by default).</td></tr>
+<tr><td><b>GPIO</b></td><td>A numbered pin of an ESP32 board.</td></tr>
+<tr><td><b>Humidifier</b></td><td>The ultrasonic mist maker that makes the alcohol and scented mist (5 V).</td></tr>
+<tr><td><b>Hysteresis</b></td><td>The gap between the WET and the DRY reading of a water sensor, so it does not flicker.</td></tr>
+<tr><td><b>JD-VCC</b></td><td>The separate power input of a relay module's coils, with a jumper to the logic supply.</td></tr>
+<tr><td><b>LocalServer</b></td><td>The board that makes the JollyHelmet-Local Wi-Fi and the Control Center, and counts the revenue.</td></tr>
+<tr><td><b>Maintenance mode</b></td><td>A page where a technician switches relays or pumps by hand. The machine shows MAINTENANCE.</td></tr>
+<tr><td><b>Mixer</b></td><td>One of the two containers of an ACS (alcohol, scented) where the recipe is made before it goes to a box.</td></tr>
+<tr><td><b>Mist</b></td><td>The alcohol or scented vapour used in cleaning. Mist method: balanced, more alcohol, more scented.</td></tr>
+<tr><td><b>NVS</b></td><td>The memory inside a board where settings are saved (they survive a power cut).</td></tr>
+<tr><td><b>Online Server</b></td><td>The ESP32-S3 that listens to the machines and sends a snapshot to Blynk. It never controls anything.</td></tr>
+<tr><td><b>OUT OF ORDER</b></td><td>The screen shown when a box cannot serve customers.</td></tr>
+<tr><td><b>Phase</b></td><td>A part of a cleaning run: start, middle or end. Each relay is on or off per part.</td></tr>
+<tr><td><b>Power-to-unlock</b></td><td>A lock that opens only while it has power. With no power the door stays locked.</td></tr>
+<tr><td><b>Rating</b></td><td>The 1 to 10 score the customer gives the helmet before and after: odor (Box 1 and cleaning in Box 3) or dryness (Box 2 and drying).</td></tr>
+<tr><td><b>Relay</b></td><td>An electrically operated switch. The boards use relays to switch locks, pumps, mist makers, lamps and the heater.</td></tr>
+<tr><td><b>SAFETY PAUSE</b></td><td>The screen shown when a door opens during a run. The loads switch off until the door is closed.</td></tr>
+<tr><td><b>Serial Monitor</b></td><td>The Arduino IDE window that shows what a board prints over USB (115200 baud).</td></tr>
+<tr><td><b>SoftAP</b></td><td>A Wi-Fi network made by a board itself (JollyHelmet-Local, JollyHelmet-Online).</td></tr>
+<tr><td><b>Terminal</b></td><td>A plain ESP32 board that holds a box's sensors, relays and display. It follows its brain.</td></tr>
+<tr><td><b>TFT</b></td><td>The 2.8 inch colour touch screen of a box.</td></tr>
+<tr><td><b>Time allot</b></td><td>The screen where the customer types the minutes to buy.</td></tr>
+<tr><td><b>Token</b></td><td>The secret key that lets the Online Server write to your Blynk template. Keep it private.</td></tr>
+<tr><td><b>Ultrasonic sensor</b></td><td>The HC-SR04. It measures the distance to the helmet or to the liquid in a container.</td></tr>
+<tr><td><b>UV-C lamp</b></td><td>The 220 V germicidal lamp. Never look at it when it is lit.</td></tr>
+<tr><td><b>Watchdog</b></td><td>A safety check: if a board stops hearing its brain for 15 seconds it switches its loads off.</td></tr>
+</table>
+
+<h1 id="r-version" data-pb="hard">Version and revisions</h1>
+<table data-w="34,66">
+<tr><th>Item</th><th>Value</th></tr>
+<tr><td><b>Manual</b></td><td>Jolly Helmet User Manual, revision 4, 2026-10-10</td></tr>
+<tr><td><b>Made by</b></td><td>MEJEZ STUDIO</td></tr>
+<tr><td><b>Covers</b></td><td>Box 1, Box 2, Box 3, ACS 1, ACS 2, LocalServer, Online Server</td></tr>
+<tr><td><b>Protocol file</b></td><td>Shared_Common.h, identical in every sketch folder (checksum b9da9bfb)</td></tr>
+</table>
+<h2>Revision history</h2>
+<table data-w="10,18,72">
+<tr><th>Rev</th><th>Date</th><th>What changed</th></tr>
+<tr><td>1</td><td>2026-10-07</td><td>First manual: customer guide and admin guide for Box 1, 2 and 3, prices, Control Center, ACS. PDF and Word, new logo, Arial.</td></tr>
+<tr><td>2</td><td>2026-10-07</td><td>Technician guide: components, pinouts, circuit and wiring, firmware and flashing, maintenance, hardware troubleshooting. Corrected from the Cirkit Designer document to what was really built.</td></tr>
+<tr><td>3</td><td>2026-10-10</td><td>Online Server, Blynk setup and the web page. Real parts: UV-C 220 V lamps, HC-SR04, 5 V mist makers and pumps, DC-DC module. Team names on the cover.</td></tr>
+<tr><td>4</td><td>2026-10-10</td><td>Reference section: safety and emergencies, box flowcharts, troubleshooting decision trees, settings reference, schematic pages, policies, glossary, this page and the index.</td></tr>
+</table>
+<h2>Firmware in this manual</h2>
+<p>The date is when the sketch file was last saved. The board in the machine may carry an older build: compare with what it prints when it starts (Serial Monitor, 115200).</p>
+<table data-w="26,24,34,16">
+<tr><th>Sketch folder</th><th>Board</th><th>Role</th><th>File date</th></tr>
+<tr><td>ESP32_S3A</td><td>S3A</td><td>Box 1 brain</td><td>2026-10-05</td></tr>
+<tr><td>ESP32_A1</td><td>A1</td><td>Box 1 screen, coin, buzzer</td><td>2026-10-02</td></tr>
+<tr><td>ESP32_A2</td><td>A2</td><td>Box 1 sensors</td><td>2026-10-02</td></tr>
+<tr><td>ESP32_A3</td><td>A3</td><td>Box 1 relays</td><td>2026-10-02</td></tr>
+<tr><td>ESP32_S3C</td><td>S3C</td><td>Box 2 brain</td><td>2026-10-05</td></tr>
+<tr><td>ESP32_C1</td><td>C1</td><td>Box 2 screen, coin, buzzer</td><td>2026-10-03</td></tr>
+<tr><td>ESP32_C2</td><td>C2</td><td>Box 2 sensors and relays</td><td>2026-10-03</td></tr>
+<tr><td>ESP32_S3B</td><td>S3B</td><td>Box 3 brain</td><td>2026-10-05</td></tr>
+<tr><td>ESP32_B1</td><td>B1</td><td>Box 3 screen, coin, buzzer</td><td>2026-10-03</td></tr>
+<tr><td>ESP32_B2</td><td>B2</td><td>Box 3 sensors</td><td>2026-10-03</td></tr>
+<tr><td>ESP32_B3</td><td>B3</td><td>Box 3 relays</td><td>2026-10-03</td></tr>
+<tr><td>ESP32_ACS1</td><td>ACS 1</td><td>Box 1 refill station</td><td>2026-10-03</td></tr>
+<tr><td>ESP32_ACS2</td><td>ACS 2</td><td>Box 3 refill station</td><td>2026-10-03</td></tr>
+<tr><td>ESP32_LOCALSRV</td><td>LocalServer</td><td>Control Center, revenue</td><td>2026-10-09</td></tr>
+<tr><td>ESP32_ONLINESRV</td><td>Online Server</td><td>Blynk monitor</td><td>2026-10-10</td></tr>
+</table>
+<h2>Tools and libraries</h2>
+<table data-w="40,60">
+<tr><th>Item</th><th>Version</th></tr>
+<tr><td>Arduino IDE board package: esp32 by Espressif</td><td>3.3.7</td></tr>
+<tr><td>TFT_eSPI</td><td>2.5.43</td></tr>
+<tr><td>ArduinoJson</td><td>7.4.3</td></tr>
+<tr><td>ESP_Async_WebServer</td><td>3.12.0</td></tr>
+<tr><td>Async_TCP</td><td>3.5.0</td></tr>
+<tr><td>Blynk</td><td>Blynk Cloud HTTPS API (no library on the board)</td></tr>
+</table>
+<h2>Check before you hand over</h2>
+<ul>
+<li>Measure the real containers, enter the LEVELS distances and the ACS lines, then switch <b>Check levels</b> and <b>Ask the ACS to refill</b> on.</li>
+<li>Run every relay and every pump by hand in Maintenance before the first automatic run.</li>
+<li>Calibrate the touch screen of B1 (it still has the A1 numbers) with ESP32_C1_CALIBRATE.</li>
+<li>Online Server: after its first upload, the Control Center must still hear every board (13 of 13). If it does not, check the radio channel.</li>
+<li>Fill in the yellow <span class="cf">confirm</span> marks of the Technician guide and of this section, then add the Cirkit pictures and the photos.</li>
+</ul>
+
+<h1 id="r-index" data-pb="hard">Index</h1>
+<p>Page numbers refer to this manual. In the Word file, right-click the index and choose Update field to refresh it after editing.</p>
+<div id="indexSlot"></div>
+
+</section>
+<script type="application/json" id="idxTerms">[ ["1N4007 diode", "1N4007"], ["12 V power supply", "12 V (supply|power)|12 V supply"], ["220 V mains", "220 ?V|mains"], ["A1 (Box 1 screen board)", "\\bA1\\b"], ["A2 (Box 1 sensor board)", "\\bA2\\b"], ["A3 (Box 1 relay board)", "\\bA3\\b"], ["ACS 1 and ACS 2 (refill station)", "\\bACS ?[12]?\\b|refill station"], ["Allan coin acceptor (coin slot)", "Allan|coin acceptor|coin slot"], ["Arduino IDE", "Arduino IDE"], ["B1 (Box 3 screen board)", "\\bB1\\b"], ["B2 (Box 3 sensor board)", "\\bB2\\b"], ["B3 (Box 3 relay board)", "\\bB3\\b"], ["Blynk", "Blynk"], ["Board settings (flashing)", "ESP32S3 Dev Module|Board settings|Flashing"], ["Buzzer", "buzzer"], ["C1 (Box 2 screen board)", "\\bC1\\b"], ["C2 (Box 2 relay and sensor board)", "\\bC2\\b"], ["Calibration", "calibrat"], ["Captive portal", "captive portal|JollyHelmet-Online"], ["Cirkit Designer", "Cirkit"], ["Cleaning phases", "phases"], ["Coin value and revenue", "revenue|coin value"], ["Control Center", "Control Center|192\\.168\\.4\\.1"], ["Cool down", "cool.?down"], ["DC-DC module", "DC-DC"], ["Door lock (solenoid)", "solenoid|enclosure lock|door lock"], ["Door sensor (MC-38)", "MC-38|door sensor"], ["Drain pump", "drain pump"], ["Emergency", "emergenc"], ["ESP-NOW and channel 1", "ESP-NOW|channel 1"], ["Fan", "\\bfan\\b"], ["Flowcharts", "flowchart"], ["Free retry", "free retry|FREE TIME"], ["Fuse", "\\bfuses?\\b"], ["Heater", "heater"], ["Humidifier (mist maker)", "humidifier|mist maker"], ["Level checks (containers)", "Check levels|level checks|LEVELS"], ["LocalServer", "LocalServer"], ["Maintenance mode", "Maintenance"], ["Mixer container", "mixer"], ["Online Server", "Online Server"], ["OUT OF ORDER", "OUT OF ORDER"], ["Pinouts", "Pinouts?\\b"], ["Policies and refunds", "refund"], ["Power cut (power-to-unlock)", "power cut|blackout|power-to-unlock"], ["Prices", "Prices|price list"], ["Rating (odor and dryness)", "rating|O.?METER"], ["Refill pump", "refill pump"], ["Relay", "\\brelays?\\b"], ["SAFETY PAUSE", "SAFETY PAUSE"], ["Screen refresh (white screen)", "white screen|Force refresh|screen refresh"], ["Serial Monitor", "Serial Monitor|Serial log"], ["Time allot", "TIME ALLOT|time allot"], ["Token (Blynk)", "token"], ["Touch screen (TFT)", "TFT|touch screen"], ["Trapped helmet", "trapped|helmet is stuck|helmet stuck"], ["Ultrasonic sensor (HC-SR04)", "HC-SR04|ultrasonic"], ["UV-C lamp", "UV-C"], ["V0 datastream", "datastream|\\bV0\\b"], ["Water-level sensor", "water.level|water sensor"], ["Watchdog (15 seconds)", "watchdog"], ["Web page (monitor)", "web page"], ["Wi-Fi JollyHelmet-Local", "JollyHelmet-Local"], ["S3A (Box 1 brain)", "\\bS3A\\b"], ["S3B (Box 3 brain)", "\\bS3B\\b"], ["S3C (Box 2 brain)", "\\bS3C\\b"] ]</script>
+<!--REF-FLOW-END-->
 
 <!-- ============ 19 BACK COVER ============ -->
 <section class="spread">
@@ -1367,8 +1896,8 @@
  </div>
  <div class="page navy">
   <div style="position:absolute;left:0;right:0;top:140px;text-align:center;font:700 9px/1.7 Arial,Helvetica,sans-serif;color:#cfd8ea">
-   <div style="font:800 13px Arial,Helvetica,sans-serif;color:#fff">MEJEZ STUDIO</div>
-   [School / contact details here]<br>[Email or phone number here]
+   <div style="font:800 9.5px/1.7 Arial,Helvetica,sans-serif;color:#fff">MEJES, JERAHMEEL ALZEL M.<br>CRUZ, DEAN RYAN P.<br>MENDOZA, RICAH S.<br>MARTOS, KRISTINA E.</div>
+   <div style="font:700 7px Arial,Helvetica,sans-serif;color:#cfd8ea;margin-top:5px">DEVELOPERS AND DESIGNERS</div>
   </div>
   <div class="bar" style="bottom:0;background:var(--amber);color:var(--deep)">USER MANUAL</div>
  </div>
@@ -1467,14 +1996,14 @@ window.__ready = true;
 // The same flow is what build\make_docx.html reads for the Word version.
 // ---------------------------------------------------------------------------------------------------------
 (function () {
-  const flow = document.getElementById('techFlow');
+  const flow = document.getElementById('techFlow'), refFlow = document.getElementById('refFlow');
   if (!flow) return;
   const backSpread = [...document.querySelectorAll('.spread')].pop();
   const slot = document.querySelector('.figslot'), firstSvg = flow.querySelector('svg');
   if (slot && firstSvg) slot.appendChild(firstSvg.cloneNode(true));
 
   const HDR = '<div class="hdr"><img class="lg" src="images/logo.png" alt=""><div><b>Jolly Helmet</b><small>Make your Helmet Happy Again!</small></div></div>';
-  let pageNo = 36, spread = null, side = 0, body = null;
+  let pageNo = 36, spread = null, side = 0, body = null, splitShort = false;
   const refs = {};
 
   function newPage() {
@@ -1533,7 +2062,10 @@ window.__ready = true;
     body.removeChild(el);
     if (el.tagName === 'TABLE') {
       // a pin table or any short table stays in one piece: move it (with its heading) to a fresh page; only long tables are split
-      if ((el.classList.contains('pin') || el.rows.length <= 12) && body.children.length > 1) {
+      // (in the Reference section a short table may split when more than 30 % of the page would stay empty; pin tables never split)
+      const free = body.clientHeight - used();
+      const keepWhole = el.classList.contains('pin') || (el.rows.length <= 12 && !(splitShort && free > body.clientHeight * 0.3));
+      if (keepWhole && body.children.length > 1) {
         breakPage(); body.appendChild(el);
         if (!over()) return;
         body.removeChild(el);
@@ -1545,16 +2077,55 @@ window.__ready = true;
     body.appendChild(el);
   }
 
-  [...flow.children].forEach(el => {
-    // a main section starts on a new page, unless the current page is still less than ~60 % full (no half-empty pages)
-    if (!body) newPage();
-    else if (el.getAttribute('data-pb') === 'hard' ? body.children.length > 0 : (el.hasAttribute('data-pb') && used() > body.clientHeight * 0.6)) newPage();
-    place(el);
-    if (el.id) refs[el.id] = +body.dataset.page;
-  });
+  // The index: every term of #idxTerms (a list of [name, regular expression]) is looked up in the text of every numbered page, except the
+  // glossary, version and index pages themselves. Consecutive pages are joined ("5-7"); a term on more than 6 page groups shows the first 6 and "...".
+  function buildIndex() {
+    const terms = JSON.parse(document.getElementById('idxTerms').textContent);
+    const from = refs['r-glossary'] || 1e9;
+    const pages = [...document.querySelectorAll('.page')].map(p => {
+      const n = parseInt((p.querySelector('.pno') || {}).textContent, 10), b = p.querySelector('.body');
+      return (n && b && n < from) ? { n, text: b.innerText } : null;
+    }).filter(Boolean);
+    const rows = [];
+    terms.forEach(([name, re]) => {
+      const rx = new RegExp(re, 'i'), hit = pages.filter(p => rx.test(p.text)).map(p => p.n);
+      if (!hit.length) return;
+      const parts = []; let i = 0;
+      while (i < hit.length) { let j = i; while (j + 1 < hit.length && hit[j + 1] === hit[j] + 1) j++; parts.push(j > i ? hit[i] + '-' + hit[j] : '' + hit[i]); i = j + 1; }
+      rows.push([name, parts.length > 6 ? parts.slice(0, 6).join(', ') + ', ...' : parts.join(', ')]);
+    });
+    rows.sort((a, b) => a[0].localeCompare(b[0], 'en', { numeric: true, sensitivity: 'base' }));
+    const half = Math.ceil(rows.length / 2), t = document.createElement('table');
+    t.className = 'idx';
+    t.innerHTML = '<tr><th>Term</th><th>Pages</th><th>Term</th><th>Pages</th></tr>';
+    for (let i = 0; i < half; i++) {
+      const a = rows[i], b = rows[i + half], tr = document.createElement('tr');
+      tr.innerHTML = '<td class="t"></td><td class="pg"></td><td class="t"></td><td class="pg"></td>';
+      tr.cells[0].textContent = a[0]; tr.cells[1].textContent = a[1];
+      if (b) { tr.cells[2].textContent = b[0]; tr.cells[3].textContent = b[1]; }
+      t.appendChild(tr);
+    }
+    window.__indexTerms = rows.length;
+    return t;
+  }
+
+  function layoutFlow(fl) {
+    [...fl.children].forEach(el => {
+      // a main section starts on a new page, unless the current page is still less than ~60 % full (no half-empty pages)
+      if (!body) newPage();
+      else if (el.getAttribute('data-pb') === 'hard' ? body.children.length > 0 : (el.hasAttribute('data-pb') && used() > body.clientHeight * 0.6)) newPage();
+      if (el.id === 'indexSlot') { place(buildIndex()); return; }
+      place(el);
+      if (el.id) refs[el.id] = +body.dataset.page;
+    });
+  }
+  layoutFlow(flow);
+  splitShort = true;
+  if (refFlow) layoutFlow(refFlow);
   if (side === 1) { const pg = document.createElement('div'); pg.className = 'page'; pg.innerHTML = HDR + '<div class="bar">USER MANUAL</div><div class="pno">' + (pageNo + 1) + '</div>'; spread.appendChild(pg); }
   document.querySelectorAll('[data-ref]').forEach(s => { s.textContent = refs[s.dataset.ref] || ''; });
   window.__techPages = pageNo - 36;
+  window.__refs = refs;
   // preview helper: JollyHelmet_UserManual.html?only=19-22 shows just those spreads (counted from 0)
   const only = new URLSearchParams(location.search).get('only');
   if (only) { const [a, b] = only.split('-').map(Number); [...document.querySelectorAll('.spread')].forEach((s, i) => { if (i < a || i > b) s.style.display = 'none'; }); }

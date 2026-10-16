@@ -59,7 +59,25 @@ function rPr(o) {
   return x ? `<w:rPr>${x}</w:rPr>` : '';
 }
 const T = (text, o = {}) => `<w:r>${rPr(o)}<w:t xml:space="preserve">${esc(text)}</w:t></w:r>`;
+// Word index: every paragraph that mentions an index term gets a hidden XE field for it (at most XE_MAX per term). The INDEX field is built from them.
+let INDEX_TERMS = [], xeOn = true; const xeCount = {}, XE_MAX = 12;
+function xeRuns(runs) {
+  if (!xeOn || !INDEX_TERMS.length) return '';
+  const text = runs.map(r => r.br ? ' ' : (r.t || '')).join('');
+  if (text.length < 4) return '';
+  let out = '';
+  for (const t of INDEX_TERMS) {
+    if ((xeCount[t.name] || 0) >= XE_MAX || !t.rx.test(text)) continue;
+    xeCount[t.name] = (xeCount[t.name] || 0) + 1;
+    const h = ''; /* no w:vanish: Word hides XE itself, and a hidden XE is skipped by INDEX */
+    out += `<w:r>${h}<w:fldChar w:fldCharType="begin"/></w:r><w:r>${h}<w:instrText xml:space="preserve"> XE "${esc(t.name)}" </w:instrText></w:r><w:r>${h}<w:fldChar w:fldCharType="end"/></w:r>`;
+  }
+  return out;
+}
 function runsXml(runs, base = {}) {
+  return runsXmlPlain(runs, base) + xeRuns(runs);
+}
+function runsXmlPlain(runs, base = {}) {
   return runs.map(r => {
     if (r.br) return '<w:r><w:br/></w:r>';
     const o = { ...base };
@@ -251,9 +269,31 @@ async function svgToImg(svgEl) {
 }
 async function figure(el) {
   const svg = el.querySelector('svg'), cap = el.querySelector('figcaption');
-  const img = await svgToImg(svg), capText = cap ? plain(runsOf(cap)) : '';
-  return P(pic(img, docRels, 6.2, capText || 'figure', { border: 'D6DBE6', maxH: 5.4 }), { jc: 'center', before: 80, after: 0, keepNext: true }) +
-    (capText ? P(T(capText), { style: 'Caption' }) : gap(100));
+  const capText = cap ? plain(runsOf(cap)) : '';
+  const capXml = capText ? P(T(capText), { style: 'Caption' }) : gap(100);
+  if (svg) {
+    const img = await svgToImg(svg);
+    const chart = el.classList.contains('chart');          // flowcharts and decision trees get a whole page
+    return P(pic(img, docRels, chart ? 6.0 : 6.2, capText || 'figure', { border: 'D6DBE6', maxH: chart ? 7.2 : 5.4 }), { jc: 'center', before: 80, after: 0, keepNext: true }) + capXml;
+  }
+  const slot = el.querySelector('.ph');
+  if (slot && !el.querySelector('img')) {                  // a Cirkit picture that has not been saved yet: a dashed box to paste it into
+    const d = '<w:top w:val="dashed" w:sz="8" w:space="0" w:color="9AA3B5"/><w:left w:val="dashed" w:sz="8" w:space="0" w:color="9AA3B5"/><w:bottom w:val="dashed" w:sz="8" w:space="0" w:color="9AA3B5"/><w:right w:val="dashed" w:sz="8" w:space="0" w:color="9AA3B5"/>';
+    const box = P(T('Cirkit Designer picture goes here', { b: true, color: '6B7280', sz: 20 }), { jc: 'center', before: 0, after: 40 }) +
+      P(T('Delete this text and use Insert, Pictures. (For the PDF the picture is saved as images\\cirkit\\' + (plain(runsOf(slot)).split('as images\\cirkit\\')[1] || '').split(',')[0] + '.)', { color: '6B7280', sz: 17 }), { jc: 'center', before: 0, after: 0 });
+    return gap(60) + TBL([TW], TR(TC(TW, box, { borders: d, fill: 'F7F8FB', va: 'center', mar: MAR(60, 120, 60, 120) }), { h: 6600, rule: 'atLeast' })) + capXml;
+  }
+  // screenshots: one picture, or several side by side at the same height
+  const loaded = [];
+  for (const im of el.querySelectorAll('img')) loaded.push({ img: await loadImg(im.getAttribute('src')), alt: im.getAttribute('alt') || '' });
+  if (!loaded.length) return '';
+  if (loaded.length === 1) return P(pic(loaded[0].img, docRels, 6.2, loaded[0].alt || capText, { border: 'D6DBE6', maxH: el.classList.contains('cirkit') ? 7.0 : 5.2 }), { jc: 'center', before: 80, after: 0, keepNext: true }) + capXml;
+  const total = 6.5, gapIn = 0.12, ar = loaded.map(x => x.img.w / x.img.h);
+  let h = (total - gapIn * (loaded.length - 1)) / ar.reduce((a, b) => a + b, 0);
+  if (h > 4.6) h = 4.6;
+  const cols = loaded.map((x, i) => Math.round(h * ar[i] * 1440) + (i < loaded.length - 1 ? Math.round(gapIn * 1440) : 0));
+  const cells = loaded.map((x, i) => TC(cols[i], P(pic(x.img, docRels, h * ar[i], x.alt || capText, { border: 'D6DBE6' }), { jc: 'left', before: 40, after: 0, keepNext: true }), { va: 'top' })).join('');
+  return TBL(cols, TR(cells), { jc: 'center', cellMar: MAR(0, 0, 0, 0) }) + capXml;
 }
 
 // ------------------------------------------------------------------ main
@@ -262,6 +302,9 @@ async function figure(el) {
     const html = await (await fetch('/m/JollyHelmet_UserManual.html?x=' + Date.now())).text();
     const doc = new DOMParser().parseFromString(html, 'text/html');
     let body = '';
+    const idxJson = doc.getElementById('idxTerms');
+    if (idxJson) INDEX_TERMS = JSON.parse(idxJson.textContent).map(([name, re]) => ({ name, rx: new RegExp(re, 'i') }));
+    LOG('index terms: ' + INDEX_TERMS.length);
 
     // ---- cover (full bleed, own section, no header/footer)
     const glow = await loadImg('images/logo_glow.png'), logo = await loadImg('images/logo.png');
@@ -276,8 +319,10 @@ async function figure(el) {
         P(T('Coin-operated helmet cleaning and drying stations', { color: 'CFD8EA', sz: 24 }), { ...ctr, before: 0, after: 0 }),
         { fill: DEEP, va: 'center', mar: MAR(0, 600, 0, 600) }), { h: 11000, rule: 'atLeast', cant: false }) +
       TR(TC(12240, P(T('MEJEZ STUDIO', { b: 1, color: INK, sz: 30 }), { ...ctr, before: 0, after: 60 }) +
-        P(T('[Member Name 1], [Member Name 2],', { b: 1, color: INK, sz: 22 }), { ...ctr, before: 0, after: 0 }) +
-        P(T('[Member Name 3], [Member Name 4]', { b: 1, color: INK, sz: 22 }), { ...ctr, before: 0, after: 80 }) +
+        P(T('MEJES, JERAHMEEL ALZEL M.', { b: 1, color: INK, sz: 22 }), { ...ctr, before: 0, after: 0 }) +
+        P(T('CRUZ, DEAN RYAN P.', { b: 1, color: INK, sz: 22 }), { ...ctr, before: 0, after: 0 }) +
+        P(T('MENDOZA, RICAH S.', { b: 1, color: INK, sz: 22 }), { ...ctr, before: 0, after: 0 }) +
+        P(T('MARTOS, KRISTINA E.', { b: 1, color: INK, sz: 22 }), { ...ctr, before: 0, after: 80 }) +
         P(T('DEVELOPERS AND DESIGNERS', { b: 1, color: '6B7280', sz: 16, sp: 40 }), { ...ctr, before: 0, after: 0 }),
         { fill: 'FFFFFF', va: 'center', mar: MAR(0, 600, 0, 600) }), { h: 2900, rule: 'atLeast', cant: false }) +
       TR(TC(12240, P(T('USER MANUAL', { b: 1, color: DEEP, sz: 44, sp: 120 }), { ...ctr, before: 0, after: 0 }),
@@ -330,8 +375,8 @@ async function figure(el) {
     // ---- technician guide: the same hidden flow the PDF lays out into spreads
     const tflow = doc.querySelector('#techFlow');
     if (tflow) {
-      body += heading('Technician guide (Hardware and maintenance)', 1, true);
-      body += P(T('Components, pinouts, wiring, firmware and maintenance', { b: 1, color: NAVY, sz: 24 }), { jc: 'center', before: 40, after: 120 });
+      body += heading('Technician guide (Hardware, online monitoring and maintenance)', 1, true);
+      body += P(T('Components, pinouts, wiring, firmware, online monitoring and maintenance', { b: 1, color: NAVY, sz: 24 }), { jc: 'center', before: 40, after: 120 });
       for (const el of tflow.children) {
         const tag = el.tagName, cls = el.classList;
         if (tag === 'H1') body += heading(plain(runsOf(el)), 2, el.hasAttribute('data-pb'));
@@ -345,6 +390,38 @@ async function figure(el) {
         else if (tag === 'TABLE') body += dataTable(parseTable(el), el.getAttribute('data-w'), cls.contains('pin'));
         else if (tag === 'FIGURE') body += await figure(el);
         else LOG('WARN: unhandled flow <' + tag + ' class="' + el.className + '">');
+      }
+    }
+
+    // ---- reference section: safety, flowcharts, decision trees, settings, schematics, policies, glossary, version, index
+    const rflow = doc.querySelector('#refFlow');
+    if (rflow) {
+      body += heading('Reference (Safety, charts, settings and index)', 1, true);
+      body += P(T('Safety, flowcharts, decision trees, settings, schematics, policies, glossary, versions and index', { b: 1, color: NAVY, sz: 24 }), { jc: 'center', before: 40, after: 120 });
+      for (const el of rflow.children) {
+        const tag = el.tagName, cls = el.classList;
+        if (tag === 'H1') {
+          if (el.id === 'r-glossary') xeOn = false;           // no index entries from the glossary, version and index pages themselves
+          body += heading(plain(runsOf(el)), 2, el.hasAttribute('data-pb'));
+        }
+        else if (tag === 'H2') body += P(T(plain(runsOf(el))), { style: 'Heading3', pb: el.hasAttribute('data-pb') });
+        else if (tag === 'P') body += P(runsXml(runsOf(el)));
+        else if (tag === 'UL') body += listXml('ul', [...el.children].map(runsOf));
+        else if (tag === 'OL') body += listXml('ol', [...el.children].map(runsOf), olStart(el));
+        else if (cls.contains('tip')) body += callout('tip', runsOf(el));
+        else if (cls.contains('warn')) body += callout('warn', runsOf(el));
+        else if (tag === 'TABLE') body += dataTable(parseTable(el), el.getAttribute('data-w'), false);
+        else if (tag === 'FIGURE') body += await figure(el);
+        else if (el.id === 'indexSlot') {
+          // a real INDEX field (Word builds it from the hidden XE entries when the fields are updated), pre-filled with the term list
+          const names = INDEX_TERMS.map(t => t.name).sort((a, b) => a.localeCompare(b, 'en', { numeric: true, sensitivity: 'base' }));
+          names.forEach((n, i) => {
+            const start = i === 0 ? '<w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText xml:space="preserve"> INDEX \\c "2" \\z "1033" </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r>' : '';
+            const end = i === names.length - 1 ? '<w:r><w:fldChar w:fldCharType="end"/></w:r>' : '';
+            body += P(start + T(n) + end, { style: 'Index1' });
+          });
+        }
+        else LOG('WARN: unhandled ref <' + tag + ' class="' + el.className + '">');
       }
     }
 
@@ -366,9 +443,11 @@ async function figure(el) {
         P(T('Jolly Helmet', { b: 1, color: AMBER, sz: 72 }), { ...ctr, before: 0, after: 240 }) +
         P(T('We hope to see you again!', { color: 'CFD8EA', sz: 24 }), { ...ctr, before: 0, after: 0 }) +
         P(T('Make your Helmet Happy Again.', { color: 'CFD8EA', sz: 24 }), { ...ctr, before: 0, after: 900 }) +
-        P(T('MEJEZ STUDIO', { b: 1, color: 'FFFFFF', sz: 28 }), { ...ctr, before: 0, after: 80 }) +
-        P(T('[School / contact details here]', { color: 'CFD8EA', sz: 20 }), { ...ctr, before: 0, after: 0 }) +
-        P(T('[Email or phone number here]', { color: 'CFD8EA', sz: 20 }), { ...ctr, before: 0, after: 0 }),
+        P(T('MEJES, JERAHMEEL ALZEL M.', { b: 1, color: 'FFFFFF', sz: 22 }), { ...ctr, before: 0, after: 0 }) +
+        P(T('CRUZ, DEAN RYAN P.', { b: 1, color: 'FFFFFF', sz: 22 }), { ...ctr, before: 0, after: 0 }) +
+        P(T('MENDOZA, RICAH S.', { b: 1, color: 'FFFFFF', sz: 22 }), { ...ctr, before: 0, after: 0 }) +
+        P(T('MARTOS, KRISTINA E.', { b: 1, color: 'FFFFFF', sz: 22 }), { ...ctr, before: 0, after: 80 }) +
+        P(T('DEVELOPERS AND DESIGNERS', { b: 1, color: 'CFD8EA', sz: 16, sp: 40 }), { ...ctr, before: 0, after: 0 }),
         { fill: DEEP, va: 'center', mar: MAR(0, 600, 0, 600) }), { h: 14100, rule: 'atLeast', cant: false }) +
       TR(TC(12240, P(T('USER MANUAL', { b: 1, color: DEEP, sz: 44, sp: 120 }), { ...ctr, before: 0, after: 0 }), { fill: AMBER, va: 'center' }), { h: 1500, rule: 'atLeast', cant: false });
     body += TBL([12240], backRows, { cellMar: MAR(0, 0, 0, 0) }) + P('', { before: 0, after: 0, line: 20, rule: 'exact' });
@@ -407,6 +486,7 @@ ${heading_('Heading4', 'heading 4', 22, 180, 60, 3, '', 'B26A00')}
 <w:style w:type="paragraph" w:customStyle="1" w:styleId="TableText"><w:name w:val="Table Text"/><w:basedOn w:val="Normal"/><w:qFormat/><w:pPr><w:spacing w:before="0" w:after="20" w:line="252" w:lineRule="auto"/></w:pPr><w:rPr><w:sz w:val="19"/><w:szCs w:val="19"/></w:rPr></w:style>
 <w:style w:type="paragraph" w:customStyle="1" w:styleId="TableHead"><w:name w:val="Table Head"/><w:basedOn w:val="Normal"/><w:qFormat/><w:pPr><w:keepNext/><w:spacing w:before="0" w:after="0" w:line="252" w:lineRule="auto"/></w:pPr><w:rPr><w:b/><w:bCs/><w:color w:val="FFFFFF"/><w:sz w:val="19"/><w:szCs w:val="19"/></w:rPr></w:style>
 <w:style w:type="paragraph" w:styleId="Caption"><w:name w:val="caption"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:uiPriority w:val="35"/><w:qFormat/><w:pPr><w:spacing w:before="40" w:after="120" w:line="240" w:lineRule="auto"/><w:jc w:val="center"/></w:pPr><w:rPr><w:b/><w:bCs/><w:color w:val="${GRAY}"/><w:sz w:val="17"/><w:szCs w:val="17"/></w:rPr></w:style>
+<w:style w:type="paragraph" w:styleId="Index1"><w:name w:val="index 1"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:autoRedefine/><w:uiPriority w:val="99"/><w:unhideWhenUsed/><w:pPr><w:tabs><w:tab w:val="right" w:leader="dot" w:pos="4500"/></w:tabs><w:spacing w:before="0" w:after="20" w:line="240" w:lineRule="auto"/><w:ind w:left="200" w:hanging="200"/></w:pPr><w:rPr><w:sz w:val="19"/><w:szCs w:val="19"/></w:rPr></w:style>
 <w:style w:type="paragraph" w:styleId="Header"><w:name w:val="header"/><w:basedOn w:val="Normal"/><w:uiPriority w:val="99"/><w:unhideWhenUsed/><w:pPr><w:spacing w:after="0" w:line="240" w:lineRule="auto"/></w:pPr></w:style>
 <w:style w:type="paragraph" w:styleId="Footer"><w:name w:val="footer"/><w:basedOn w:val="Normal"/><w:uiPriority w:val="99"/><w:unhideWhenUsed/><w:pPr><w:spacing w:after="0" w:line="240" w:lineRule="auto"/></w:pPr></w:style>
 </w:styles>`;
@@ -421,7 +501,7 @@ ${numOverrides.map(n => `<w:num w:numId="${n.numId}"><w:abstractNumId w:val="${n
 </w:numbering>`;
 
     const settingsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:settings ${W}><w:defaultTabStop w:val="720"/><w:characterSpacingControl w:val="doNotCompress"/><w:updateFields w:val="true"/><w:compat><w:compatSetting w:name="compatibilityMode" w:uri="http://schemas.microsoft.com/office/word" w:val="15"/></w:compat></w:settings>`;
-    const core = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:dcmitype="http://purl.org/dc/dcmitype/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><dc:title>Jolly Helmet - User Manual</dc:title><dc:creator>MEJEZ STUDIO</dc:creator><cp:lastModifiedBy>MEJEZ STUDIO</cp:lastModifiedBy><dcterms:created xsi:type="dcterms:W3CDTF">2026-10-07T00:00:00Z</dcterms:created><dcterms:modified xsi:type="dcterms:W3CDTF">2026-10-07T00:00:00Z</dcterms:modified></cp:coreProperties>`;
+    const core = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:dcmitype="http://purl.org/dc/dcmitype/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><dc:title>Jolly Helmet - User Manual</dc:title><dc:creator>MEJEZ STUDIO</dc:creator><cp:lastModifiedBy>MEJEZ STUDIO</cp:lastModifiedBy><dcterms:created xsi:type="dcterms:W3CDTF">2026-10-07T00:00:00Z</dcterms:created><dcterms:modified xsi:type="dcterms:W3CDTF">2026-10-10T00:00:00Z</dcterms:modified></cp:coreProperties>`;
     const app = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties"><Application>Microsoft Office Word</Application></Properties>`;
 
     // ---- package

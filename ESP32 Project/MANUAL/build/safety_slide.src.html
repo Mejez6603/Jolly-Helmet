@@ -1,0 +1,116 @@
+<!-- Revision 6 (2026-10-11): the SAFETY SLIDE of the enclosure door. Put into the user's Word file by build\patch_docx.html?src=safety_slide.src.html
+     Fact given by the owner: the enclosure door has a mechanical safety slide at its lower left. Sliding it DOWN unlocks the door by hand, e.g. when the solenoid lock is
+     broken or there is no power. Everything below only says what follows from that. -->
+
+<!-- ================================================================ CUSTOMER GUIDE -->
+<div class="op" data-op="replace-para" data-startswith="Do not force the door.">
+<p><b>Do not force the door.</b> It is locked on purpose while the machine runs. To stop, use <b>CANCEL</b> on the screen. If the screen does not answer, use the safety slide (see "If the door will not open").</p>
+</div>
+
+<div class="op" data-op="replace-para" data-startswith="If your helmet is stuck after a power cut or a fault">
+<p><b>If your helmet is stuck</b> after a power cut or a fault, do not pull on the door. Slide the <b>safety lock down</b> (lower left of the enclosure door): the door unlocks at once. Then tell the staff.</p>
+</div>
+
+<div class="ins" data-where="before" data-anchor="Heading3:Questions">
+<h3>If the door will not open</h3>
+<p>The door is locked on purpose while a machine runs. If the screen does not answer, the power is off, or the lock is broken, you can always open the door yourself with the <b>safety slide</b>.</p>
+<ol>
+<li>Look at the <b>lower left corner of the enclosure door</b>. The safety slide is there.</li>
+<li>Slide it <b>down</b>. The door unlocks at once, with or without power.</li>
+<li>Open the door and take your helmet out. Tell the staff afterwards.</li>
+</ol>
+<figure data-w="4.6"><img src="images/web/safety_slide.png" alt="The safety slide at the lower left of the enclosure door"><figcaption>The safety slide: lower left of the enclosure door. Slide it down to unlock (drawing)</figcaption></figure>
+<div class="warn">If the machine was running, opening the door stops it (SAFETY PAUSE) and switches the UV light and the heat off. The UV light is strong: do not look into the chamber until it is off. The helmet may be warm.</div>
+</div>
+
+<div class="op" data-op="rows-append" data-after="Heading3:Questions">
+<table><tr><td>The door will not open.</td><td>Wait until the run ends, or tap CANCEL. If the screen does not answer or the power is off, slide the safety lock down (lower left of the enclosure door).</td></tr></table>
+</div>
+
+<!-- ================================================================ ADMIN GUIDE -->
+<div class="op" data-op="rows-append" data-after="Heading3:Troubleshooting" data-bold="yes">
+<table><tr><td>Door will not open, helmet stuck</td><td>Slide the safety lock down (lower left of the enclosure door): it unlocks the door at once, with or without power. Then find the cause: box page, Maintenance, ENCLOSURE LOCK (Fix it: The door will not open).</td></tr></table>
+</div>
+
+<!-- ================================================================ TECHNICIAN GUIDE -->
+<div class="op" data-op="replace-para" data-startswith="The locks are power-to-unlock: the relay is ON only">
+<p>The locks are <b>power-to-unlock</b>: the relay is ON only while the door may open (the OPEN steps, Maintenance, or the trapped-helmet release). With no power a solenoid keeps its door locked, but the enclosure door also has a mechanical <b>safety slide</b> that opens it by hand (next block). The 1N4007 takes the voltage spike when the relay lets go of the coil. Without it the spike can reset the board and burn the relay contacts.</p>
+</div>
+
+<div class="op" data-op="replace-para" data-startswith="After a power cut the doors stay locked.">
+<p><b>After a power cut</b> the solenoid locks stay shut, but the enclosure door can be opened at once with the <b>safety slide</b> (lower left of the door, slide it down). When power is back, release a lock from the Control Center: Box page, Maintenance, ENCLOSURE LOCK. It switches itself off after 60 seconds.</p>
+</div>
+
+<div class="ins" data-where="before" data-anchor="Heading3:Coin slot and buzzer">
+<h3>Safety slide on the enclosure door</h3>
+<p>The enclosure door has a mechanical <b>safety slide</b> at its lower left. Sliding it <b>down</b> unlocks the door by hand. It works with no power, with a broken solenoid and without any help from the boards. It is the way out for a trapped helmet.</p>
+<ul>
+<li>The slide is part of the door. It is not wired and the firmware does not read it. When the door opens, the door sensor reports it: during a run the box shows SAFETY PAUSE and the UV-C, the mist and the heater are switched off within about 2 seconds.</li>
+<li>A door switch in series with each UV-C lamp (recommended, see Switching 220 V loads) cuts the lamp at once when the door opens, even before the firmware reacts.</li>
+<li>After the slide has been used, put it back in its normal position, close the door and check that the lock holds it. The Maintenance page of the Control Center switches the lock for a test.</li>
+<li>Test the slide every month (see the schedule in Maintenance): with the power off, sliding it down must unlock the door by hand. Never block, tape or remove the slide.</li>
+</ul>
+</div>
+
+<div class="op" data-op="bullet-after" data-after="If a terminal hears nothing from its brain for 15 seconds, it switches its relays off">
+<ul><li>The enclosure door also has a mechanical safety slide (lower left) that unlocks it by hand, with no power and no firmware.</li></ul>
+</div>
+
+<div class="op" data-op="append-para" data-startswith="Switch every relay by hand in Maintenance">
+<p> Test the safety slide of each enclosure door: with the power off, sliding it down must unlock the door by hand.</p>
+</div>
+
+<div class="op" data-op="append-para" data-startswith="Measure the solenoid while its relay is ON.">
+<p> The safety slide still opens the enclosure door.</p>
+</div>
+
+<div class="op" data-op="replace-para" data-startswith="Locks are power-to-unlock">
+<p>Locks are power-to-unlock (the enclosure door also has a safety slide)</p>
+</div>
+
+<div class="op" data-op="replace-para" data-startswith="When power is back, use Maintenance, ENCLOSURE LOCK.">
+<p>Slide the safety lock down (lower left of the enclosure door) at once. When power is back, test the solenoid with Maintenance, ENCLOSURE LOCK.</p>
+</div>
+
+<!-- ================================================================ REFERENCE -->
+<div class="op" data-op="replace-para" data-startswith="A helmet is stuck: see the next block.">
+<p><b>A helmet is stuck, or the power is off:</b> slide the <b>safety lock down</b> (lower left of the enclosure door). The door unlocks at once. More in the next block.</p>
+</div>
+
+<div class="op" data-op="replace-para" data-startswith="The locks are power-to-unlock. With the power off">
+<p>The solenoid locks are <b>power-to-unlock</b>: with the power off, or with a broken solenoid, they stay locked. The <b>enclosure door has a mechanical safety slide</b> at its lower left. Slide it <b>down</b> and the door unlocks, with or without power. Anybody can use it. Never block or remove it.</p>
+</div>
+
+<div class="op" data-op="bullet-before" data-before="Check that the machine has power. After a power cut">
+<ul><li><b>Fastest way: slide the safety lock down.</b> It is at the lower left of the enclosure door. The door unlocks at once, even with no power or a broken solenoid. If the machine was running it pauses (SAFETY PAUSE) and the UV-C, the mist and the heater switch off. The helmet may be warm.</li></ul>
+</div>
+
+<div class="op" data-op="rows-append" data-after="Heading3:Safety features built into the firmware">
+<table><tr><td>Safety slide</td><td>A mechanical slide at the lower left of the enclosure door unlocks it by hand, with no power and no firmware. Opening the door then starts SAFETY PAUSE if a run was on.</td></tr></table>
+</div>
+
+<div class="op" data-op="replace-para" data-startswith="The locks are power-to-unlock: with no power a door stays shut.">
+<p>The locks are power-to-unlock: with no power a solenoid door stays shut, but the safety slide (lower left of the enclosure door) opens it by hand. Switch the mains off before reaching in.</p>
+</div>
+
+<div class="op" data-op="replace-image" data-after="Heading3:Tree 4: the door will not open" data-figs="figs_ref.html" data-fig="tree4"></div>
+
+<div class="op" data-op="rows-append" data-after="Heading3:Fixed values (not settings)">
+<table><tr><td>Safety slide</td><td>Mechanical, lower left of the enclosure door. Not a setting: it always works.</td></tr></table>
+</div>
+
+<div class="op" data-op="bullet-after" data-after="Children use the machine with an adult">
+<ul><li>Never block, tape or remove the safety slide of the enclosure door. It is how a trapped helmet is freed when the lock or the power fails.</li></ul>
+</div>
+
+<div class="op" data-op="glossary">
+<table>
+<tr><td>Safety slide</td><td>The mechanical slide at the lower left of the enclosure door. Slide it down and the door unlocks by hand, with no power and no help from the boards.</td></tr>
+</table>
+</div>
+
+<div class="op" data-op="rev-row">
+<table><tr><td>6</td><td>@@TODAY@@</td><td>The safety slide of the enclosure door (lower left, slide down to unlock by hand when the solenoid lock is broken or there is no power): customer guide, admin guide, technician guide, safety and emergencies, decision tree 4, settings reference, glossary and policies.</td></tr></table>
+</div>
+
+<div class="op" data-op="xe-terms">[["Safety slide (manual door release)", "safety slide|safety lock"], ["Helmet stuck (trapped helmet)", "helmet is stuck|helmet stuck|trapped"]]</div>

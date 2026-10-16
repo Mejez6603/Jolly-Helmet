@@ -55,13 +55,18 @@ function demoAll() {
   perDay.forEach((c, i) => dy.push([c + (i === 13 ? Math.floor(t / 150) * 8 : 0), Math.round(c / 8)]));
   const hr = [0, 0, 0, 0, 0, 1, 3, 6, 9, 12, 14, 11, 8, 10, 13, 15, 18, 22, 25, 19, 11, 6, 2, 1].map(v => v + Math.floor(n0 / 20)), wd = [18, 12, 15, 17, 21, 34, 41];
   const bx = [[Math.round(n0 * 0.46), Math.round(n0 * 0.46) * 15], [Math.round(n0 * 0.2), Math.round(n0 * 0.2) * 10], [Math.round(n0 * 0.34), Math.round(n0 * 0.34) * 15]];
-  L.st = { cv: 1, ss: n0, cn: coins, rv: coins, ad: 412, h: hist, dy, sn: Math.floor(Date.now() / 1000) - 9 * 86400, bx, hr, wd,
+  const rs = [2, Math.floor(Date.now() / 1000) - 3 * 86400, 20, 200, 83, coins - 83, 100, 1];          // corrected old data (made up): [update, captured at, customers, coins counted, restated coins, coins since, cv x100, mode]
+  L.st = { cv: 1, ss: n0, cn: coins, rv: coins, ad: 412, rs, h: hist, dy, sn: Math.floor(Date.now() / 1000) - 9 * 86400, bx, hr, wd,
     sys: { up: Math.floor(t + 18000), rst: 'power-on', boots: 3, rssi: -58, heap: 162000, mq: 31800 + Math.floor(t % 1000), mqmax: 100000 } };
   return { v0: JSON.stringify(L) };
 }
 
-/* The same boxes as the PUBLIC status device would carry them: { seq, ts, iv, b:[[step, seconds left, heard] x3] } (see DATA_CONTRACT.md, section 5) */
+/* The same boxes as the PUBLIC status device would carry them: { seq, ts, iv, b:[[step, seconds left, heard, sessions] x3] } (see DATA_CONTRACT.md, section 5).
+   "sessions" is each box's completed-sessions counter: it goes up when the cycle ends (Box 1: end of the cleaning, Box 2: end of the heating, Box 3: end of the drying),
+   which is when a customer's optional name disappears. (The names themselves live in SS.demoNames, see status.js.) */
 function demoPublic() {
-  const L = JSON.parse(demoAll().v0), b = L.b.map((x, i) => { const heard = L.n[BOXES[i].brain] === '1' ? 1 : 0; return [heard ? x[0] : 0, heard ? x[1] : 0, heard]; });
+  const L = JSON.parse(demoAll().v0), t = (Date.now() - DEMO_T0) / 1000 + 25;
+  const sess = [50 + Math.floor((t + 20) / 150), 20 + Math.floor((t + 70) / 120), 70 + Math.floor((t + 135) / 200)];
+  const b = L.b.map((x, i) => { const heard = L.n[BOXES[i].brain] === '1' ? 1 : 0; return [heard ? x[0] : 0, heard ? x[1] : 0, heard, heard ? sess[i] : 0]; });
   return { v0: JSON.stringify({ seq: L.seq, ts: L.ts, iv: L.iv, b }) };
 }

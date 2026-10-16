@@ -20,6 +20,12 @@ const CONFIG = {
   //              private token here. Leave empty to give it in the address instead:  status.html#t=THE_PUBLIC_TOKEN  (that is what the QR code does).
   publicToken: '',
   statusPollSec: 30,                     // how often a customer's page asks Blynk (only while it is open and visible)
+  // Optional customer names (2026-10-14): a customer can type a name or nickname on the card of the machine being used; everybody sees it there until the
+  // cycle ends, then it clears by itself. The names are kept in ONE extra String datastream of the PUBLIC Blynk device (namesPin, default V5): add that
+  // datastream to the Blynk template once (DATA_CONTRACT.md, section 5). Without it the page works as before and a customer who tries to add a name
+  // is told that names are not switched on. names: false hides the feature.
+  names: true,
+  namesPin: 'v5',
   prices: {                              // shown on the customer page, edit to match the Control Center prices
     'Box 1': '15 coins = 5 minutes',
     'Box 2': '10 coins = 3 minutes',

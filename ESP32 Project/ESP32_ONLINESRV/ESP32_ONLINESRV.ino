@@ -57,6 +57,7 @@ struct Cfg {
     bool     events;        // also log a Blynk event "alert" when something needs attention
     bool     insecure;      // skip the TLS certificate check
     uint32_t mqmax;         // Blynk messages per month in the plan (0 = unknown, the page hides the quota bar)
+    char     ptoken[72];    // token of a SECOND Blynk device for the public customer page (status.html); empty = not used
 };
 static Cfg cfg;
 
@@ -67,6 +68,7 @@ struct Status {
     uint32_t nextAtMs;
     uint32_t mq;                                        // uploads counted this month
     uint32_t boots;
+    bool pubTried, pubOk; char pubErr[110]; uint32_t pubAtMs;   // the upload to the public status device
 };
 static Status st;
 
@@ -80,6 +82,20 @@ struct DayData {            // revenue per day, oldest first, [DAYS-1] = today; 
 static DayData day;
 static bool     dayDirty = false;
 static uint32_t dayLastSaveMs = 0;
+
+struct Usage {              // what each box earned and when the customers come (counted from the boxes' "completed sessions" counters); saved in NVS
+    uint32_t since;         // unix time when counting started (0 = clock not known yet)
+    uint32_t sess[3];       // finished sessions: Box 1, Box 2, Box 3
+    uint32_t coins[3];      // coins used in those sessions
+    uint16_t hour[24];      // finished sessions per local hour of the day (0..23)
+    uint16_t dow[7];        // finished sessions per weekday (0 = Sunday)
+    uint32_t lastSeq[3];    // the last "completed sessions" counter seen from each brain
+    uint8_t  have[3];       // 1 = lastSeq is valid
+};
+static Usage    use;
+static volatile bool resetUsageReq = false;
+static bool     useDirty = false;
+static uint32_t useLastSaveMs = 0;
 
 static DNSServer        dnsServer;
 static AsyncWebServer   server(80);
@@ -125,6 +141,12 @@ static void loadConfig() {
     cfg.events   = prefs.getBool("events", false);
     cfg.insecure = prefs.getBool("insecure", false);
     cfg.mqmax    = prefs.getUInt("mqmax", 0);
+    strlcpy(cfg.ptoken, prefs.getString("ptoken", "").c_str(), sizeof(cfg.ptoken));
+    memset(&snapRs, 0, sizeof(snapRs)); snapRsHave = false;                       // restated old data from the spare ESP32_RESTATE board
+    if (prefs.getBytesLength("rs_pkt") == sizeof(snapRs)) {
+        prefs.getBytes("rs_pkt", &snapRs, sizeof(snapRs));
+        snapRsHave = (snapRs.magic == RESTATE_MAGIC && snapRs.active == 1);
+    }
     if (cfg.iv < 30) cfg.iv = 30;
     if (!cfg.server[0]) strlcpy(cfg.server, "blynk.cloud", sizeof(cfg.server));
     st.mq    = prefs.getUInt("mq", 0);
@@ -133,6 +155,8 @@ static void loadConfig() {
     prefs.putUInt("boots", st.boots);
     memset(&day, 0, sizeof(day));
     if (prefs.getBytesLength("day") == sizeof(day)) prefs.getBytes("day", &day, sizeof(day));
+    memset(&use, 0, sizeof(use));
+    if (prefs.getBytesLength("usage") == sizeof(use)) prefs.getBytes("usage", &use, sizeof(use));
 }
 static void saveConfig() {     // caller holds no lock; copies under the lock, writes outside it
     Cfg c;
@@ -140,6 +164,7 @@ static void saveConfig() {     // caller holds no lock; copies under the lock, w
     prefs.putString("ssid", c.ssid);   prefs.putString("pass", c.pass);   prefs.putString("token", c.token);   prefs.putString("server", c.server);
     prefs.putUShort("iv", c.iv);       prefs.putFloat("tz", c.tz);        prefs.putBool("extra", c.extra);      prefs.putBool("events", c.events);
     prefs.putBool("insecure", c.insecure);                                prefs.putUInt("mqmax", c.mqmax);
+    prefs.putString("ptoken", c.ptoken);
 }
 
 // ---------------------------------------------------------------------
@@ -197,6 +222,38 @@ static void dayTick(const SnapAll& s) {
 }
 
 // ---------------------------------------------------------------------
+// Per box earnings and the busiest hours / weekdays: every time a brain's "completed sessions" counter goes up, that session is added to its box,
+// to the hour of the day and to the weekday it ended on (local time, zone set in the setup page). The first value seen after a start only
+// sets the starting point, so nothing is counted twice and a brain restart (counter back to 0) is ignored.
+// ---------------------------------------------------------------------
+static void usageTick(const SnapAll& s) {
+    const bool seen[3]    = { s.b[0].s3Seen, s.c.s3Seen, s.b[1].s3Seen };
+    const uint32_t seq[3] = { s.b[0].sessSeq, s.c.sessSeq, s.b[1].sessSeq };
+    // Since 2026-10-13 the S3's session coin field also carries SESSION_CANCELLED_FLAG (bit 15 = the customer aborted mid-cycle): only the low 15 bits are coins.
+    // An aborted session now counts here too (a session of that box, with the coins that customer paid).
+    const uint16_t cn[3]  = { (uint16_t)(s.b[0].sessCoins & ~SESSION_CANCELLED_FLAG), (uint16_t)(s.c.sessCoins & ~SESSION_CANCELLED_FLAG), (uint16_t)(s.b[1].sessCoins & ~SESSION_CANCELLED_FLAG) };
+    bool tv = timeValid();
+    if (resetUsageReq) { resetUsageReq = false; memset(&use, 0, sizeof(use)); prefs.putBytes("usage", &use, sizeof(use)); useDirty = false; useLastSaveMs = millis(); }
+    if (tv && use.since == 0) { use.since = (uint32_t)time(nullptr); useDirty = true; }
+    for (int i = 0; i < 3; i++) {
+        if (!seen[i]) continue;
+        if (!use.have[i]) { use.lastSeq[i] = seq[i]; use.have[i] = 1; useDirty = true; continue; }
+        if (seq[i] == use.lastSeq[i]) continue;
+        uint32_t delta = seq[i] - use.lastSeq[i];                       // unsigned: a counter that went back wraps to a huge number
+        use.lastSeq[i] = seq[i]; useDirty = true;
+        if (delta == 0 || delta > 20) continue;                          // the brain restarted: only take the new starting point
+        use.sess[i]  += delta;
+        use.coins[i] += cn[i];                                           // the coins of the newest one (earlier ones, if packets were missed, are unknown)
+        if (tv) {
+            time_t t = time(nullptr) + (long)(cfg.tz * 3600.0f); struct tm tmv; gmtime_r(&t, &tmv);
+            if (use.hour[tmv.tm_hour] < 65000 - delta) use.hour[tmv.tm_hour] += (uint16_t)delta;
+            if (use.dow[tmv.tm_wday]  < 65000 - delta) use.dow[tmv.tm_wday]  += (uint16_t)delta;
+        }
+    }
+    if (useDirty && millis() - useLastSaveMs > 120000UL) { prefs.putBytes("usage", &use, sizeof(use)); useDirty = false; useLastSaveMs = millis(); }
+}
+
+// ---------------------------------------------------------------------
 // The Blynk payload  (see ONLINE_WEB/DATA_CONTRACT.md)
 // ---------------------------------------------------------------------
 static size_t buildPayload(const SnapAll& s, char* out, size_t cap, uint32_t seq, bool compact) {   // compact = no history lists, minimal health (about 350 bytes shorter)
@@ -209,6 +266,16 @@ static size_t buildPayload(const SnapAll& s, char* out, size_t cap, uint32_t seq
         float cv = p.coinValueX100 / 100.0f;
         uint32_t avg = p.totalSessions ? p.totalDurationSec / p.totalSessions : 0;
         jadd(out, cap, len, "\"cv\":%.2f,\"ss\":%lu,\"cn\":%lu,\"rv\":%.2f,\"ad\":%lu", (double)cv, (unsigned long)p.totalSessions, (unsigned long)p.totalCoins, (double)(p.totalCoins * cv), (unsigned long)avg);
+        first = false;
+    }
+    // restated old data (ESP32_RESTATE board): [update no., captured at (unix), customers at capture, coins collected at capture, those coins restated
+    // at the new price list, coins sold since the capture (-1 = the LocalServer's totals were reset), coin value x100 at the capture]
+    if (s.rsHave) {
+        long newCn = 0;
+        const uint32_t baseC = (s.rs.mode == 1) ? s.rs.oldRestCoins : s.rs.baseCoins;     // mode 1 (apply): the LocalServer total already starts from the restated old coins
+        if (s.s.seen) newCn = (s.s.p.totalCoins >= baseC) ? (long)(s.s.p.totalCoins - baseC) : -1L;
+        jadd(out, cap, len, "%s\"rs\":[%u,%lu,%lu,%lu,%lu,%ld,%u,%u]", first ? "" : ",", (unsigned)s.rs.rev, (unsigned long)s.rs.capturedAt, (unsigned long)s.rs.baseSessions,
+             (unsigned long)s.rs.baseCoins, (unsigned long)s.rs.oldRestCoins, newCn, (unsigned)s.rs.cvX100, (unsigned)s.rs.mode);
         first = false;
     }
     // system health
@@ -233,6 +300,18 @@ static size_t buildPayload(const SnapAll& s, char* out, size_t cap, uint32_t seq
         char tmp[260]; size_t tl = 0;
         for (int i = 0; i < DAYS; i++) jadd(tmp, sizeof(tmp), tl, "%s[%lu,%u]", i ? "," : "", (unsigned long)day.coins[i], (unsigned)day.sess[i]);
         if (len + tl + 16 < BUDGET) jadd(out, cap, len, ",\"dy\":[%s]", tmp);
+    }
+    // per box earnings (bx: [sessions, coins] for Box 1, 2, 3), busiest hours (hr: 24 numbers), weekdays (wd: 7 numbers, Sunday first), counting since (sn: unix time)
+    if (!compact && use.since) {
+        char tmp[200]; size_t tl = 0;
+        jadd(tmp, sizeof(tmp), tl, "[[%lu,%lu],[%lu,%lu],[%lu,%lu]]", (unsigned long)use.sess[0], (unsigned long)use.coins[0], (unsigned long)use.sess[1], (unsigned long)use.coins[1], (unsigned long)use.sess[2], (unsigned long)use.coins[2]);
+        if (len + tl + 24 < BUDGET) jadd(out, cap, len, ",\"sn\":%lu,\"bx\":%s", (unsigned long)use.since, tmp);
+        tl = 0;
+        for (int i = 0; i < 24; i++) jadd(tmp, sizeof(tmp), tl, "%s%u", i ? "," : "", (unsigned)use.hour[i]);
+        if (len + tl + 16 < BUDGET) jadd(out, cap, len, ",\"hr\":[%s]", tmp);
+        tl = 0;
+        for (int i = 0; i < 7; i++) jadd(tmp, sizeof(tmp), tl, "%s%u", i ? "," : "", (unsigned)use.dow[i]);
+        if (len + tl + 16 < BUDGET) jadd(out, cap, len, ",\"wd\":[%s]", tmp);
     }
     jadd(out, cap, len, "}}");
     return len;
@@ -321,6 +400,7 @@ static void runBurst(bool isTest) {
     SnapAll s; snapTake(s);                                           // taken BEFORE leaving channel 1
     uint32_t alertMask = alertsNow(s, millis() / 1000UL);
     dayTick(s);
+    usageTick(s);
     static char payload[1100];                                        // static: keeps the loop task stack small
     uint32_t seq = seqBase + (++uploadCounter);
     size_t plen = buildPayload(s, payload, sizeof(payload), seq, false);
@@ -405,6 +485,17 @@ static void runBurst(bool isTest) {
                     else { Serial.printf("[ONLINE] logEvent failed: %s\n", err); if (!note[0]) snprintf(note, sizeof(note), "event failed: %.90s", err); break; }
                 }
             }
+            if (c.ptoken[0]) {                                                  // the public status device (status.html): only step number, seconds left, heard, sessions counter
+                static char pj[260], penc[560], ppath[700];
+                char perr[110]; int pcode = 0;
+                publicJson(s, pj, sizeof(pj), seq, timeValid() ? (uint32_t)time(nullptr) : 0, c.iv);
+                urlEncode(pj, penc, sizeof(penc));
+                snprintf(ppath, sizeof(ppath), "/external/api/update?token=%s&v0=%s", c.ptoken, penc);
+                bool pok = blynkGet(c.server, c.insecure, ppath, pcode, perr, sizeof(perr));
+                lock(); st.pubTried = true; st.pubOk = pok; st.pubAtMs = millis(); strlcpy(st.pubErr, pok ? "" : perr, sizeof(st.pubErr)); if (pok) st.mq++; unlock();
+                Serial.printf("[ONLINE] Public status update: %s (%d) %s\n", pok ? "OK" : "FAILED", pcode, pok ? "" : perr);
+                if (!pok && !note[0]) snprintf(note, sizeof(note), "public status failed: %.80s", perr);
+            }
             lock(); strlcpy(st.blynkNote, note, sizeof(st.blynkNote)); unlock();
             if (ok && (uploadCounter % 10 == 0)) prefs.putUInt("mq", st.mq);
         }
@@ -450,6 +541,10 @@ static void apiStatus(AsyncWebServerRequest* r) {
     d["ssid"]     = cfg.ssid;
     d["hasPass"]  = cfg.pass[0] ? 1 : 0;
     d["hasToken"] = cfg.token[0] ? 1 : 0;
+    d["hasPtoken"] = cfg.ptoken[0] ? 1 : 0;
+    JsonObject pb = d["pub"].to<JsonObject>();
+    pb["tried"] = st.pubTried ? 1 : 0; pb["ok"] = st.pubOk ? 1 : 0; pb["err"] = st.pubErr; pb["age"] = st.pubTried ? (int)((now - st.pubAtMs) / 1000UL) : -1;
+    d["sessions"] = use.sess[0] + use.sess[1] + use.sess[2];
     d["server"]   = cfg.server;
     d["iv"]       = cfg.iv; d["tz"] = cfg.tz; d["extra"] = cfg.extra ? 1 : 0; d["events"] = cfg.events ? 1 : 0; d["insecure"] = cfg.insecure ? 1 : 0; d["mqmax"] = cfg.mqmax;
     JsonObject w = d["wifi"].to<JsonObject>();
@@ -461,7 +556,7 @@ static void apiStatus(AsyncWebServerRequest* r) {
     d["mq"]   = st.mq;
     unlock();
     JsonObject ra = d["radio"].to<JsonObject>();
-    ra["heard"] = snapHeardCount(s); ra["stats"] = s.s.seen ? 1 : 0; ra["statsAge"] = s.s.seen ? (int)((now - s.s.ms) / 1000UL) : -1;
+    ra["heard"] = snapHeardCount(s); ra["rs"] = s.rsHave ? (int)s.rs.rev : 0; ra["stats"] = s.s.seen ? 1 : 0; ra["statsAge"] = s.s.seen ? (int)((now - s.s.ms) / 1000UL) : -1;
     if (timeValid()) {
         time_t t = time(nullptr) + (long)(cfg.tz * 3600.0f); struct tm tmv; gmtime_r(&t, &tmv);
         char buf[32]; strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M", &tmv); d["time"] = buf;
@@ -498,6 +593,11 @@ static void apiSave(AsyncWebServerRequest* r) {
         else if (changed) cfg.pass[0] = '\0';                              // a different network without a password = an open network
     }
     if (param(r, "token").length()) strlcpy(cfg.token, param(r, "token").c_str(), sizeof(cfg.token));
+    if (param(r, "ptoken").length()) {                                        // a single "-" removes the public status token
+        if (param(r, "ptoken") == "-") cfg.ptoken[0] = '\0';
+        else strlcpy(cfg.ptoken, param(r, "ptoken").c_str(), sizeof(cfg.ptoken));
+        st.pubTried = false;
+    }
     if (param(r, "server").length()) strlcpy(cfg.server, param(r, "server").c_str(), sizeof(cfg.server));
     int iv = param(r, "iv").toInt(); if (iv >= 30 && iv <= 3600) cfg.iv = (uint16_t)iv;
     if (r->hasParam("tz")) { float tz = param(r, "tz").toFloat(); if (tz >= -12.0f && tz <= 14.0f) cfg.tz = tz; }
@@ -508,6 +608,11 @@ static void apiSave(AsyncWebServerRequest* r) {
     unlock();
     saveConfig();
     testRequested = true;
+    JsonDocument d; d["ok"] = 1; sendJson(r, d);
+}
+static void apiResetUsage(AsyncWebServerRequest* r) {                        // start the per box / busiest hours statistics again from zero
+    lastPortalHitMs = millis();
+    resetUsageReq = true;                                                     // done by loop() (it owns the counters)
     JsonDocument d; d["ok"] = 1; sendJson(r, d);
 }
 static void apiForget(AsyncWebServerRequest* r) {
@@ -546,6 +651,7 @@ void setup() {
     server.on("/api/scan", HTTP_GET, apiScan);
     server.on("/api/save", HTTP_GET, apiSave);
     server.on("/api/forget", HTTP_GET, apiForget);
+    server.on("/api/resetusage", HTTP_GET, apiResetUsage);
     server.onNotFound([](AsyncWebServerRequest* r) { r->redirect("http://192.168.4.1/"); });   // captive portal: anything else shows the setup page
     server.begin();
 
@@ -561,6 +667,13 @@ void loop() {
         lastTick = now;
         SnapAll s; snapTake(s);
         dayTick(s);
+        usageTick(s);
+        if (snapRsDirty) {                                                          // the restated data arrived (or was withdrawn): keep it in flash
+            RestatePacket k; bool have;
+            portENTER_CRITICAL(&snapMux); k = snapRs; have = snapRsHave; snapRsDirty = false; portEXIT_CRITICAL(&snapMux);
+            if (have) prefs.putBytes("rs_pkt", &k, sizeof(k)); else prefs.remove("rs_pkt");
+            Serial.printf("[ONLINE] Restated data %s.\n", have ? "stored" : "withdrawn");
+        }
     }
 
     bool ready; uint32_t nextAt;

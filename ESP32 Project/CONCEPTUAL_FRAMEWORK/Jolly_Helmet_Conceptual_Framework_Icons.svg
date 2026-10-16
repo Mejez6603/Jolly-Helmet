@@ -1,0 +1,170 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1900 1110" width="1900" height="1110" font-family="Arial, Helvetica, sans-serif">
+<defs><marker id="ah" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L12,6 L0,12 z" fill="#000"/></marker></defs>
+<rect width="1900" height="1110" fill="#fff"/>
+<text x="950" y="54" font-size="32" font-weight="bold" text-anchor="middle" fill="#000" xml:space="preserve">JOLLY HELMET: CONCEPTUAL FRAMEWORK</text>
+<text x="950" y="86" font-size="19" font-weight="normal" text-anchor="middle" fill="#000" xml:space="preserve">Coin-operated automatic helmet cleaning and drying station with local and online monitoring</text>
+<rect x="40" y="125" width="520" height="805" fill="#fff" stroke="#000" stroke-width="3"/>
+<rect x="40" y="125" width="520" height="56" fill="#000"/>
+<text x="300" y="163" font-size="26" font-weight="bold" text-anchor="middle" fill="#fff" xml:space="preserve">INPUT</text>
+<rect x="640" y="125" width="640" height="805" fill="#fff" stroke="#000" stroke-width="3"/>
+<rect x="640" y="125" width="640" height="56" fill="#000"/>
+<text x="960" y="163" font-size="26" font-weight="bold" text-anchor="middle" fill="#fff" xml:space="preserve">PROCESS</text>
+<rect x="1360" y="125" width="500" height="805" fill="#fff" stroke="#000" stroke-width="3"/>
+<rect x="1360" y="125" width="500" height="56" fill="#000"/>
+<text x="1610" y="163" font-size="26" font-weight="bold" text-anchor="middle" fill="#fff" xml:space="preserve">OUTPUT</text>
+<text x="58" y="215" font-size="18" font-weight="bold" text-anchor="start" fill="#000" xml:space="preserve">Hardware and materials</text>
+<line x1="58" y1="223" x2="542" y2="223" stroke="#000" stroke-width="1.2"/>
+<g transform="translate(60,231) scale(0.95)" fill="none" stroke="#000" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="10" y="10" width="20" height="20" rx="2"/><rect x="16" y="16" width="8" height="8"/><path d="M15,5V10M20,5V10M25,5V10M15,30V35M20,30V35M25,30V35M5,15H10M5,20H10M5,25H10M30,15H35M30,20H35M30,25H35"/></g>
+<text x="110" y="257" font-size="17" font-weight="normal" text-anchor="start" fill="#000" xml:space="preserve">ESP32 / ESP32-S3 microcontrollers</text>
+<g transform="translate(60,277) scale(0.95)" fill="none" stroke="#000" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="7" width="30" height="21" rx="2"/><path d="M14,34H26M20,28V34"/><circle cx="20" cy="17.5" r="4"/></g>
+<text x="110" y="303" font-size="17" font-weight="normal" text-anchor="start" fill="#000" xml:space="preserve">Touch screen and coin acceptor</text>
+<g transform="translate(60,323) scale(0.95)" fill="none" stroke="#000" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="14" width="10" height="12" rx="2"/><path d="M19,13Q25,20 19,27M24,9Q34,20 24,31M29,5Q39,20 29,35"/></g>
+<text x="110" y="349" font-size="17" font-weight="normal" text-anchor="start" fill="#000" xml:space="preserve">Ultrasonic and water-level sensors</text>
+<g transform="translate(60,369) scale(0.95)" fill="none" stroke="#000" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="20" cy="16" r="10"/><path d="M15,28H25M16,32H24M17,36H23M20,3V0M8,6L6,4M32,6L34,4"/></g>
+<text x="110" y="387" font-size="17" font-weight="normal" text-anchor="start" fill="#000" xml:space="preserve">Relays, misting humidifiers, UV-C lamps,</text>
+<text x="110" y="408" font-size="17" font-weight="normal" text-anchor="start" fill="#000" xml:space="preserve">heater, fan and pumps</text>
+<g transform="translate(60,427) scale(0.95)" fill="none" stroke="#000" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="18" width="22" height="16" rx="2"/><path d="M13,18V13A7,7 0 0 1 27,13V18"/><circle cx="20" cy="26" r="2" fill="#000"/></g>
+<text x="110" y="453" font-size="17" font-weight="normal" text-anchor="start" fill="#000" xml:space="preserve">Solenoid door lock and safety slide</text>
+<g transform="translate(60,473) scale(0.95)" fill="none" stroke="#000" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20,5C20,5 8,19 8,26A12,12 0 0 0 32,26C32,19 20,5 20,5Z"/><path d="M14,27A6,6 0 0 0 20,33"/></g>
+<text x="110" y="499" font-size="17" font-weight="normal" text-anchor="start" fill="#000" xml:space="preserve">Alcohol, scented solution and water</text>
+<g transform="translate(60,519) scale(0.95)" fill="none" stroke="#000" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M23,4L10,23H19L16,36L30,16H21Z"/></g>
+<text x="110" y="545" font-size="17" font-weight="normal" text-anchor="start" fill="#000" xml:space="preserve">220 V mains and 12 V power supply</text>
+<text x="58" y="591" font-size="18" font-weight="bold" text-anchor="start" fill="#000" xml:space="preserve">Software and tools</text>
+<line x1="58" y1="599" x2="542" y2="599" stroke="#000" stroke-width="1.2"/>
+<g transform="translate(60,607) scale(0.95)" fill="none" stroke="#000" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M14,12L5,20L14,28M26,12L35,20L26,28M23,9L17,31"/></g>
+<text x="110" y="633" font-size="17" font-weight="normal" text-anchor="start" fill="#000" xml:space="preserve">Arduino IDE (C++ firmware), ESP-NOW radio</text>
+<g transform="translate(60,653) scale(0.95)" fill="none" stroke="#000" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M11,30A7,7 0 0 1 12,16A10,10 0 0 1 31,17A6.5,6.5 0 0 1 30,30Z"/></g>
+<text x="110" y="679" font-size="17" font-weight="normal" text-anchor="start" fill="#000" xml:space="preserve">Blynk cloud and web page (HTML, JavaScript)</text>
+<text x="58" y="725" font-size="18" font-weight="bold" text-anchor="start" fill="#000" xml:space="preserve">User and administrator input</text>
+<line x1="58" y1="733" x2="542" y2="733" stroke="#000" stroke-width="1.2"/>
+<g transform="translate(60,741) scale(0.95)" fill="none" stroke="#000" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6,31V24A14,14 0 0 1 34,24V31Z"/><rect x="15" y="17" width="19" height="8" rx="2"/><path d="M6,31H14"/></g>
+<text x="110" y="767" font-size="17" font-weight="normal" text-anchor="start" fill="#000" xml:space="preserve">Helmet and coins</text>
+<g transform="translate(60,787) scale(0.95)" fill="none" stroke="#000" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="12" width="32" height="16" rx="8"/><circle cx="27" cy="20" r="5" fill="#000"/></g>
+<text x="110" y="813" font-size="17" font-weight="normal" text-anchor="start" fill="#000" xml:space="preserve">Mode choice: cleaning or drying</text>
+<g transform="translate(60,833) scale(0.95)" fill="none" stroke="#000" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20,5L24.5,15L35,16L27,23L29.5,34L20,28.5L10.5,34L13,23L5,16L15.5,15Z"/></g>
+<text x="110" y="859" font-size="17" font-weight="normal" text-anchor="start" fill="#000" xml:space="preserve">Satisfaction rating (1 to 10)</text>
+<g transform="translate(60,879) scale(0.95)" fill="none" stroke="#000" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6,11H34M6,20H34M6,29H34"/><circle cx="25" cy="11" r="3.6" fill="#fff"/><circle cx="13" cy="20" r="3.6" fill="#fff"/><circle cx="27" cy="29" r="3.6" fill="#fff"/></g>
+<text x="110" y="905" font-size="17" font-weight="normal" text-anchor="start" fill="#000" xml:space="preserve">Price, time and refill settings</text>
+<rect x="660" y="199" width="600" height="254" fill="#efefef" stroke="#000" stroke-width="1.6"/>
+<text x="676" y="225" font-size="18" font-weight="bold" text-anchor="start" fill="#000" xml:space="preserve">A. System development (prototype model)</text>
+<rect x="667" y="237" width="186" height="96" rx="6" fill="#fff" stroke="#000" stroke-width="1.3"/>
+<g transform="translate(740,245) scale(1.0)" fill="none" stroke="#000" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="8" width="22" height="27" rx="2"/><rect x="15" y="4" width="10" height="7" rx="1.5"/><path d="M14,19H26M14,25H26M14,31H21"/></g>
+<text x="760" y="303" font-size="14.5" font-weight="normal" text-anchor="middle" fill="#000" xml:space="preserve">1. Requirements</text>
+<text x="760" y="322" font-size="14.5" font-weight="normal" text-anchor="middle" fill="#000" xml:space="preserve">and design</text>
+<rect x="867" y="237" width="186" height="96" rx="6" fill="#fff" stroke="#000" stroke-width="1.3"/>
+<g transform="translate(940,245) scale(1.0)" fill="none" stroke="#000" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="12" r="3.2"/><circle cx="32" cy="12" r="3.2"/><circle cx="20" cy="31" r="3.2"/><path d="M11.2,12H28.8M9.6,14.8L18.4,28.4M30.4,14.8L21.6,28.4"/></g>
+<text x="960" y="303" font-size="14.5" font-weight="normal" text-anchor="middle" fill="#000" xml:space="preserve">2. Wiring and</text>
+<text x="960" y="322" font-size="14.5" font-weight="normal" text-anchor="middle" fill="#000" xml:space="preserve">enclosure</text>
+<rect x="1067" y="237" width="186" height="96" rx="6" fill="#fff" stroke="#000" stroke-width="1.3"/>
+<g transform="translate(1140,245) scale(1.0)" fill="none" stroke="#000" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M14,12L5,20L14,28M26,12L35,20L26,28M23,9L17,31"/></g>
+<text x="1160" y="303" font-size="14.5" font-weight="normal" text-anchor="middle" fill="#000" xml:space="preserve">3. Firmware for</text>
+<text x="1160" y="322" font-size="14.5" font-weight="normal" text-anchor="middle" fill="#000" xml:space="preserve">each board</text>
+<rect x="667" y="343" width="186" height="96" rx="6" fill="#fff" stroke="#000" stroke-width="1.3"/>
+<g transform="translate(740,351) scale(1.0)" fill="none" stroke="#000" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="7" width="32" height="21" rx="2"/><path d="M13,34H27M20,28V34M9,22L15,16L20,20L27,12"/></g>
+<text x="760" y="409" font-size="14.5" font-weight="normal" text-anchor="middle" fill="#000" xml:space="preserve">4. Control Center</text>
+<text x="760" y="428" font-size="14.5" font-weight="normal" text-anchor="middle" fill="#000" xml:space="preserve">and Online Server</text>
+<rect x="867" y="343" width="186" height="96" rx="6" fill="#fff" stroke="#000" stroke-width="1.3"/>
+<g transform="translate(940,351) scale(1.0)" fill="none" stroke="#000" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M16,5H24M18,5V15L8,32A3,3 0 0 0 11,36H29A3,3 0 0 0 32,32L22,15V5M13,26H27"/></g>
+<text x="960" y="409" font-size="14.5" font-weight="normal" text-anchor="middle" fill="#000" xml:space="preserve">5. Bench tests and</text>
+<text x="960" y="428" font-size="14.5" font-weight="normal" text-anchor="middle" fill="#000" xml:space="preserve">3-week deployment</text>
+<rect x="1067" y="343" width="186" height="96" rx="6" fill="#fff" stroke="#000" stroke-width="1.3"/>
+<g transform="translate(1140,351) scale(1.0)" fill="none" stroke="#000" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="20" cy="20" r="14"/><path d="M12,20L18,26L28,14"/></g>
+<text x="1160" y="409" font-size="14.5" font-weight="normal" text-anchor="middle" fill="#000" xml:space="preserve">6. Evaluation and</text>
+<text x="1160" y="428" font-size="14.5" font-weight="normal" text-anchor="middle" fill="#000" xml:space="preserve">documentation</text>
+<rect x="660" y="467" width="600" height="254" fill="#efefef" stroke="#000" stroke-width="1.6"/>
+<text x="676" y="493" font-size="18" font-weight="bold" text-anchor="start" fill="#000" xml:space="preserve">B. Machine operation for each customer</text>
+<rect x="667" y="505" width="133" height="96" rx="6" fill="#fff" stroke="#000" stroke-width="1.3"/>
+<g transform="translate(713.5,513) scale(1.0)" fill="none" stroke="#000" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="20" cy="20" r="3.5" fill="#000"/><circle cx="20" cy="20" r="10"/><circle cx="20" cy="20" r="16" stroke-dasharray="3 4"/></g>
+<text x="733.5" y="571" font-size="14.5" font-weight="normal" text-anchor="middle" fill="#000" xml:space="preserve">1. Tap to</text>
+<text x="733.5" y="590" font-size="14.5" font-weight="normal" text-anchor="middle" fill="#000" xml:space="preserve">start</text>
+<path d="M804,526L812,533L804,540" fill="none" stroke="#000" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="818" y="505" width="133" height="96" rx="6" fill="#fff" stroke="#000" stroke-width="1.3"/>
+<g transform="translate(864.5,513) scale(1.0)" fill="none" stroke="#000" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20,5L24.5,15L35,16L27,23L29.5,34L20,28.5L10.5,34L13,23L5,16L15.5,15Z"/></g>
+<text x="884.5" y="571" font-size="14.5" font-weight="normal" text-anchor="middle" fill="#000" xml:space="preserve">2. Rate the</text>
+<text x="884.5" y="590" font-size="14.5" font-weight="normal" text-anchor="middle" fill="#000" xml:space="preserve">helmet</text>
+<path d="M955,526L963,533L955,540" fill="none" stroke="#000" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="969" y="505" width="133" height="96" rx="6" fill="#fff" stroke="#000" stroke-width="1.3"/>
+<g transform="translate(1015.5,513) scale(1.0)" fill="none" stroke="#000" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="20" cy="20" r="14"/><circle cx="20" cy="20" r="9"/><path d="M20,15V25"/></g>
+<text x="1035.5" y="571" font-size="14.5" font-weight="normal" text-anchor="middle" fill="#000" xml:space="preserve">3. Insert</text>
+<text x="1035.5" y="590" font-size="14.5" font-weight="normal" text-anchor="middle" fill="#000" xml:space="preserve">coins</text>
+<path d="M1106,526L1114,533L1106,540" fill="none" stroke="#000" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="1120" y="505" width="133" height="96" rx="6" fill="#fff" stroke="#000" stroke-width="1.3"/>
+<g transform="translate(1166.5,513) scale(1.0)" fill="none" stroke="#000" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="14" width="10" height="12" rx="2"/><path d="M19,13Q25,20 19,27M24,9Q34,20 24,31M29,5Q39,20 29,35"/></g>
+<text x="1186.5" y="571" font-size="14.5" font-weight="normal" text-anchor="middle" fill="#000" xml:space="preserve">4. Sensors check</text>
+<text x="1186.5" y="590" font-size="14.5" font-weight="normal" text-anchor="middle" fill="#000" xml:space="preserve">helmet, tanks</text>
+<rect x="667" y="611" width="133" height="96" rx="6" fill="#fff" stroke="#000" stroke-width="1.3"/>
+<g transform="translate(713.5,619) scale(1.0)" fill="none" stroke="#000" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="15" width="14" height="20" rx="2"/><path d="M13,15V9H21V15M23,10H27M30,5L34,3M30,10H35M30,15L34,17"/></g>
+<text x="733.5" y="677" font-size="14.5" font-weight="normal" text-anchor="middle" fill="#000" xml:space="preserve">5. CLEANING:</text>
+<text x="733.5" y="696" font-size="14.5" font-weight="normal" text-anchor="middle" fill="#000" xml:space="preserve">mist + UV-C</text>
+<path d="M804,632L812,639L804,646" fill="none" stroke="#000" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="818" y="611" width="133" height="96" rx="6" fill="#fff" stroke="#000" stroke-width="1.3"/>
+<g transform="translate(864.5,619) scale(1.0)" fill="none" stroke="#000" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="20" cy="20" r="2.6" fill="#000"/><path d="M20,17C20,8 28,6 28,12C28,16 24,17 20,17Z"/><path d="M20,17C20,8 28,6 28,12C28,16 24,17 20,17Z" transform="rotate(120 20 20)"/><path d="M20,17C20,8 28,6 28,12C28,16 24,17 20,17Z" transform="rotate(240 20 20)"/></g>
+<text x="884.5" y="677" font-size="14.5" font-weight="normal" text-anchor="middle" fill="#000" xml:space="preserve">or DRYING:</text>
+<text x="884.5" y="696" font-size="14.5" font-weight="normal" text-anchor="middle" fill="#000" xml:space="preserve">heater + fan</text>
+<path d="M955,632L963,639L955,646" fill="none" stroke="#000" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="969" y="611" width="133" height="96" rx="6" fill="#fff" stroke="#000" stroke-width="1.3"/>
+<g transform="translate(1015.5,619) scale(1.0)" fill="none" stroke="#000" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M31,14A12,12 0 1 0 32,24"/><path d="M31,5V14H22"/></g>
+<text x="1035.5" y="677" font-size="14.5" font-weight="normal" text-anchor="middle" fill="#000" xml:space="preserve">6. Rate result,</text>
+<text x="1035.5" y="696" font-size="14.5" font-weight="normal" text-anchor="middle" fill="#000" xml:space="preserve">free retry once</text>
+<path d="M1106,632L1114,639L1106,646" fill="none" stroke="#000" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="1120" y="611" width="133" height="96" rx="6" fill="#fff" stroke="#000" stroke-width="1.3"/>
+<g transform="translate(1166.5,619) scale(1.0)" fill="none" stroke="#000" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M10,35V5H28V35M5,35H35"/><circle cx="23.5" cy="21" r="1.8" fill="#000"/></g>
+<text x="1186.5" y="677" font-size="14.5" font-weight="normal" text-anchor="middle" fill="#000" xml:space="preserve">7. Finish, door</text>
+<text x="1186.5" y="696" font-size="14.5" font-weight="normal" text-anchor="middle" fill="#000" xml:space="preserve">opens</text>
+<rect x="660" y="735" width="600" height="176" fill="#efefef" stroke="#000" stroke-width="1.6"/>
+<text x="676" y="761" font-size="18" font-weight="bold" text-anchor="start" fill="#000" xml:space="preserve">C. Data flow</text>
+<rect x="667" y="773" width="133" height="96" rx="6" fill="#fff" stroke="#000" stroke-width="1.3"/>
+<g transform="translate(713.5,781) scale(1.0)" fill="none" stroke="#000" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="10" y="10" width="20" height="20" rx="2"/><rect x="16" y="16" width="8" height="8"/><path d="M15,5V10M20,5V10M25,5V10M15,30V35M20,30V35M25,30V35M5,15H10M5,20H10M5,25H10M30,15H35M30,20H35M30,25H35"/></g>
+<text x="733.5" y="839" font-size="14.5" font-weight="normal" text-anchor="middle" fill="#000" xml:space="preserve">Machine boards</text>
+<text x="733.5" y="858" font-size="14.5" font-weight="normal" text-anchor="middle" fill="#000" xml:space="preserve">(ESP32 nodes)</text>
+<path d="M804,794L812,801L804,808" fill="none" stroke="#000" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="818" y="773" width="133" height="96" rx="6" fill="#fff" stroke="#000" stroke-width="1.3"/>
+<g transform="translate(864.5,781) scale(1.0)" fill="none" stroke="#000" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="7" width="32" height="21" rx="2"/><path d="M13,34H27M20,28V34M9,22L15,16L20,20L27,12"/></g>
+<text x="884.5" y="839" font-size="14.5" font-weight="normal" text-anchor="middle" fill="#000" xml:space="preserve">LocalServer</text>
+<text x="884.5" y="858" font-size="14.5" font-weight="normal" text-anchor="middle" fill="#000" xml:space="preserve">Control Center</text>
+<path d="M955,794L963,801L955,808" fill="none" stroke="#000" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="969" y="773" width="133" height="96" rx="6" fill="#fff" stroke="#000" stroke-width="1.3"/>
+<g transform="translate(1015.5,781) scale(1.0)" fill="none" stroke="#000" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M11,30A7,7 0 0 1 12,16A10,10 0 0 1 31,17A6.5,6.5 0 0 1 30,30Z"/></g>
+<text x="1035.5" y="839" font-size="14.5" font-weight="normal" text-anchor="middle" fill="#000" xml:space="preserve">Online Server</text>
+<text x="1035.5" y="858" font-size="14.5" font-weight="normal" text-anchor="middle" fill="#000" xml:space="preserve">(Blynk cloud)</text>
+<path d="M1106,794L1114,801L1106,808" fill="none" stroke="#000" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="1120" y="773" width="133" height="96" rx="6" fill="#fff" stroke="#000" stroke-width="1.3"/>
+<g transform="translate(1166.5,781) scale(1.0)" fill="none" stroke="#000" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="11" y="4" width="18" height="32" rx="3"/><circle cx="20" cy="13" r="3" fill="#000"/><path d="M15,21H25M15,26H25M17,31H23"/></g>
+<text x="1186.5" y="839" font-size="14.5" font-weight="normal" text-anchor="middle" fill="#000" xml:space="preserve">Web page</text>
+<text x="1186.5" y="858" font-size="14.5" font-weight="normal" text-anchor="middle" fill="#000" xml:space="preserve">and alerts</text>
+<text x="960" y="899" font-size="14.5" font-weight="normal" text-anchor="middle" fill="#000" xml:space="preserve">ESP-NOW radio inside the machine; Wi-Fi and Blynk to the internet</text>
+<text x="1378" y="215" font-size="18" font-weight="bold" text-anchor="start" fill="#000" xml:space="preserve">For the customer</text>
+<line x1="1378" y1="223" x2="1842" y2="223" stroke="#000" stroke-width="1.2"/>
+<g transform="translate(1380,231) scale(0.95)" fill="none" stroke="#000" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5,32V25A13,13 0 0 1 31,25V32Z"/><rect x="14" y="19" width="17" height="7" rx="2"/><path d="M34,4V12M30,8H38M31,17V19"/></g>
+<text x="1430" y="257" font-size="17" font-weight="normal" text-anchor="start" fill="#000" xml:space="preserve">Cleaned, sanitized and dried helmet</text>
+<g transform="translate(1380,277) scale(0.95)" fill="none" stroke="#000" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="11" y="4" width="18" height="32" rx="3"/><circle cx="20" cy="13" r="3" fill="#000"/><path d="M15,21H25M15,26H25M17,31H23"/></g>
+<text x="1430" y="303" font-size="17" font-weight="normal" text-anchor="start" fill="#000" xml:space="preserve">Status page: free, in use, out of order</text>
+<text x="1378" y="349" font-size="18" font-weight="bold" text-anchor="start" fill="#000" xml:space="preserve">For the owner and administrator</text>
+<line x1="1378" y1="357" x2="1842" y2="357" stroke="#000" stroke-width="1.2"/>
+<g transform="translate(1380,365) scale(0.95)" fill="none" stroke="#000" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="22" width="6" height="12"/><rect x="17" y="14" width="6" height="20"/><rect x="27" y="7" width="6" height="27"/><path d="M4,36H36"/></g>
+<text x="1430" y="383" font-size="17" font-weight="normal" text-anchor="start" fill="#000" xml:space="preserve">Revenue and usage statistics</text>
+<text x="1430" y="404" font-size="17" font-weight="normal" text-anchor="start" fill="#000" xml:space="preserve">(customers, coins, session time)</text>
+<g transform="translate(1380,423) scale(0.95)" fill="none" stroke="#000" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="7" width="32" height="21" rx="2"/><path d="M13,34H27M20,28V34M9,22L15,16L20,20L27,12"/></g>
+<text x="1430" y="441" font-size="17" font-weight="normal" text-anchor="start" fill="#000" xml:space="preserve">Real-time monitoring: Control Center</text>
+<text x="1430" y="462" font-size="17" font-weight="normal" text-anchor="start" fill="#000" xml:space="preserve">and online page</text>
+<g transform="translate(1380,481) scale(0.95)" fill="none" stroke="#000" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12,28V19A8,8 0 0 1 28,19V28L31,31H9Z"/><path d="M17,34A3,3 0 0 0 23,34"/></g>
+<text x="1430" y="499" font-size="17" font-weight="normal" text-anchor="start" fill="#000" xml:space="preserve">Alerts: low containers, out of order,</text>
+<text x="1430" y="520" font-size="17" font-weight="normal" text-anchor="start" fill="#000" xml:space="preserve">door safety</text>
+<g transform="translate(1380,539) scale(0.95)" fill="none" stroke="#000" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M10,5H25L31,11V35H10Z"/><path d="M25,5V11H31M15,19H26M15,25H26M15,31H22"/></g>
+<text x="1430" y="565" font-size="17" font-weight="normal" text-anchor="start" fill="#000" xml:space="preserve">Reports (CSV, print) and checklist</text>
+<text x="1378" y="611" font-size="18" font-weight="bold" text-anchor="start" fill="#000" xml:space="preserve">For the team</text>
+<line x1="1378" y1="619" x2="1842" y2="619" stroke="#000" stroke-width="1.2"/>
+<g transform="translate(1380,627) scale(0.95)" fill="none" stroke="#000" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5,8H18A2,2 0 0 1 20,10V33A2,2 0 0 0 18,31H5Z"/><path d="M35,8H22A2,2 0 0 0 20,10V33A2,2 0 0 1 22,31H35Z"/></g>
+<text x="1430" y="653" font-size="17" font-weight="normal" text-anchor="start" fill="#000" xml:space="preserve">User manual and technician guide</text>
+<g transform="translate(1380,673) scale(0.95)" fill="none" stroke="#000" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="20" cy="20" r="14"/><path d="M12,20L18,26L28,14"/></g>
+<text x="1430" y="699" font-size="17" font-weight="normal" text-anchor="start" fill="#000" xml:space="preserve">Tested and deployed prototype</text>
+<line x1="564" y1="527.5" x2="636" y2="527.5" stroke="#000" stroke-width="6" marker-end="url(#ah)"/>
+<line x1="1284" y1="527.5" x2="1356" y2="527.5" stroke="#000" stroke-width="6" marker-end="url(#ah)"/>
+<path d="M1610,932 V1005 H300 V934" fill="none" stroke="#000" stroke-width="3.5" stroke-dasharray="14 8" marker-end="url(#ah)"/>
+<rect x="470" y="957" width="960" height="96" fill="#fff" stroke="#000" stroke-width="2"/>
+<g transform="translate(492,985) scale(1.0)" fill="none" stroke="#000" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M31,14A12,12 0 1 0 32,24"/><path d="M31,5V14H22"/></g>
+<text x="950" y="991" font-size="19" font-weight="bold" text-anchor="middle" fill="#000" xml:space="preserve">FEEDBACK</text>
+<text x="950" y="1016" font-size="16.5" font-weight="normal" text-anchor="middle" fill="#000" xml:space="preserve">Customer ratings, sales statistics and fault alerts guide the price and time settings,</text>
+<text x="950" y="1037" font-size="16.5" font-weight="normal" text-anchor="middle" fill="#000" xml:space="preserve">the refilling of the containers and the maintenance of the machine.</text>
+<text x="950" y="1086" font-size="16" font-weight="normal" text-anchor="middle" fill="#000" xml:space="preserve">Figure 1. Conceptual framework of the Jolly Helmet system (Input, Process, Output and feedback)</text>
+</svg>
