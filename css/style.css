@@ -211,6 +211,7 @@ dialog { margin:auto; max-height:calc(100vh - 24px); overflow:auto; }
 .nm-node svg { width:54px; height:54px; margin:0 auto 4px; display:block; stroke:var(--head); fill:none; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round; }
 .nm-node small { display:block; font-weight:500; color:var(--muted); font-size:11.5px; word-break:break-word; }
 .nm-miss { color:var(--warn); font-weight:700; }
+.nm-oos { color:var(--bad); font-weight:800; letter-spacing:.04em; }
 .nm-dot { position:absolute; top:0; right:16px; width:16px; height:16px; border-radius:50%; border:3px solid var(--card); background:var(--muted); box-shadow:0 0 0 1px var(--line); }
 .nm-dot.ok { background:var(--ok); } .nm-dot.warn { background:var(--amber); } .nm-dot.bad { background:var(--bad); } .nm-dot.off { opacity:.55; }
 .nm-bars { display:inline-flex; gap:2px; align-items:flex-end; height:16px; margin-top:3px; } .nm-bars i { width:4px; background:var(--line); border-radius:1px; } .nm-bars i.on { background:var(--head); }

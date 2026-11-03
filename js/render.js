@@ -177,9 +177,12 @@ function networkMap(L, T, sy) {
   const boxes = BOXES.map((def, i) => {
     const ids = [...new Set([def.term, def.sensors, def.relayBoard, def.brain])], missing = ids.filter(k => !n[k]);
     if (!known) return nmNode('box', def.name, stale ? 'no recent data' : 'not reported', 'off');
-    const st = !missing.length ? 'ok' : missing.length < ids.length ? 'warn' : 'bad';
-    const miss = missing.length && missing.length < ids.length ? `<span class="nm-miss">missing: ${missing.map(k => esc(NODES[k].replace(/^Box \d /, ''))).join(', ')}</span>` : '';
-    return nmNode('box', def.name, `${ids.length - missing.length} of ${ids.length} boards${miss ? '<br>' + miss : ''}`, st);
+    /* a box that misses ANY of its boards cannot be used (the screen shows OUT OF ORDER), so it is red and says so, whether one board or all of them are silent */
+    if (missing.length) {
+      const list = missing.length < ids.length ? `<br><span class="nm-miss">missing: ${missing.map(k => esc(NODES[k].replace(/^Box \d /, ''))).join(', ')}</span>` : '<br><span class="nm-miss">no board is heard</span>';
+      return nmNode('box', def.name, `<b class="nm-oos">OUT OF ORDER</b><br>${ids.length - missing.length} of ${ids.length} boards${list}`, 'bad');
+    }
+    return nmNode('box', def.name, `${ids.length} of ${ids.length} boards`, 'ok');
   }).join('');
   const hasRf = Array.isArray(L.rf);
   const open = hasRf ? [0, 1, 2].filter(i => L.rf[i] && L.rf[i][2]).map(i => i + 1) : [];
@@ -202,7 +205,7 @@ function networkMap(L, T, sy) {
       <div class="nm-group"><div class="nm-gtitle">Machines heard on the radio</div><div class="nm-items">${boxes}${rsNode}</div></div>
       <div class="nm-group nm-ls"><div class="nm-gtitle">Server heard</div><div class="nm-items">${ls}</div></div>
     </div>
-    <div class="nm-legend"><span><i class="ok"></i>heard / working</span><span><i class="warn"></i>some missing</span><span><i class="bad"></i>not heard / failed</span><span><i class="off"></i>unknown</span></div>
+    <div class="nm-legend"><span><i class="ok"></i>heard / working</span><span><i class="warn"></i>late</span><span><i class="bad"></i>out of order / not heard</span><span><i class="off"></i>unknown</span></div>
   </div>`;
 }
 function nmBracket() {                                     // the horizontal line over the two groups reaches exactly from the middle of one to the middle of the other
