@@ -18,6 +18,7 @@ function tickStatus() {
   if (age <= iv * 2 + 15)      { S.link = 'live'; pill.className = 'pill live'; t.textContent = DEMO ? 'DEMO' : 'LIVE'; }
   else if (age <= iv * 6 + 30) { S.link = 'late'; pill.className = 'pill late'; t.textContent = 'DELAYED'; }
   else                         { S.link = 'dead'; pill.className = 'pill dead'; t.textContent = 'OLD DATA'; }
+  if (was !== S.link && typeof renderSys === 'function') renderSys();                                                       // the map's colours follow the link state
   if (was !== S.link && (S.link === 'dead' || was === 'dead') && typeof Alerts !== 'undefined') Alerts.update(S.live);   // the data went stale (or came back) between two readings
 }
 
@@ -31,7 +32,7 @@ async function loop(force) {
       S.err = (e && e.message) || 'network error';
       if (/Failed to fetch|NetworkError|Load failed|abort/i.test(S.err)) S.err = 'no internet, or Blynk did not answer.';
     }
-    renderAll(); tickStatus(); Alerts.update(S.live);
+    renderAll(); tickStatus(); renderSys(); Alerts.update(S.live);
   }
   timer = setTimeout(loop, (S.err && /token/i.test(S.err) ? 30 : cfg.pollSec) * 1000);
 }
@@ -68,6 +69,5 @@ if (store.get('jh_theme')) document.documentElement.dataset.theme = store.get('j
 const qTheme = new URLSearchParams(location.search).get('theme');          // index.html?theme=light or ?theme=dark (handy for screenshots)
 if (qTheme === 'light' || qTheme === 'dark') document.documentElement.dataset.theme = qTheme;
 
-Checklist.publish();
 start();
 Tabs.route();                                          // open the tab named in the address (#alerts, #reports ...)

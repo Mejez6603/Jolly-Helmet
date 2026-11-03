@@ -88,7 +88,7 @@ const Reports = (() => {
         barSvg({ title: 'Sessions per weekday', vals: wd, labels: names, xs: names.map(x => x.slice(0, 3)), hi: [top], w: 420, h: 170 }) + `<div class="sub">Busiest: ${names[top]}</div></div>`;
     } else h += `<div class="card"><div class="card-h"><div><b>Busiest days</b></div></div>${need(wd ? 'No sessions counted yet.' : NEWFW)}</div>`;
     if (bx && bx.length === 3 && sum(bx.map(x => x[0])) > 0) {
-      const names = ['Box 1 (Cleaner)', 'Box 2 (Dryer)', 'Box 3 (Cleaner + Dryer)'], rev = bx.map(x => x[1] * cv), tot = sum(rev) || 1, mx = Math.max(...rev, 1);
+      const names = ['Box 1', 'Box 2', 'Box 3'], rev = bx.map(x => x[1] * cv), tot = sum(rev) || 1, mx = Math.max(...rev, 1);
       h += `<div class="card"><div class="card-h"><div><b>What each box earns</b><small>since ${since}</small></div></div><div class="hbars">` +
         bx.map((x, i) => `<div class="hb"><div class="hl"><span>${names[i]}</span><b class="num">${fmtMoney(rev[i])}</b></div><div class="bar"><i style="width:${Math.round(rev[i] / mx * 100)}%"></i></div><small>${x[0].toLocaleString()} sessions, ${Math.round(rev[i] / tot * 100)}% of the revenue, ${x[0] ? money(rev[i] / x[0]) : '-'} each</small></div>`).join('') + `</div></div>`;
     } else h += `<div class="card"><div class="card-h"><div><b>What each box earns</b></div></div>${need(bx ? 'No sessions counted yet.' : NEWFW)}</div>`;

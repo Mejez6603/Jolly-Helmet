@@ -28,7 +28,7 @@ const CONFIG = {
   namesPin: 'v5',
   prices: {                              // shown on the customer page, edit to match the Control Center prices
     'Box 1': '15 coins = 5 minutes',
-    'Box 2': '10 coins = 3 minutes',
+    'Box 2': '15 coins = 5 minutes',
     'Box 3': '15 coins = 5 minutes'
   },
   contact: 'Ask the staff, or tell the owner.'     // "Something wrong?" line on the customer page

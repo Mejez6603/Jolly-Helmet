@@ -2,19 +2,6 @@
 /* Turns the data in S into HTML. One function per card; renderAll() puts them on the page. */
 
 /* ---- small building blocks ---- */
-function spark(key) {                                   // a tiny line graph of one container level
-  const a = S.hist[key]; if (!a || a.length < 3) return '';
-  const w = 120, h = 24, n = a.length;
-  const pts = a.map((v, i) => [i * w / (n - 1), h - 2 - Math.max(0, Math.min(100, v)) / 100 * (h - 4)]);
-  const line = pts.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' ');
-  return `<svg class="spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true"><path class="f" d="${line} L${w} ${h} L0 ${h} Z"/><path class="s" d="${line}"/></svg>`;
-}
-function level(label, pct, key) {                       // a labelled bar, 0..100 %
-  if (typeof pct !== 'number' || pct < 0) return '';
-  const p = Math.max(0, Math.min(100, Math.round(pct)));
-  const cls = p < 15 ? 'bad' : p < 35 ? 'warn' : '';
-  return `<div class="lv"><div class="lv-t"><span>${esc(label)}</span><b class="num">${p}%</b></div><div class="bar ${cls}"><i style="width:${p}%"></i></div>${spark(key)}</div>`;
-}
 function stateClass(name) {
   if (name === 'OUT OF ORDER') return 'bad';
   if (name === 'MAINTENANCE') return 'maint';
@@ -23,60 +10,92 @@ function stateClass(name) {
   if (IDLE.has(name)) return '';
   return 'use';
 }
-function nodeFlags(L) {                                 // the 13 "heard / not heard" flags
+function nodeFlags(L) {                                 // the "heard / not heard" flags, one per board in NODES
   const n = L.n, f = Array.isArray(n) ? n.map(Number) : String(n == null ? '' : n).split('').map(Number);
-  while (f.length < 13) f.push(L.n == null ? 1 : 0);    // no "n" at all: assume everything is there
-  return f.slice(0, 13).map(v => v ? 1 : 0);
+  while (f.length < NODES.length) f.push(L.n == null ? 1 : 0);    // no "n" at all: assume everything is there
+  return f.slice(0, NODES.length).map(v => v ? 1 : 0);
 }
 
-/* ---- one box ---- */
-function boxCard(i, b, n) {
+/* ---- one box, drawn as a little machine: screen, coin slot, helmet window with UV tubes, mist, heater and fan, doors with their locks, and the main container beside it ---- */
+function boxDrawing(def, f) {
+  const k = nm => def.relays.indexOf(nm), has = nm => k(nm) >= 0;
+  const R = nm => f.relOn && has(nm) && ((f.relays >> k(nm)) & 1) === 1;             // is this relay ON now (unknown = off while the relay board is silent)
+  const lb = (x, y, t, a) => `<text class="bx-lb" x="${x}" y="${y}"${a ? ` text-anchor="${a}"` : ''}>${esc(t)}</text>`;
+  let s = `<rect class="bx-body" x="10" y="4" width="212" height="284" rx="16"/>`;
+  /* the touch screen */
+  s += `<rect class="bx-scr ${f.brainOn ? stateClass(f.name) : 'off'}" x="30" y="16" width="164" height="48" rx="6"/><text class="bx-st" x="112" y="35" text-anchor="middle">${esc(f.name)}</text>`;
+  if (f.brainOn && (RUNNING.has(f.name) || f.timer > 0)) s += `<text class="bx-tm" x="112" y="55" text-anchor="middle">${mmss(f.timer)}</text>`;
+  /* coin slot (the light is the coin power relay) and the helmet sensor */
+  const hs = !f.sensOn || !(typeof f.helmet === 'number' && f.helmet >= 0) ? 'unk' : (f.helmet > 0 && f.helmet < 15 ? 'in' : 'out');
+  s += `<rect class="bx-slot" x="30" y="70" width="104" height="20" rx="10"/><circle class="bx-led ${R('Coin slot power') ? 'on' : ''}" cx="44" cy="80" r="4"/><text class="bx-sm" x="92" y="84" text-anchor="middle">coins ${f.termOn ? f.coins : '-'}</text>`;
+  s += `<rect class="bx-slot" x="140" y="70" width="54" height="20" rx="10"/><text class="bx-sm" x="167" y="84" text-anchor="middle">${{ unk: 'helmet ?', in: 'helmet in', out: 'no helmet' }[hs]}</text>`;
+  /* the window: UV tubes top and bottom, the helmet in the middle */
+  s += `<rect class="bx-win" x="30" y="96" width="164" height="126" rx="8"/>`;
+  def.relays.filter(r => /^UV/.test(r)).slice(0, 2).forEach((nm, j) => {
+    const y = j ? 206 : 108, on = R(nm);
+    s += lb(190, y - 3, nm, 'end') + (on ? `<rect class="bx-uvh" x="40" y="${y - 3}" width="144" height="14" rx="7"/>` : '') + `<rect class="bx-uv ${on ? 'on' : ''}" x="44" y="${y}" width="136" height="8" rx="4"><title>${esc(nm)} ${on ? 'ON' : 'off'}</title></rect>`;
+  });
+  s += `<path class="bx-hel ${hs}" d="M88 176 L88 152 C88 134 99 124 112 124 C125 124 136 134 136 152 L136 176 Z"/><rect class="bx-vis ${hs}" x="94" y="144" width="36" height="13" rx="4"/>`;
+  if (hs === 'unk') s += `<text class="bx-q" x="112" y="162" text-anchor="middle">?</text>`;
+  [['Humidifier 1', 54, 'Mist 1'], ['Humidifier 2', 112, 'Mist 2'], ['Humidifier 3', 170, 'Mist 3']].forEach(([nm, cx, t]) => {
+    if (!has(nm)) return; const on = R(nm);
+    s += `<rect class="bx-noz" x="${cx - 7}" y="180" width="14" height="5" rx="2"><title>${esc(nm)} ${on ? 'ON' : 'off'}</title></rect>`;
+    if (on) s += [-4, 4].map(d => `<path class="bx-mist" d="M${cx + d} 177 q-4 -5 0 -8 t0 -8 t0 -8"/>`).join('');
+    s += lb(cx, 194, t, 'middle');
+  });
+  if (has('Heater')) {
+    const on = R('Heater'), d = 'M150 152 l6 -14 l6 14 l6 -14 l6 14 l6 -14 l6 14';
+    s += (on ? `<path class="bx-heath" d="${d}"/>` : '') + `<path class="bx-heat ${on ? 'on' : ''}" d="${d}"><title>Heater ${on ? 'ON' : 'off'}</title></path>` + lb(168, 166, 'heater', 'middle');
+  }
+  if (has('Fan')) {
+    const on = R('Fan');
+    s += `<g transform="translate(62 146)"><g class="bx-fan ${on ? 'on' : ''}"><circle class="bx-fanr" r="14"/>` + [0, 90, 180, 270].map(a => `<path d="M0 0 C4 -4 4 -11 0 -12 C-4 -11 -4 -4 0 0Z" transform="rotate(${a})"/>`).join('') + `<title>Fan ${on ? 'ON' : 'off'}</title></g></g>` + lb(62, 170, 'fan', 'middle');
+  }
+  /* doors (open / closed from the sensor board) with the padlock above each (the lock relay) */
+  const slot = 212 / def.doors.length;
+  def.doors.forEach((d, i) => {
+    const cx = 10 + slot * (i + .5), open = f.sensOn && ((f.doors >> i) & 1) === 1, ln = d + ' lock';
+    if (has(ln)) s += `<path class="bx-shk" d="M${cx - 3} 237 v-3 a3 3 0 0 1 6 0 v3"/><rect class="bx-lk ${!f.relOn ? 'unk' : R(ln) ? 'on' : ''}" x="${cx - 4.5}" y="237" width="9" height="7" rx="1.5"><title>${esc(ln)} ${R(ln) ? 'ON' : 'off'}</title></rect>`;
+    s += open ? `<path class="bx-door open" d="M${cx - 9} 248 L${cx + 6} 252 V270 L${cx - 9} 268 Z"><title>${esc(d)} door OPEN</title></path>` : `<rect class="bx-door ${f.sensOn ? 'shut' : 'unk'}" x="${cx - 9}" y="248" width="18" height="22" rx="2"><title>${esc(d)} door ${f.sensOn ? 'closed' : 'not known'}</title></rect>`;
+    s += lb(cx, 282, d, 'middle');
+  });
+  /* the main container beside the machine, with its hose; its level comes from the Refilling Station (f.rf) or, on older firmware, from the box's own sensor (f.lvl) */
+  const th = 196, rfk = Array.isArray(f.rf) && f.rf[1] >= 0 && f.rf[1] <= 4;
+  let p, lc, word;
+  if (rfk) { const mx = Math.max(1, nz(f.rf[6], 1200)); p = Math.max(0, Math.min(100, nz(f.rf[0], 0) / mx * 100)); lc = ['low', 'low', 'early', 'high', 'ok'][f.rf[1]]; word = RF_STATE[f.rf[1]]; }
+  else { p = f.lvl >= 0 ? Math.max(0, Math.min(100, f.lvl)) : -1; const w = warnPct(); lc = p < 0 ? 'unk' : p < 15 ? 'low' : (w && p < w) ? 'early' : 'ok'; word = p < 0 ? '-' : Math.round(p) + '%'; }
+  const fh = p < 0 ? 0 : p / 100 * th;
+  s += `<path class="bx-hose" d="M222 150 H238"/><rect class="bx-tank" x="238" y="16" width="30" height="${th + 4}" rx="6"/>`;
+  if (fh) s += `<rect class="bx-fill ${lc}" x="240" y="${(18 + th - fh).toFixed(1)}" width="26" height="${fh.toFixed(1)}" rx="4"/>`;
+  else if (!rfk) s += `<text class="bx-q" x="253" y="125" text-anchor="middle">?</text>`;
+  const rfNw = Array.isArray(f.rf) && f.rf[1] === -2;                                      /* the station does not watch this box for now */
+  if (((f.rf !== undefined && f.rf !== null) || f.rfOff) && !rfNw) {                       /* the refill valve above the tank: bow-tie, blue while the valve is open */
+    const open = rfk && f.rf[2];
+    s += `<path class="bx-valve ${open ? 'on' : ''}" d="M246 2 L253 8 L246 14 Z M260 2 L253 8 L260 14 Z"><title>Refill valve ${open ? 'OPEN' : 'closed'}</title></path>`;
+  }
+  s += `<text class="bx-pc" x="253" y="238" text-anchor="middle">${word}</text>` + lb(253, 252, 'main', 'middle') + lb(253, 262, 'container', 'middle');
+  if (f.rfOff) s += `<text class="bx-warn" x="253" y="274" text-anchor="middle">station off</text>`;
+  else if (rfNw) s += lb(253, 274, 'not watched', 'middle');
+  else if (rfk && f.rf[3]) s += `<text class="bx-warn" x="253" y="274" text-anchor="middle">refill failed</text>`;
+  else if (rfk && f.rf[2]) s += `<text class="bx-wet" x="253" y="274" text-anchor="middle">refilling</text>`;
+  else if (rfk && f.rf[7]) s += `<text class="bx-wet" x="253" y="274" text-anchor="middle">waiting</text>`;  return s;
+}
+function boxCard(i, b, n, rfi) {                                // rfi = { r: [raw, state, valve, failed, edges...] or null, off: station not heard } when the firmware has the Refilling Station
   const def = BOXES[i];
   const head = (right) => `<div class="card-h"><div><b>${def.name}</b><small>${def.role}</small></div>${right}</div>`;
   if (!b) return `<div class="card">${head(chip('no data', 'off'))}</div>`;
   const brainOn = n[def.brain], termOn = n[def.term], sensOn = n[def.sensors], relOn = n[def.relayBoard];
-  const name = brainOn ? (def.st[b[0]] || ('step ' + b[0])) : 'NOT HEARD';
-  const timer = nz(b[1], 0), coins = nz(b[2], 0), doors = nz(b[3], 0), helmet = b[4], wet = nz(b[7], 0), relays = nz(b[8], 0);
-  let h = `<div class="card">` + head(`<span class="chip state ${brainOn ? stateClass(name) : 'off'}">${esc(name)}</span>`);
-  if (brainOn && (RUNNING.has(name) || timer > 0)) h += `<div class="timer"><span class="big num">${mmss(timer)}</span><span class="bigl">time left</span></div>`;
-  h += `<div class="row"><span>Coins counted</span><b class="num">${termOn ? coins : '-'}</b></div>`;
-  if (!sensOn) {
-    h += `<div class="chips">${chip('sensor board offline', 'off')}</div>`;
-  } else {
-    if (typeof helmet === 'number' && helmet >= 0) h += `<div class="row"><span>Helmet</span><b>${helmet > 0 && helmet < 15 ? 'inside' : 'not inside'}</b></div>`;
-    h += `<div class="chips">` + def.doors.map((d, k) => ((doors >> k) & 1) ? chip(d + ' door OPEN', 'warn') : chip(d + ' closed', 'run')).join('') + `</div>`;
-    if (def.tanks) {
-      h += level('Alcohol container', b[5], 'b' + i + 'a') + level('Scented container', b[6], 'b' + i + 's');
-      h += `<div class="chips">${chip('alcohol water sensor: ' + ((wet & 1) ? 'wet' : 'dry'))}${chip('scented water sensor: ' + ((wet & 2) ? 'wet' : 'dry'))}</div>`;
-    }
-  }
-  if (relOn && b.length > 8) {
-    const on = def.relays.filter((nm, k) => (relays >> k) & 1);
-    h += `<div class="chips">${on.length ? on.map(nm => chip(nm + ' ON', 'use')).join('') : '<span class="meter">Nothing switched on.</span>'}</div>`;
-  }
-  return h + `</div>`;
+  const f = { brainOn, termOn, sensOn, relOn, name: brainOn ? (def.st[b[0]] || ('step ' + b[0])) : 'NOT HEARD',
+              timer: nz(b[1], 0), coins: nz(b[2], 0), doors: nz(b[3], 0), helmet: b[4], relays: nz(b[8], 0), lvl: sensOn ? nz(b[5], -1) : -1,
+              rf: rfi && !rfi.off ? rfi.r : (rfi ? null : undefined), rfOff: !!(rfi && rfi.off) };
+  const same = def.sensors === def.relayBoard, off = [];
+  if (!sensOn) off.push(same ? 'sensor and relay board offline' : 'sensor board offline');
+  if (!relOn && !(same && !sensOn)) off.push('relay board offline');
+  const say = `${def.name}: ${f.name}${brainOn && f.timer > 0 ? ', ' + mmss(f.timer) + ' left' : ''}${termOn ? ', ' + f.coins + ' coins' : ''}${Array.isArray(f.rf) && f.rf[1] >= 0 ? ', main container ' + RF_STATE[f.rf[1]] : (f.lvl >= 0 ? ', main container ' + Math.round(f.lvl) + '%' : '')}`;
+  return `<div class="card">` + head(`<span class="chip state ${brainOn ? stateClass(f.name) : 'off'}">${esc(f.name)}</span>`)
+    + `<svg class="bx-svg" viewBox="0 0 280 296" role="img" aria-label="${esc(say)}">${boxDrawing(def, f)}</svg>`
+    + (off.length ? `<div class="chips">${off.map(t => chip(t, 'off')).join('')}</div>` : '') + `</div>`;
 }
-
-/* ---- one refill station ---- */
-function acsCard(i, a) {
-  const title = `ACS ${i + 1}`, sub = i ? 'refills Box 3' : 'refills Box 1';
-  if (!a || !a[0]) return `<div class="card"><div class="card-h"><div><b>${title}</b><small>${sub}</small></div>${chip('NOT HEARD', 'off')}</div></div>`;
-  const [ok, step, flags, empty, warn, pa, ps, pumps, sec] = a;
-  const name = ACSSTEP[step] || ('step ' + step);
-  const cls = step >= 7 && step <= 9 ? 'bad' : step === 10 ? 'maint' : step === 0 ? '' : 'run';
-  let h = `<div class="card"><div class="card-h"><div><b>${title}</b><small>${sub}</small></div><span class="chip state ${cls}">${esc(name)}</span></div>`;
-  h += level('Alcohol mixer', pa, 'a' + i + 'a') + level('Scented mixer', ps, 'a' + i + 's');
-  let c = '';
-  c += (flags & 1) ? chip('ALCOHOL MIXER LOW', 'bad') : ''; c += (flags & 4) ? chip('SCENTED MIXER LOW', 'bad') : '';
-  c += (empty & 1) ? chip('WATER TANK EMPTY', 'bad') : ''; c += (empty & 2) ? chip('ALCOHOL TANK EMPTY', 'bad') : ''; c += (empty & 4) ? chip('SCENTED TANK EMPTY', 'bad') : '';
-  c += (flags & 128) ? chip('box is asking for liquid', 'use') : '';
-  PUMPS.forEach((nm, k) => { if ((pumps >> k) & 1) c += chip('running: ' + nm, 'run'); });
-  h += `<div class="chips">${c || '<span class="meter">All supplies available, no pump running.</span>'}</div>`;
-  ACSWARN.forEach(w => { if (warn & w[0]) h += `<div class="meter" style="margin-top:5px">&#9888; ${esc(w[1])}</div>`; });
-  if (step >= 7 && step <= 9) h += `<div class="meter" style="margin-top:5px">Checking again in ${sec} s.</div>`;
-  return h + `</div>`;
-}
-
 /* ---- the banners at the top of the Monitor tab (errors, then everything that needs attention: see alerts.js) ---- */
 function drawBanners() {
   const ban = [];
@@ -131,10 +150,73 @@ function renderStats() {
   $('days').innerHTML = `<div class="days">` + rev.map((r, i) => `<div class="dc"><div class="t num">${r ? CONFIG.coin + Math.round(r) : ''}</div><div class="b ${i === rev.length - 1 ? 'today' : ''}" style="height:${Math.max(3, Math.round(r / mx * 78))}%"></div><div class="d">${weekday(rev.length - 1 - i)}</div></div>`).join('') + `</div><div class="sub">Revenue per day, today on the right.</div>`;
 }
 
-/* ---- boards and the Online Server's own health ---- */
+/* ---- the network map (Blynk - site Wi-Fi - Online Server, then the three boxes and the LocalServer) ---- */
+const NM_ICON = {
+  net:  '<svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="22"/><path d="M10 32h44M32 10c9 9 9 35 0 44M32 10c-9 9-9 35 0 44M14 20h36M14 44h36"/></svg>',
+  wifi: '<svg viewBox="0 0 64 64"><path d="M8 46h48v8H8zM14 46l6-14h24l6 14"/><path d="M44 26c5 0 8-3 8-3M46 18c6 0 10-4 10-4"/><circle cx="16" cy="50" r="1.5"/><circle cx="24" cy="50" r="1.5"/><path d="M32 32V18"/></svg>',
+  os:   '<svg viewBox="0 0 64 64"><rect x="10" y="16" width="44" height="32" rx="5"/><path d="M18 24h10M18 32h10M36 24h10"/><circle cx="44" cy="38" r="3"/><path d="M22 48v6M42 48v6M18 54h28"/></svg>',
+  box:  '<svg viewBox="0 0 64 64"><rect x="14" y="8" width="36" height="48" rx="4"/><rect x="20" y="14" width="24" height="18" rx="2"/><path d="M22 40h20M22 46h12"/><circle cx="44" cy="46" r="2"/></svg>',
+  rs:   '<svg viewBox="0 0 64 64"><path d="M22 8h20l-2 14H24z"/><path d="M32 22v10M20 32h24M24 32v10h16V32"/><path d="M32 42v8M26 50h12M22 56h20"/><circle cx="32" cy="37" r="2"/></svg>',
+  ls:   '<svg viewBox="0 0 64 64"><rect x="12" y="10" width="40" height="14" rx="3"/><rect x="12" y="28" width="40" height="14" rx="3"/><circle cx="20" cy="17" r="1.8"/><circle cx="20" cy="35" r="1.8"/><path d="M32 42v8M20 54h24M32 50v4"/></svg>'
+};
+function nmNode(icon, title, subHtml, st) {
+  return `<div class="nm-node"><span class="nm-dot ${st}"></span>${NM_ICON[icon]}${esc(title)}<small>${subHtml}</small></div>`;
+}
+function nmBars(rssi) {                                    // four little bars for the Wi-Fi signal at the site
+  const q = rssi > -55 ? 4 : rssi > -65 ? 3 : rssi > -75 ? 2 : 1;
+  return '<span class="nm-bars">' + [1, 2, 3, 4].map(i => `<i class="${i <= q ? 'on' : ''}" style="height:${4 + i * 3}px"></i>`).join('') + '</span>';
+}
+function networkMap(L, T, sy) {
+  const link = S.link, stale = link === 'dead' || link === 'err';          // the boards' flags are old: show them as unknown, not green
+  const dotOf = { live: 'ok', late: 'warn', dead: 'bad', err: 'bad', nodata: 'warn' }[link] || 'off';
+  const lineOf = { live: '', late: 'bad', dead: 'bad', err: 'bad' }[link] ?? 'off';       // the lines: solid = fine, red dashes = broken, grey dashes = not known yet
+  const known = !!S.live && L.n != null && !stale, n = known ? nodeFlags(L) : [];
+  const netSub = { live: 'Blynk · OK', late: 'Blynk · delayed', dead: 'Blynk · old data', err: 'cannot read Blynk', nodata: 'Blynk · no data yet' }[link] || 'Blynk';
+  const wifiSub = (sy.rssi ? sy.rssi + ' dBm<br>' + nmBars(sy.rssi) : 'site Wi-Fi');
+  const osSub = link === 'live' || link === 'late' ? (sy.up != null ? 'running ' + esc(fmtUp(sy.up)) : 'listens only') : (link === 'dead' ? 'not uploading' : 'listens only');
+  const boxes = BOXES.map((def, i) => {
+    const ids = [...new Set([def.term, def.sensors, def.relayBoard, def.brain])], missing = ids.filter(k => !n[k]);
+    if (!known) return nmNode('box', def.name, stale ? 'no recent data' : 'not reported', 'off');
+    const st = !missing.length ? 'ok' : missing.length < ids.length ? 'warn' : 'bad';
+    const miss = missing.length && missing.length < ids.length ? `<span class="nm-miss">missing: ${missing.map(k => esc(NODES[k].replace(/^Box \d /, ''))).join(', ')}</span>` : '';
+    return nmNode('box', def.name, `${ids.length - missing.length} of ${ids.length} boards${miss ? '<br>' + miss : ''}`, st);
+  }).join('');
+  const hasRf = Array.isArray(L.rf);
+  const open = hasRf ? [0, 1, 2].filter(i => L.rf[i] && L.rf[i][2]).map(i => i + 1) : [];
+  const waiting = hasRf ? [0, 1, 2].filter(i => L.rf[i] && L.rf[i][7]).map(i => i + 1) : [];
+  const rsNode = !hasRf ? nmNode('rs', 'Refilling Station', stale ? 'no recent data' : 'not reported', 'off')
+    : !known ? nmNode('rs', 'Refilling Station', 'no recent data', 'off')
+    : n[STATION] ? nmNode('rs', 'Refilling Station', open.length ? 'refilling Box ' + open.join(', ') + (waiting.length ? '<br><span class="nm-miss">waiting: Box ' + waiting.join(', ') + '</span>' : '') : 'heard', 'ok')
+    : nmNode('rs', 'Refilling Station', 'not heard<br><span class="nm-miss">all boxes: drying only</span>', 'bad');
+  const lsHeard = T.cv != null || T.ss != null;
+  const ls = nmNode('ls', 'LocalServer', stale || !S.live ? 'no recent data' : lsHeard ? 'totals received' : 'not heard yet', stale || !S.live ? 'off' : lsHeard ? 'ok' : 'bad');
+  return `<div class="nmap">
+    <div class="nm-top">
+      <div class="nm-tl">${nmNode('net', 'Internet', netSub, dotOf)}<div class="nm-link ${lineOf}"></div>${nmNode('wifi', 'Wi-Fi', wifiSub, dotOf)}<div class="nm-link nm-l2 ${lineOf}"></div></div>
+      <div class="nm-vl ${lineOf}"></div>
+      ${nmNode('os', 'Online Server', osSub, dotOf)}
+      <div class="nm-tr"></div>
+    </div>
+    <div class="nm-drop"></div>
+    <div class="nm-groups">
+      <div class="nm-group"><div class="nm-gtitle">Machines heard on the radio</div><div class="nm-items">${boxes}${rsNode}</div></div>
+      <div class="nm-group nm-ls"><div class="nm-gtitle">Server heard</div><div class="nm-items">${ls}</div></div>
+    </div>
+    <div class="nm-legend"><span><i class="ok"></i>heard / working</span><span><i class="warn"></i>some missing</span><span><i class="bad"></i>not heard / failed</span><span><i class="off"></i>unknown</span></div>
+  </div>`;
+}
+function nmBracket() {                                     // the horizontal line over the two groups reaches exactly from the middle of one to the middle of the other
+  const g = document.querySelector('#sys .nm-groups'); if (!g) return;
+  const gs = [...g.querySelectorAll('.nm-group')], r = g.getBoundingClientRect();
+  const c = gs.map(e => { const b = e.getBoundingClientRect(); return b.left + b.width / 2 - r.left; }); c.push(r.width / 2);
+  g.style.setProperty('--bl', Math.min(...c) + 'px'); g.style.setProperty('--br', (r.width - Math.max(...c)) + 'px');
+}
+addEventListener('resize', nmBracket);
+
+/* ---- the network map and the Online Server's own health ---- */
 function renderSys() {
-  const L = S.live || {}, T = S.stats || {}, sy = T.sys || {}, n = nodeFlags(L);
-  let h = `<div class="nodes">` + NODES.map((nm, i) => `<div class="node"><span>${esc(nm)}</span>${chip(n[i] ? 'ONLINE' : 'OFFLINE', n[i] ? 'run' : 'off')}</div>`).join('') + `</div>`;
+  const L = S.live || {}, T = S.stats || {}, sy = T.sys || {};
+  let h = networkMap(L, T, sy);
   const rows = [];
   if (sy.up != null) rows.push(['Online Server running for', fmtUp(sy.up)]);
   if (sy.rst) rows.push(['Last restart reason', esc(sy.rst) + (sy.boots != null ? ` (start #${sy.boots})` : '')]);
@@ -148,6 +230,7 @@ function renderSys() {
     h += `<div class="row"><span>Blynk uploads this month</span><b class="num">${Number(sy.mq).toLocaleString()}</b></div>`;
   }
   $('sys').innerHTML = h;
+  nmBracket();
 }
 
 /* ---- the whole page ---- */
@@ -157,10 +240,9 @@ function renderAll() {
   drawBanners();
   if (L) {
     const n = nodeFlags(L);
-    $('boxes').innerHTML = [0, 1, 2].map(i => boxCard(i, (L.b || [])[i], n)).join('');
-    $('acs').innerHTML = [0, 1].map(i => acsCard(i, (L.a || [])[i])).join('');
+    $('boxes').innerHTML = [0, 1, 2].map(i => boxCard(i, (L.b || [])[i], n, Array.isArray(L.rf) ? { r: L.rf[i], off: !n[STATION] } : null)).join('');
     renderLevels(L);
-  } else { $('boxes').innerHTML = ''; $('acs').innerHTML = ''; $('levels').innerHTML = ''; }
+  } else { $('boxes').innerHTML = ''; $('levels').innerHTML = ''; }
   $('data').hidden = !L;                                // nothing to show until the first data arrives
   renderStats(); renderSys();
   if (typeof Reports !== 'undefined') Reports.refresh();
