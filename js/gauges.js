@@ -110,7 +110,7 @@ function renderLevels(L) {
     cards.push(gaugeCard(def.name + ' main container', 'filled by the Refilling Station', ok ? nz(b[5], -1) : -1, 'b' + i, stale));
   });
   const note = rf
-    ? 'Red = EMPTY or LOW: the box offers drying only. Yellow = MID. Yellow to green = HIGH. Green = MAX (full). The Refilling Station opens a box\'s valve by itself when its container is EMPTY or LOW, one valve at a time (EMPTY first, then LOW). Active = the station reads this container; Inactive = it does not (not watched, sensor fault, nothing heard, or old data). For now the station watches and refills Box 3 only, so the other boxes say Inactive.'
+    ? 'Red = EMPTY or LOW: the box offers drying only. Yellow = MID. Yellow to green = HIGH. Green = MAX (full). The Refilling Station opens a box\'s valve by itself when its container is EMPTY or LOW, one valve at a time (EMPTY first, then LOW). Active = the station reads this container; Inactive = it does not (not watched, sensor fault, nothing heard, or data not yet updated). For now the station watches and refills Box 3 only, so the other boxes say Inactive.'
     : `Red below 15 %, amber below the early warning line (${warnPct() ? warnPct() + ' %' : 'off'}; change it in the Alerts tab). For a main container 0 % is the refill line: the box stops cleaning there.`;
   el.innerHTML = `<div class="grid gauges">${cards.join('')}</div><div class="sub">${note}</div>`;
 }

@@ -13,7 +13,7 @@ const SEV_NAME = { critical: 'CRITICAL', warning: 'WARNING', notice: 'NOTICE', i
 /* what each kind of alert is called, how serious it is, which sound it starts with, and whether it repeats until somebody acknowledges it */
 const AL_TYPES = {
   out_of_order:  { sev: 'critical', label: 'A box is OUT OF ORDER',                        sound: 'siren',   repeat: true },
-  all_offline:   { sev: 'critical', label: 'No machine board is heard at all',             sound: 'alarm',   repeat: true },
+  all_offline:   { sev: 'critical', label: 'No machine board is active at all',            sound: 'alarm',   repeat: true },
   safety_pause:  { sev: 'warning',  label: 'A door was opened during a run (SAFETY PAUSE)', sound: 'urgent', repeat: false },
   station_offline: { sev: 'critical', label: 'The Refilling Station is offline (all boxes offer DRYING only)', sound: 'alarm', repeat: false },
   refill_failed:   { sev: 'warning',  label: 'A refill failed (the level is not rising)',     sound: 'twotone', repeat: false },
@@ -21,7 +21,7 @@ const AL_TYPES = {
   container_low: { sev: 'warning',  label: 'A main container is LOW (under 15 %)',         sound: 'beeps3',  repeat: false },
   cleaning_off:  { sev: 'warning',  label: 'Cleaning is switched off (a container is low)', sound: 'twotone', repeat: false },
   board_offline: { sev: 'warning',  label: 'A board is offline',                           sound: 'twotone', repeat: false },
-  stale:         { sev: 'warning',  label: 'The data is old, or Blynk cannot be read',     sound: 'descend', repeat: false },
+  stale:         { sev: 'warning',  label: 'The data is not yet updated, or Blynk cannot be read', sound: 'descend', repeat: false },
   early_low:     { sev: 'notice',   label: 'A container is getting low (early warning)',   sound: 'soft',    repeat: false },
   cleared:       { sev: 'info',     label: 'An alert cleared (back to normal)',            sound: 'chime',   repeat: false },
   session:       { sev: 'info',     label: 'A customer finished a session',                sound: 'ding',    repeat: false, off: true }
@@ -44,7 +44,7 @@ const Alerts = (() => {
     const out = [], w = warnPct();
     const add = (id, type, text) => out.push({ id, type, text });
     if (S.err) add('stale:err', 'stale', 'Cannot read Blynk: ' + S.err);
-    else if (S.link === 'dead') add('stale:old', 'stale', 'The data on the page is old (the Online Server stopped uploading, or the internet at the site is down)');
+    else if (S.link === 'dead') add('stale:old', 'stale', 'The data on the page is not yet updated');
     if (L) {
       const n = nodeFlags(L);
       (L.b || []).forEach((b, i) => {

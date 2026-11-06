@@ -20,7 +20,7 @@ function tickStatus() {
   ag.textContent = 'updated ' + ago(age) + ' ago';
   if (age <= iv * 2 + 15)      { S.link = 'live'; setPill(true, 'Data is arriving'); }
   else if (age <= iv * 6 + 30) { S.link = 'late'; setPill(true, 'Data is arriving, but later than usual'); }
-  else                         { S.link = 'dead'; setPill(false, 'The data is old: nothing new has arrived for a while'); }
+  else                         { S.link = 'dead'; setPill(false, 'The data is not yet updated: nothing new has arrived for a while'); }
   /* a link that turns stale (or comes back) changes the machine cards and the map (Active / Inactive), not only the badge */
   const staleOf = l => l === 'dead' || l === 'err';
   if (was !== S.link) {

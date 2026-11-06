@@ -56,7 +56,7 @@ THE TABS  (Monitor, Alerts, Reports; Checklist, Fix it and Manual were taken out
              test (the play button) or switch off. Critical alerts (box OUT OF ORDER, no board heard) repeat every minute until somebody
              presses Acknowledge. Also: a number in the tab title and the tab icon, and optional browser notifications.
              Sounds: siren (out of order), alarm (nothing heard), urgent (door opened during a run), three beeps (container low),
-             two tones (board offline, cleaning off), falling tones (data old / no link), soft blip (early warning), chime (cleared), ding (customer finished, off by default).
+             two tones (board offline, cleaning off), falling tones (data not yet updated / no link), soft blip (early warning), chime (cleared), ding (customer finished, off by default).
   Reports    revenue and customers per day with a 7-day average, this week against last week, busiest hours, busiest weekdays, what each box earns, a day-by-day
              table, CSV downloads and "Print / save as PDF" (a clean report page).
   QR button  the QR code, link and a printable sign for the customer page.
