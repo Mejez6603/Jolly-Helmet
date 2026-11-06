@@ -41,12 +41,12 @@ function dialArc(a0, a1, r, cx, cy) {                           // angles in per
   const s = p(a0), e = p(a1);
   return `M${s[0].toFixed(1)} ${s[1].toFixed(1)} A${r} ${r} 0 0 1 ${e[0].toFixed(1)} ${e[1].toFixed(1)}`;
 }
-function gaugeCard(title, sub, pct, key) {
+function gaugeCard(title, sub, pct, key, stale) {
   const known = typeof pct === 'number' && pct >= 0, w = warnPct();
   const p = known ? Math.max(0, Math.min(100, pct)) : 0;
   const st = !known ? 'unknown' : p < 15 ? 'low' : (w && p < w) ? 'early' : 'ok';
   const cx = 60, cy = 54, r = 46;
-  let svg = `<svg viewBox="0 0 120 80" class="dial" role="img" aria-label="${esc(title)}: ${known ? Math.round(p) + ' percent' : 'unknown'}">`;
+  let svg = `<svg viewBox="0 0 120 80" class="dial" role="img" aria-label="${esc(title)}: ${known ? Math.round(p) + ' percent' : 'inactive'}">`;
   svg += `<path d="${dialArc(0, 15, r, cx, cy)}" class="z-low"/>`;
   svg += `<path d="${dialArc(15, w > 15 ? w : 15.01, r, cx, cy)}" class="z-early"/>`;
   svg += `<path d="${dialArc(w > 15 ? w : 15, 100, r, cx, cy)}" class="z-ok"/>`;
@@ -66,21 +66,22 @@ function gaugeCard(title, sub, pct, key) {
       } else if (sl >= 0.8) note = '&#8593; rising (being refilled?)';
       else note = '&#8594; steady';
     } else note = 'watching the trend...';
+    if (st !== 'ok') note = (st === 'low' ? '<span class="gbad">LOW: refill now</span>' : 'getting low') + (note ? ' · ' + note : '');
   }
-  const lab = { ok: 'OK', early: 'GETTING LOW', low: 'LOW: REFILL NOW', unknown: 'NOT KNOWN' }[st];
-  return `<div class="card gauge ${st}">${svg}<div class="gt">${esc(title)}</div><div class="gsub">${esc(sub)}</div><div class="gs"><span class="chip ${st === 'ok' ? 'run' : st === 'early' ? 'warn' : st === 'low' ? 'bad' : 'off'}">${lab}</span></div><div class="gn">${note}</div></div>`;
+  const active = known && !stale;                              // the chip says only Active or Inactive; the level is the number in the dial and the line under the chip
+  return `<div class="card gauge ${st}">${svg}<div class="gt">${esc(title)}</div><div class="gsub">${esc(sub)}</div><div class="gs"><span class="chip ${active ? 'run' : 'off'}">${active ? 'Active' : 'Inactive'}</span></div><div class="gn">${note}</div></div>`;
 }
 
 /* ---- a dial from the Refilling Station's reading: rf[i] = [raw, state 0-4, valve open, refill failed, mid edge, high edge, max edge, waiting in the queue] ----
    EMPTY and LOW = red (the box offers drying only), MID = yellow, HIGH = yellow to green, MAX = green. The edges are the box's own calibration (LocalServer). */
 const RF_STATE = ['EMPTY', 'LOW', 'MID', 'HIGH', 'MAX'];
-function stateGaugeCard(title, sub, r) {
+function stateGaugeCard(title, sub, r, stale) {
   const known = Array.isArray(r) && r[1] >= 0 && r[1] <= 4;
   const raw = known ? nz(r[0], 0) : 0, st = known ? r[1] : -1;
   const mx = known ? Math.max(1, nz(r[6], 1200)) : 1200, pct = v => Math.max(0, Math.min(100, v / mx * 100));
   const m = known ? pct(nz(r[4], 500)) : 41.7, h = known ? Math.max(m, pct(nz(r[5], 1000))) : 83.3, cap = Math.max(h, 97);
   const cx = 60, cy = 54, rad = 46;
-  let svg = `<svg viewBox="0 0 120 80" class="dial" role="img" aria-label="${esc(title)}: ${known ? RF_STATE[st] : 'unknown'}">`;
+  let svg = `<svg viewBox="0 0 120 80" class="dial" role="img" aria-label="${esc(title)}: ${known ? RF_STATE[st] : 'inactive'}">`;
   svg += `<path d="${dialArc(0, m, rad, cx, cy)}" class="z-low"/><path d="${dialArc(m, h, rad, cx, cy)}" class="z-early"/>`;
   svg += `<path d="${dialArc(h, cap, rad, cx, cy)}" class="z-high"/><path d="${dialArc(cap, 100, rad, cx, cy)}" class="z-max"/>`;
   if (known) {
@@ -92,23 +93,24 @@ function stateGaugeCard(title, sub, r) {
   const cls = !known ? 'unknown' : st <= 1 ? 'low' : st === 2 ? 'early' : st === 3 ? 'high' : 'ok';
   const notWatched = Array.isArray(r) && r[1] === -2;                             /* -2 = the station does not watch this box for now (it watches Box 3 only) */
   const fault = Array.isArray(r) && !known && !notWatched;                        /* the station is heard but reports no level for this box = its water-level sensor is faulty */
-  const lab = notWatched ? 'NOT WATCHED' : fault ? 'SENSOR FAULT' : !known ? 'NOT KNOWN' : st === 0 ? 'EMPTY: DRYING ONLY' : st === 1 ? 'LOW: DRYING ONLY' : RF_STATE[st];
-  const chipc = notWatched ? '' : fault ? 'bad' : !known ? 'off' : st <= 1 ? 'bad' : st === 2 ? 'warn' : st === 3 ? 'high' : 'run';
-  const note = notWatched ? 'not read or refilled by the station for now' : fault ? '<span class="gbad">the water-level sensor reads wrongly: check its wiring (the box offers drying only)</span>' : !known ? '' : r[3] ? '<span class="gbad">refill FAILED: the level is not rising</span>' : r[2] ? '<span class="gwet">refilling now (valve open)</span>' : r[7] ? '<span class="gwet">waiting for its turn (one valve at a time)</span>' : 'reading ' + Math.round(raw);
-  return `<div class="card gauge ${cls}">${svg}<div class="gt">${esc(title)}</div><div class="gsub">${esc(sub)}</div><div class="gs"><span class="chip ${chipc}">${lab}</span></div><div class="gn">${note}</div></div>`;
+  /* the chip says only Active (the station reads this container and the data is fresh) or Inactive (not watched, sensor fault, nothing heard, or old data);
+     the level itself is the big word in the dial, and what it means for the box (drying only, refill failed...) is in the line under the chip */
+  const active = known && !stale;
+  const note = notWatched ? 'not read or refilled by the station for now' : fault ? '<span class="gbad">the water-level sensor reads wrongly: check its wiring (the box offers drying only)</span>' : !known ? '' : r[3] ? '<span class="gbad">refill FAILED: the level is not rising</span>' : r[2] ? '<span class="gwet">refilling now (valve open)</span>' : r[7] ? '<span class="gwet">waiting for its turn (one valve at a time)</span>' : 'reading ' + Math.round(raw) + (st <= 1 ? ' · <span class="gbad">drying only</span>' : '');
+  return `<div class="card gauge ${cls}">${svg}<div class="gt">${esc(title)}</div><div class="gsub">${esc(sub)}</div><div class="gs"><span class="chip ${active ? 'run' : 'off'}">${active ? 'Active' : 'Inactive'}</span></div><div class="gn">${note}</div></div>`;
 }
 
 /* ---- the Levels section of the Monitor page: 3 dials = the main container of Box 1, Box 2 and Box 3 ---- */
 function renderLevels(L) {
   const el = $('levels'); if (!el) return;
-  const n = nodeFlags(L), cards = [], rf = Array.isArray(L.rf) ? L.rf : null;
+  const n = nodeFlags(L), cards = [], rf = Array.isArray(L.rf) ? L.rf : null, stale = S.link === 'dead' || S.link === 'err';   // old data: nothing is Active
   BOXES.forEach((def, i) => {
-    if (rf) { cards.push(stateGaugeCard(def.name + ' main container', Array.isArray(rf[i]) && rf[i][1] === -2 ? 'not watched for now' : 'filled by the Refilling Station', n[STATION] ? rf[i] : null)); return; }
+    if (rf) { cards.push(stateGaugeCard(def.name + ' main container', Array.isArray(rf[i]) && rf[i][1] === -2 ? 'not watched for now' : 'filled by the Refilling Station', n[STATION] ? rf[i] : null, stale)); return; }
     const b = (L.b || [])[i], ok = b && n[def.sensors];                  // firmware without the Refilling Station: the old percent reading
-    cards.push(gaugeCard(def.name + ' main container', 'filled by the Refilling Station', ok ? nz(b[5], -1) : -1, 'b' + i));
+    cards.push(gaugeCard(def.name + ' main container', 'filled by the Refilling Station', ok ? nz(b[5], -1) : -1, 'b' + i, stale));
   });
   const note = rf
-    ? 'Red = EMPTY or LOW: the box offers drying only. Yellow = MID. Yellow to green = HIGH. Green = MAX (full). The Refilling Station opens a box\'s valve by itself when its container is EMPTY or LOW, one valve at a time (EMPTY first, then LOW). For now the station watches and refills Box 3 only; the other boxes say NOT WATCHED.'
+    ? 'Red = EMPTY or LOW: the box offers drying only. Yellow = MID. Yellow to green = HIGH. Green = MAX (full). The Refilling Station opens a box\'s valve by itself when its container is EMPTY or LOW, one valve at a time (EMPTY first, then LOW). Active = the station reads this container; Inactive = it does not (not watched, sensor fault, nothing heard, or old data). For now the station watches and refills Box 3 only, so the other boxes say Inactive.'
     : `Red below 15 %, amber below the early warning line (${warnPct() ? warnPct() + ' %' : 'off'}; change it in the Alerts tab). For a main container 0 % is the refill line: the box stops cleaning there.`;
   el.innerHTML = `<div class="grid gauges">${cards.join('')}</div><div class="sub">${note}</div>`;
 }

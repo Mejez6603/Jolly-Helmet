@@ -31,7 +31,7 @@ KEEP IN MIND
   * A Blynk token can also WRITE. The page never does, and the firmware ignores writes, but do not put the token inside js/config.js on a
     public web site. Leave CONFIG.token empty (the default) so each viewer types it.
   * The page reads Blynk every 10 seconds only while its tab is open and visible (Settings can change that).
-  * "LIVE / DELAYED / OLD DATA" and "updated x ago" come from the numbers inside the data, not from Blynk's own online/offline label
+  * "Status: Active / Status: Inactive" (top right) and "updated x ago" come from the numbers inside the data, not from Blynk's own online/offline label. The machine cards and every part of the network map also say only Active or Inactive.
     (the board uses Blynk's HTTPS API, so Blynk Console may show the device as offline; that is normal).
   * The analytics (customers, revenue, last cycles) need the LocalServer to be on, flashed with the version that broadcasts its totals.
 
@@ -47,8 +47,10 @@ THE TABS  (Monitor, Alerts, Reports; Checklist, Fix it and Manual were taken out
              a valve symbol above each container lights blue while the station is refilling it. Firmware without the station shows the old percent dials with a "falling,
              about 5 h to the refill line" estimate from the readings this browser has seen). Set the early warning line in the Alerts tab (default 30 %).
              Alerts also warn when the Refilling Station is offline (every box then offers drying only) and when a refill failed.
+             The "Needs attention" banner lists every alert as its own coloured row, highest priority first, with a count per level: CRITICAL = red, WARNING = orange, NOTICE = blue, INFO = grey
+             (the Alerts tab uses the same colours in "Active now", the log and the sound table).
              Further down: the NETWORK MAP (a drawing like the Online Server's own setup page): Internet/Blynk - Wi-Fi at the site - Online Server, then Box 1, Box 2, Box 3, the Refilling Station
-             and the LocalServer, each with a coloured dot (green = all heard, amber = some boards missing with their names, red = broken, grey = not known) and the Online Server's own figures.
+             and the LocalServer, each with a coloured dot and the word Active (green: every board heard) or Inactive (red: something silent, old or not known; a box names the boards that are missing) and the Online Server's own figures.
              Boards have plain names on this page (TFT Display, Sensors, Relay Controller, Main Controller); the codes A1, B1, C1, A2, B2, A3, B3, C2, S3A, S3B, S3C
              are only used in the firmware, the Control Center and the setup page.  Alerts     what needs attention now, an alert LOG (kept in the browser, CSV download) and SOUNDS: every kind of alert has its own sound that you can change,
              test (the play button) or switch off. Critical alerts (box OUT OF ORDER, no board heard) repeat every minute until somebody

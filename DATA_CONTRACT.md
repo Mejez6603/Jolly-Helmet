@@ -36,7 +36,7 @@ monitor page shows a quota bar; leave it at 0 to hide the bar.
 |---|---|
 | `seq` | Counter, +1 on every write (starts at a random number after a restart). The page treats a changed `seq` as "new data". |
 | `ts` | Unix time in seconds (set by NTP at the first successful upload). 0 until then. |
-| `iv` | Upload interval in seconds. The page uses it to decide LIVE / DELAYED / OLD DATA. |
+| `iv` | Upload interval in seconds. The page uses it to decide "Status: Active" (data newer than about 6 x `iv` + 30 s) or "Status: Inactive" (older, no link, or no data yet). |
 
 | `b` | Three boxes: Box 1, Box 2, Box 3. Each is a list of 9 numbers (below). |
 | `a` | **REMOVED.** The two ACS boards no longer exist and the Online Server (firmware of 2026-11-03) does not send `a` any more. The Refilling Station's reading is `rf` (below). |
@@ -77,7 +77,7 @@ S3A, S3B, S3C = Main Controller. (The Refilling Station, D1, is in the `n` flags
 
 A container that is only EMPTY or LOW is not an alert (the station refills it within a minute, the box offers drying meanwhile): only a failed refill (`failed` = 1) and a silent station are.
 
-When the station is not heard (`n[11]` = 0) the Online Server sends `[0,-1,0,0,500,1000,1200,0]` for every box; the page shows "not known" and raises the alert "The Refilling Station is offline: all boxes offer DRYING only".
+When the station is not heard (`n[11]` = 0) the Online Server sends `[0,-1,0,0,500,1000,1200,0]` for every box; the page shows every dial as Inactive and raises the alert "The Refilling Station is offline: all boxes offer DRYING only".
 ### ACS list `a[i]` (OBSOLETE: not sent since 2026-11-03; kept only to read old data)
 `[ok, step, flags, empty, warn, alcoholMixerPercent, scentedMixerPercent, pumpMask, stepSeconds]`. `ok` 1 = heard. `step` 0 IDLE ... 10 MAINTENANCE.
 

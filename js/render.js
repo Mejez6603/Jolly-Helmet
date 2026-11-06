@@ -83,16 +83,19 @@ function boxDrawing(def, f) {
 function boxCard(i, b, n, rfi) {                                // rfi = { r: [raw, state, valve, failed, edges...] or null, off: station not heard } when the firmware has the Refilling Station
   const def = BOXES[i];
   const head = (right) => `<div class="card-h"><div><b>${def.name}</b><small>${def.role}</small></div>${right}</div>`;
-  if (!b) return `<div class="card">${head(chip('no data', 'off'))}</div>`;
+  if (!b) return `<div class="card">${head(chip('Inactive', 'off'))}</div>`;
   const brainOn = n[def.brain], termOn = n[def.term], sensOn = n[def.sensors], relOn = n[def.relayBoard];
-  const f = { brainOn, termOn, sensOn, relOn, name: brainOn ? (def.st[b[0]] || ('step ' + b[0])) : 'NOT HEARD',
+  /* the chip says only Active or Inactive: Active = every board of this box is heard AND the data is fresh (the screen in the drawing still shows the step) */
+  const stale = S.link === 'dead' || S.link === 'err', ids = [...new Set([def.term, def.sensors, def.relayBoard, def.brain])];
+  const active = !stale && ids.every(k => n[k]);
+  const f = { brainOn, termOn, sensOn, relOn, name: brainOn ? (def.st[b[0]] || ('step ' + b[0])) : 'INACTIVE',
               timer: nz(b[1], 0), coins: nz(b[2], 0), doors: nz(b[3], 0), helmet: b[4], relays: nz(b[8], 0), lvl: sensOn ? nz(b[5], -1) : -1,
               rf: rfi && !rfi.off ? rfi.r : (rfi ? null : undefined), rfOff: !!(rfi && rfi.off) };
   const same = def.sensors === def.relayBoard, off = [];
-  if (!sensOn) off.push(same ? 'sensor and relay board offline' : 'sensor board offline');
-  if (!relOn && !(same && !sensOn)) off.push('relay board offline');
-  const say = `${def.name}: ${f.name}${brainOn && f.timer > 0 ? ', ' + mmss(f.timer) + ' left' : ''}${termOn ? ', ' + f.coins + ' coins' : ''}${Array.isArray(f.rf) && f.rf[1] >= 0 ? ', main container ' + RF_STATE[f.rf[1]] : (f.lvl >= 0 ? ', main container ' + Math.round(f.lvl) + '%' : '')}`;
-  return `<div class="card">` + head(`<span class="chip state ${brainOn ? stateClass(f.name) : 'off'}">${esc(f.name)}</span>`)
+  if (!sensOn) off.push(same ? 'sensor and relay board inactive' : 'sensor board inactive');
+  if (!relOn && !(same && !sensOn)) off.push('relay board inactive');
+  const say = `${def.name} ${active ? 'active' : 'inactive'}: ${f.name}${brainOn && f.timer > 0 ? ', ' + mmss(f.timer) + ' left' : ''}${termOn ? ', ' + f.coins + ' coins' : ''}${Array.isArray(f.rf) && f.rf[1] >= 0 ? ', main container ' + RF_STATE[f.rf[1]] : (f.lvl >= 0 ? ', main container ' + Math.round(f.lvl) + '%' : '')}`;
+  return `<div class="card">` + head(`<span class="chip state ${active ? 'run' : 'off'}">${active ? 'Active' : 'Inactive'}</span>`)
     + `<svg class="bx-svg" viewBox="0 0 280 296" role="img" aria-label="${esc(say)}">${boxDrawing(def, f)}</svg>`
     + (off.length ? `<div class="chips">${off.map(t => chip(t, 'off')).join('')}</div>` : '') + `</div>`;
 }
@@ -167,32 +170,34 @@ function nmBars(rssi) {                                    // four little bars f
   return '<span class="nm-bars">' + [1, 2, 3, 4].map(i => `<i class="${i <= q ? 'on' : ''}" style="height:${4 + i * 3}px"></i>`).join('') + '</span>';
 }
 function networkMap(L, T, sy) {
-  const link = S.link, stale = link === 'dead' || link === 'err';          // the boards' flags are old: show them as unknown, not green
-  const dotOf = { live: 'ok', late: 'warn', dead: 'bad', err: 'bad', nodata: 'warn' }[link] || 'off';
-  const lineOf = { live: '', late: 'bad', dead: 'bad', err: 'bad' }[link] ?? 'off';       // the lines: solid = fine, red dashes = broken, grey dashes = not known yet
+  /* Every part of the map is either Active (green) or Inactive (red). Anything that is old, silent or not known counts as Inactive. */
+  const link = S.link, stale = link === 'dead' || link === 'err';          // the boards' flags are old: nothing can be called Active
+  const up = link === 'live' || link === 'late';                           // data is arriving
+  const dotOf = up ? 'ok' : 'bad';
+  const lineOf = up ? '' : 'bad';                                          // the lines: solid = Active, red dashes = Inactive
   const known = !!S.live && L.n != null && !stale, n = known ? nodeFlags(L) : [];
-  const netSub = { live: 'Blynk · OK', late: 'Blynk · delayed', dead: 'Blynk · old data', err: 'cannot read Blynk', nodata: 'Blynk · no data yet' }[link] || 'Blynk';
-  const wifiSub = (sy.rssi ? sy.rssi + ' dBm<br>' + nmBars(sy.rssi) : 'site Wi-Fi');
-  const osSub = link === 'live' || link === 'late' ? (sy.up != null ? 'running ' + esc(fmtUp(sy.up)) : 'listens only') : (link === 'dead' ? 'not uploading' : 'listens only');
+  const nmSt = ok => `<b class="nm-st ${ok ? 'ok' : 'bad'}">${ok ? 'Active' : 'Inactive'}</b>`;
+  const netSub = nmSt(up);
+  const wifiSub = nmSt(up) + (up && sy.rssi ? '<br>' + sy.rssi + ' dBm<br>' + nmBars(sy.rssi) : '');
+  const osSub = nmSt(up) + (up && sy.up != null ? '<br>running ' + esc(fmtUp(sy.up)) : '');
   const boxes = BOXES.map((def, i) => {
     const ids = [...new Set([def.term, def.sensors, def.relayBoard, def.brain])], missing = ids.filter(k => !n[k]);
-    if (!known) return nmNode('box', def.name, stale ? 'no recent data' : 'not reported', 'off');
-    /* a box that misses ANY of its boards cannot be used (the screen shows OUT OF ORDER), so it is red and says so, whether one board or all of them are silent */
+    if (!known) return nmNode('box', def.name, nmSt(false), 'bad');
+    /* a box is Active only when ALL of its boards are heard; if some are silent it is Inactive and the map names the silent ones */
     if (missing.length) {
-      const list = missing.length < ids.length ? `<br><span class="nm-miss">missing: ${missing.map(k => esc(NODES[k].replace(/^Box \d /, ''))).join(', ')}</span>` : '<br><span class="nm-miss">no board is heard</span>';
-      return nmNode('box', def.name, `<b class="nm-oos">OUT OF ORDER</b><br>${ids.length - missing.length} of ${ids.length} boards${list}`, 'bad');
+      const list = missing.length < ids.length ? `<br><span class="nm-miss">missing: ${missing.map(k => esc(NODES[k].replace(/^Box \d /, ''))).join(', ')}</span>` : '';
+      return nmNode('box', def.name, nmSt(false) + list, 'bad');
     }
-    return nmNode('box', def.name, `${ids.length} of ${ids.length} boards`, 'ok');
+    return nmNode('box', def.name, nmSt(true), 'ok');
   }).join('');
   const hasRf = Array.isArray(L.rf);
   const open = hasRf ? [0, 1, 2].filter(i => L.rf[i] && L.rf[i][2]).map(i => i + 1) : [];
   const waiting = hasRf ? [0, 1, 2].filter(i => L.rf[i] && L.rf[i][7]).map(i => i + 1) : [];
-  const rsNode = !hasRf ? nmNode('rs', 'Refilling Station', stale ? 'no recent data' : 'not reported', 'off')
-    : !known ? nmNode('rs', 'Refilling Station', 'no recent data', 'off')
-    : n[STATION] ? nmNode('rs', 'Refilling Station', open.length ? 'refilling Box ' + open.join(', ') + (waiting.length ? '<br><span class="nm-miss">waiting: Box ' + waiting.join(', ') + '</span>' : '') : 'heard', 'ok')
-    : nmNode('rs', 'Refilling Station', 'not heard<br><span class="nm-miss">all boxes: drying only</span>', 'bad');
-  const lsHeard = T.cv != null || T.ss != null;
-  const ls = nmNode('ls', 'LocalServer', stale || !S.live ? 'no recent data' : lsHeard ? 'totals received' : 'not heard yet', stale || !S.live ? 'off' : lsHeard ? 'ok' : 'bad');
+  const rsNode = !known || !hasRf ? nmNode('rs', 'Refilling Station', nmSt(false), 'bad')
+    : n[STATION] ? nmNode('rs', 'Refilling Station', nmSt(true) + (open.length ? '<br>refilling Box ' + open.join(', ') + (waiting.length ? '<br><span class="nm-miss">waiting: Box ' + waiting.join(', ') + '</span>' : '') : ''), 'ok')
+    : nmNode('rs', 'Refilling Station', nmSt(false) + '<br><span class="nm-miss">all boxes: drying only</span>', 'bad');
+  const lsHeard = T.cv != null || T.ss != null, lsOn = !stale && !!S.live && lsHeard;
+  const ls = nmNode('ls', 'LocalServer', nmSt(lsOn), lsOn ? 'ok' : 'bad');
   return `<div class="nmap">
     <div class="nm-top">
       <div class="nm-tl">${nmNode('net', 'Internet', netSub, dotOf)}<div class="nm-link ${lineOf}"></div>${nmNode('wifi', 'Wi-Fi', wifiSub, dotOf)}<div class="nm-link nm-l2 ${lineOf}"></div></div>
@@ -205,7 +210,7 @@ function networkMap(L, T, sy) {
       <div class="nm-group"><div class="nm-gtitle">Machines heard on the radio</div><div class="nm-items">${boxes}${rsNode}</div></div>
       <div class="nm-group nm-ls"><div class="nm-gtitle">Server heard</div><div class="nm-items">${ls}</div></div>
     </div>
-    <div class="nm-legend"><span><i class="ok"></i>heard / working</span><span><i class="warn"></i>late</span><span><i class="bad"></i>out of order / not heard</span><span><i class="off"></i>unknown</span></div>
+    <div class="nm-legend"><span><i class="ok"></i>Active</span><span><i class="bad"></i>Inactive</span></div>
   </div>`;
 }
 function nmBracket() {                                     // the horizontal line over the two groups reaches exactly from the middle of one to the middle of the other

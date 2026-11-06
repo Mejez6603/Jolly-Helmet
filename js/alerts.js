@@ -138,7 +138,7 @@ const Alerts = (() => {
     const draw = () => {
       const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d');
       if (logoImg && logoImg.complete && logoImg.naturalWidth) g.drawImage(logoImg, 0, 4, 56, 56 * logoImg.naturalHeight / logoImg.naturalWidth);
-      g.fillStyle = sev === 'critical' ? '#d32f2f' : sev === 'warning' ? '#f59e0b' : '#1c5fa8'; g.beginPath(); g.arc(46, 18, 17, 0, 7); g.fill();
+      g.fillStyle = sev === 'critical' ? '#d32f2f' : sev === 'warning' ? '#ee7d0b' : '#1c5fa8'; g.beginPath(); g.arc(46, 18, 17, 0, 7); g.fill();
       g.fillStyle = '#fff'; g.font = 'bold 22px Arial'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(n > 9 ? '9+' : String(n), 46, 19);
       iconEl.href = c.toDataURL('image/png');
     };
@@ -156,14 +156,16 @@ const Alerts = (() => {
   }
 
   /* ---------------- drawing ---------------- */
-  const sevChip = s => `<span class="chip ${s === 'critical' ? 'bad' : s === 'warning' ? 'warn' : s === 'notice' ? 'use' : ''}">${SEV_NAME[s]}</span>`;
+  const sevChip = s => `<span class="sev ${s}">${SEV_NAME[s]}</span>`;                  // critical red, warning orange, notice blue, info grey (css: .sev)
   function banner() {                                             // the box at the top of the Monitor tab
     const c = counts(), parts = [];
     if (Sound.st.on && !Sound.ready() && !Sound.dismissed) parts.push(`<div class="note" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span>&#128263; Alert sounds are waiting: the browser needs one tap before it lets this page make noise.</span><button class="btn" data-act="sound-on" type="button" style="margin:0">Turn on alert sounds</button></div>`);
     if (c.all.length) {
       const sorted = c.all.slice().sort((a, b) => SEV[b.sev] - SEV[a.sev]);
-      parts.push(`<div class="alert ${c.top}"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center"><span>Needs attention (${c.all.length})</span>${c.unacked.length ? '<button class="btn" data-act="ack-all" type="button" style="margin:0;padding:5px 12px">Acknowledge (stop the repeating sound)</button>' : '<span class="chip">acknowledged</span>'}</div><ul>` +
-        sorted.map(a => `<li>${sevChip(a.sev)} ${esc(a.text)}</li>`).join('') + '</ul></div>');
+      const counts = ['critical', 'warning', 'notice', 'info'].map(s => [s, c.all.filter(a => a.sev === s).length]).filter(x => x[1]);     // "1 CRITICAL  7 WARNING"
+      parts.push(`<div class="alert ${c.top}"><div class="al-head"><span>Needs attention (${c.all.length})</span>${c.unacked.length ? '<button class="btn" data-act="ack-all" type="button" style="margin:0;padding:5px 12px">Acknowledge (stop the repeating sound)</button>' : '<span class="chip">acknowledged</span>'}</div>` +
+        `<div class="al-counts">${counts.map(([s, k]) => `<span class="sev ${s}">${k} ${SEV_NAME[s]}</span>`).join('')}</div><ul>` +
+        sorted.map(a => `<li class="${a.sev}">${sevChip(a.sev)}<span>${esc(a.text)}</span></li>`).join('') + '</ul></div>');
     }
     return parts.join('');
   }
@@ -179,7 +181,7 @@ const Alerts = (() => {
     const c = counts(), now = Date.now();
     // active
     $('alActive').innerHTML = `<div class="card-h"><div><b>Active now</b><small>${c.all.length ? c.all.length + ' alert' + (c.all.length > 1 ? 's' : '') + (c.unacked.length ? '' : ', all acknowledged') : 'nothing needs attention'}</small></div>${c.unacked.length ? '<button class="btn" data-act="ack-all" type="button" style="margin:0;padding:6px 12px">Acknowledge all</button>' : ''}</div>` +
-      (c.all.length ? c.all.slice().sort((a, b) => SEV[b.sev] - SEV[a.sev]).map(a => `<div class="row"><span>${sevChip(a.sev)} ${esc(a.text)}<br><small>since ${when(a.t0)} (${ago((now - a.t0) / 1000)})</small></span></div>`).join('') : '<div class="empty">All clear.</div>');
+      (c.all.length ? c.all.slice().sort((a, b) => SEV[b.sev] - SEV[a.sev]).map(a => `<div class="row al-row ${a.sev}"><span>${sevChip(a.sev)} ${esc(a.text)}<br><small>since ${when(a.t0)} (${ago((now - a.t0) / 1000)})</small></span></div>`).join('') : '<div class="empty">All clear.</div>');
     // sounds + notifications
     const perm = ('Notification' in window) ? Notification.permission : 'unsupported';
     const opts = cur => Object.keys(Sound.PATTERNS).map(k => `<option value="${k}"${k === cur ? ' selected' : ''}>${esc(Sound.PATTERNS[k].label)}</option>`).join('');
