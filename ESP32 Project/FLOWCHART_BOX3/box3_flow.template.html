@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<title>BOX 3 - customer screen flow (TFT)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  @page { size: 1680px 2640px; margin: 0; }
+  html, body { margin: 0; background: #fff; }
+  body { width: 1680px; height: 2640px; position: relative; font-family: 'Segoe UI', Arial, Helvetica, sans-serif; color: #111; overflow: hidden; }
+  body.sheet { width: 2560px; height: auto; overflow: visible; }
+  #chart { position: absolute; left: 0; top: 0; width: 1680px; height: 2640px; }
+  svg#lines { position: absolute; left: 0; top: 0; z-index: 1; }
+  h1 { position: absolute; left: 50px; top: 34px; margin: 0; font-size: 40px; letter-spacing: .5px; font-weight: 800; }
+  .sub { position: absolute; left: 52px; top: 86px; font-size: 20px; color: #333; }
+  .src { position: absolute; right: 50px; top: 38px; text-align: right; font-size: 13px; color: #444; line-height: 18px; }
+  .legend { position: absolute; left: 50px; right: 50px; top: 126px; height: 40px; display: flex; gap: 26px; align-items: center; font-size: 12.5px; border-top: 2px solid #111; padding-top: 6px; }
+  .legend .it { display: flex; align-items: center; gap: 8px; }
+  .legend i { display: inline-block; width: 34px; height: 18px; background: #fff; border: 2px solid #111; border-radius: 4px; box-sizing: border-box; }
+  .legend i.lstart { background: #111; }
+  .legend i.lrun { border-width: 5px; }
+  .legend i.ldlg { border-style: dashed; }
+  .legend i.lfault { border: 4px double #111; }
+  .node { position: absolute; z-index: 2; background: #fff; border: 2px solid #111; border-radius: 9px; box-sizing: border-box; overflow: hidden; }
+  .node.run { border-width: 5px; }
+  .node.dlg { border-style: dashed; }
+  .node.fault { border: 5px double #111; }
+  .node .nh { height: 28px; line-height: 28px; padding: 0 8px; font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: .3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-bottom: 1px solid #111; }
+  .node.start .nh { background: #111; color: #fff; }
+  .node canvas { display: block; width: 224px; height: 168px; margin: 4px auto 0; border-radius: 4px; background: #000; box-shadow: 0 0 0 2px #333; }
+  .node .nc { padding: 5px 8px 0; font-size: 10.5px; line-height: 13px; color: #222; height: 80px; overflow: hidden; }
+  .node .nc b { color: #000; }
+  .node .nc .st { font-family: 'IBM Plex Mono', Consolas, monospace; font-size: 9px; color: #666; }
+  .lab { position: absolute; z-index: 3; font-size: 11px; line-height: 13px; font-weight: 600; background: #fff; padding: 1px 3px; text-align: center; }
+  .lab.left { text-align: left; }
+  .cluster { position: absolute; z-index: 0; border: 2px dotted #888; border-radius: 12px; }
+  .ctitle { position: absolute; z-index: 3; font-size: 12px; font-weight: 800; letter-spacing: .4px; background: #fff; padding: 0 6px; }
+  .tag { display: inline-block; min-width: 16px; text-align: center; font-weight: 800; border: 1.5px solid #111; border-radius: 50%; font-size: 10px; line-height: 14px; margin: 0 1px; }
+  .notes { position: absolute; left: 50px; right: 50px; font-size: 12px; line-height: 17px; border-top: 2px solid #111; padding-top: 8px; }
+  .notes ul { margin: 2px 0 0 0; padding-left: 18px; columns: 2; column-gap: 40px; }
+  .notes li { break-inside: avoid; margin-bottom: 3px; }
+  .warn { color: #b00020; font-weight: 700; }
+  .node.memo { border-style: dotted; border-width: 2px; background: #fafafa; }
+  .node.memo .mb { padding: 10px 12px; font-size: 12.5px; line-height: 17px; }
+  .sheetcell { display: block; width: 640px; height: 480px; }
+  #sheet { display: grid; grid-template-columns: repeat(4, 640px); }
+</style></head>
+<body>
+<div id="chart"></div>
+<script>
+const FLOW = /*FLOW_JSON*/;
+const META = /*META_JSON*/;
+
+/* ------------------------------------------------------------------ the TFT renderer (same drawing rules as the Box Cycle Designer preview) */
+const SCALE = 2, SW = 320, SH = 240;
+const TEXT_SIZE_PX = { 1: 9, 2: 16, 4: 26 };
+const MONO = "'IBM Plex Mono', Consolas, 'Courier New', monospace";
+const STEP = {}; FLOW.steps.forEach((s, i) => { s._i = i; STEP[s.name] = s; });
+
+function parseTokens(str) {
+  const parts = String(str || '').split('|'), bg = parts[0] || '#000000', els = [];
+  for (let i = 1; i < parts.length; i++) {
+    const p = parts[i].split(','), tag = p[0];
+    if (tag === 'ST') els.push({ t: 'ST', x: +p[1], y: +p[2], color: p[3], text: p.slice(4, -2).join(','), anchor: p[p.length - 2] || 'TL', size: +p[p.length - 1] || 2 });
+    else if (tag === 'TT') els.push({ t: 'TT', x: +p[1], y: +p[2], color: p[3], text: p.slice(4, -3).join(','), blink: +p[p.length - 3] || 0, anchor: p[p.length - 2] || 'TL', size: +p[p.length - 1] || 2 });
+    else if (tag === 'BTN') els.push({ t: 'BTN', x: +p[1], y: +p[2], w: +p[3], h: +p[4], color: p[5], label: p.slice(6, -1).join(','), action: p[p.length - 1] });
+    else if (tag === 'SHP') els.push({ t: 'SHP', x: +p[1], y: +p[2], w: +p[3], h: +p[4], color: p[5], filled: p[6] === '1' });
+    else if (tag === 'PBAR') els.push({ t: 'PBAR', x: +p[1], y: +p[2], w: +p[3], h: +p[4], track: p[5], fill: p[6] });
+    else els.push({ t: 'OTHER', tag });
+  }
+  return { bg, els };
+}
+function fmtMMSS(sec) { sec = Math.max(0, Math.round(sec)); return [String(Math.floor(sec / 60)).padStart(2, '0'), String(sec % 60).padStart(2, '0')]; }
+// example values shown on the pictures (the real screen counts live)
+function sampleFor(step) {
+  const nominal = step.durationMode === 'bought' ? FLOW.rules.timeValue * (FLOW.rules.timeUnit === 'sec' ? 1 : 60) : (step.durationSec || 0);
+  const remaining = nominal * 0.6, [mm, ss] = fmtMMSS(remaining);
+  const m = step.relayBitmask || 0;
+  const status = (m & (1 << 12)) ? 'HEAT: ON' : (m & ((1 << 3) | (1 << 5) | (1 << 6))) ? 'MIST: ON' : (m & ((1 << 4) | (1 << 7))) ? 'UV: ON' : 'Standing by...';
+  return { mm, ss, progress: nominal > 0 ? 0.4 : 0, status, coins: 5, required: FLOW.rules.coins };
+}
+function interp(text, sm) {
+  return text.split('{MINUTE}').join(sm.mm).split('{SECOND}').join(sm.ss).split('{TIMER}').join(String(Math.round(parseInt(sm.mm, 10) * 60 + parseInt(sm.ss, 10))))
+    .split('{COINS}').join(String(sm.coins)).split('{REQUIREDCOIN}').join(String(sm.required)).split('{MINCOINS}').join(String(FLOW.rules.coins)).split('{MAXCOINS}').join(String(FLOW.rules.maxCoins))
+    .split('{TRIES}').join('10').split('{TRY}').join('3').split('{STATUS2}').join('').split('{STATUS3}').join('').split('{STATUS}').join(sm.status);
+}
+function rrect(ctx, x, y, w, h, r, color, fill) {
+  ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+  if (fill) { ctx.fillStyle = color; ctx.fill(); } else { ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.stroke(); }
+}
+function drawScreen(canvas, step) {
+  canvas.width = SW * SCALE; canvas.height = SH * SCALE;
+  const ctx = canvas.getContext('2d'), sm = sampleFor(step), tk = parseTokens(step.displayTokens);
+  ctx.fillStyle = tk.bg; ctx.fillRect(0, 0, canvas.width, canvas.height);
+  const al = h => h === 'C' ? 'center' : h === 'R' ? 'right' : 'left', bl = v => v === 'M' ? 'middle' : v === 'B' ? 'bottom' : 'top';
+  tk.els.forEach(el => {
+    if (el.t === 'SHP') { ctx.strokeStyle = ctx.fillStyle = el.color; ctx.lineWidth = 2; if (el.filled) ctx.fillRect(el.x * SCALE, el.y * SCALE, el.w * SCALE, el.h * SCALE); else ctx.strokeRect(el.x * SCALE, el.y * SCALE, el.w * SCALE, el.h * SCALE); }
+    else if (el.t === 'BTN') {
+      rrect(ctx, el.x * SCALE, el.y * SCALE, el.w * SCALE, el.h * SCALE, 6 * SCALE, el.color, true); rrect(ctx, el.x * SCALE, el.y * SCALE, el.w * SCALE, el.h * SCALE, 6 * SCALE, '#FFFFFF', false);
+      ctx.fillStyle = '#FFFFFF'; ctx.font = `600 ${16 * SCALE}px ${MONO}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(el.label, (el.x + el.w / 2) * SCALE, (el.y + el.h / 2) * SCALE);
+    } else if (el.t === 'PBAR') {
+      ctx.fillStyle = el.track; ctx.fillRect(el.x * SCALE, el.y * SCALE, el.w * SCALE, el.h * SCALE);
+      ctx.fillStyle = el.fill; ctx.fillRect(el.x * SCALE, el.y * SCALE, el.w * SCALE * sm.progress, el.h * SCALE);
+      ctx.strokeStyle = 'rgba(0,0,0,0.35)'; ctx.lineWidth = 1; ctx.strokeRect(el.x * SCALE + .5, el.y * SCALE + .5, el.w * SCALE - 1, el.h * SCALE - 1);
+    } else if (el.t === 'ST' || el.t === 'TT') {
+      const text = el.t === 'TT' ? interp(el.text, sm) : el.text;
+      ctx.fillStyle = el.color; ctx.font = `${(TEXT_SIZE_PX[el.size] || 16) * SCALE}px ${MONO}`; ctx.textAlign = al(el.anchor[1]); ctx.textBaseline = bl(el.anchor[0]); ctx.fillText(text, el.x * SCALE, el.y * SCALE);
+    } else { ctx.fillStyle = '#888'; ctx.font = `${12 * SCALE}px ${MONO}`; ctx.textAlign = 'left'; ctx.textBaseline = 'top'; ctx.fillText('[' + el.tag + ']', 8, 8); }
+  });
+}
+
+/* ------------------------------------------------------------------ what the machine does in a step (decoded from the file) */
+const REL = { door: 0, uv1: 4, uv2: 7, hum1: 3, hum2: 5, hum3: 6, coin: 11, heat: 12 };
+const bit = (m, b) => ((m >> b) & 1) === 1;
+function relayText(s) {
+  const m = s.relayBitmask || 0, o = [];
+  if (bit(m, REL.door)) o.push('door lock released');
+  if (bit(m, REL.coin)) o.push('coin slot ON');
+  const h = [REL.hum1, REL.hum2, REL.hum3].filter(b => bit(m, b)).length;
+  if (h === 3) o.push('3 humidifiers (mist)'); else if (h) o.push(h + ' humidifier(s)');
+  if (bit(m, REL.uv1) && bit(m, REL.uv2)) o.push('UV 1 + UV 2'); else if (bit(m, REL.uv1)) o.push('UV 1'); else if (bit(m, REL.uv2)) o.push('UV 2');
+  if (bit(m, REL.heat)) {
+    let t = 'heater';
+    const ph = s.phase && s.phase.relays && s.phase.relays.heat;
+    if (ph !== undefined && !(ph & 4) && s.phase.end && s.phase.end.value > 0) t += ' (OFF for the last ' + s.phase.end.value + (s.phase.end.unit === 'pct' ? ' %' : ' s') + ')';
+    o.push(t);
+  }
+  return o.length ? o.join(' · ') : 'everything off';
+}
+function timeText(s) {
+  if (s.durationMode === 'bought') return 'time bought with the coins';
+  if (s.durationSec > 0) { const [a, b] = fmtMMSS(s.durationSec); return (s.durationSec >= 60 ? parseInt(a, 10) + ':' + b + ' min' : s.durationSec + ' s') + ' fixed'; }
+  return '';
+}
+function btnText(s) { return parseTokens(s.displayTokens).els.filter(e => e.t === 'BTN').map(e => e.label).join(' / '); }
+function exitsText(s) {
+  const nice = { 'btn:CANCEL_YES': 'YES', 'btn:CANCEL_NO': 'NO', 'btn:ABORT_YES': 'CONFIRM', 'btn:ABORT_NO': 'RESUME', timerZero: 'after ' + s.durationSec + ' s' };
+  return s.branches.map(b => {
+    const c = b.conditions.map(x => nice[x.key] || x.key).join(' + ');
+    const g = b.goto === '__return__' ? 'back to the previous screen' : b.goto === 'TAPS' ? 'back to the start screen' : (TITLE[b.goto] || b.goto);
+    return '<b>' + c + '</b> → ' + g;
+  }).join('<br>');
+}
+
+/* ------------------------------------------------------------------ layout */
+const W = 1680, MX = 50, NW = 232, GX = 105, NH = 284, IMGY = 28 + 4, IMGH = 168;
+const ROW = { r1: 190, r1b: 572, r2: 954, r3: 1336, r4: 1718, r5: 2100 };
+const colX = c => MX + c * (NW + GX);
+const COLOR_NOTE = '';
+
+// each node = one picture. "steps" lists the copies in the file (CL = Cleaning mode, DR = Drying mode); the picture is the same.
+const NODES = [
+  { id: 'taps', steps: ['TAPS'], col: 0, row: 'r1', kind: 'start', title: 'Start screen', note: 'Resting screen. Any touch starts.' },
+  { id: 'chkC', steps: ['CHECKING C'], col: 1, row: 'r1', title: 'Checking main container', note: 'Please wait, 2 seconds. The level of the main container comes from the Refilling Station.' },
+  { id: 'welc', steps: ['WELCOME'], col: 2, row: 'r1', title: 'Welcome', note: 'Tap → SELECT MODE. If the Refilling Station is silent (15 s) or the container is EMPTY / LOW → the dry-only screen.' },
+  { id: 'mode', steps: ['SELECT MODE'], col: 3, row: 'r1', title: 'Select mode', note: 'The customer picks CLEANING or DRYING.' },
+  { id: 'dryo', steps: ['SELECT DRY ONLY'], col: 3, row: 'r1b', title: 'Select mode · dry only', note: 'CLEANING is greyed out (the container is EMPTY or LOW, or the Refilling Station is not heard). Only DRYING can be pressed.' },
+  { id: 'coin', steps: ['CL INSERT COIN', 'DR INSERT COIN'], col: 0, row: 'r2', title: 'Insert coin', tag: '①', note: 'PRICE' },
+  { id: 'opnA', steps: ['CL OPEN A', 'DR OPEN A'], col: 1, row: 'r2', title: 'Open the door', note: 'The door stays unlocked until it is opened.' },
+  { id: 'plcA', steps: ['CL SENSORS A', 'DR SENSORS A'], col: 2, row: 'r2', title: 'Place the helmet', tag: '③', note: 'Waits for the helmet. Door closed with no helmet → notice ③.' },
+  { id: 'clsA', steps: ['CL CLOSE DOOR A', 'DR CLOSE DOOR A'], col: 3, row: 'r2', title: 'Close the door', tag: '③', note: 'Door closed + helmet inside → the run starts. No helmet → notice ③.' },
+  { id: 'clen', steps: ['CLEANING BAL'], col: 0, row: 'r3', kind: 'run', title: 'Cleaning (UV + mist)', tag: '②', note: 'Extra coins add time.' },
+  { id: 'cdry', steps: ['CL HEATING'], col: 1, row: 'r3', kind: 'run', title: 'Drying after cleaning', note: 'Starts by itself when the cleaning time is up. Also reached by CANCEL → CONFIRM ②.' },
+  { id: 'wait', steps: ['START HEATING'], col: 2, row: 'r3', title: 'Please wait', note: 'Short transition before the drying starts.' },
+  { id: 'dryg', steps: ['DR HEATING'], col: 3, row: 'r3', kind: 'run', title: 'Drying (UV + heat)', tag: '②', note: 'Extra coins add time.' },
+  { id: 'cool', steps: ['DR COOLDOWN'], col: 4, row: 'r3', kind: 'run', title: 'Cooling down', note: 'Passive cool-down before the door unlocks.' },
+  { id: 'opnB', steps: ['CL OPEN B', 'DR OPEN B'], col: 0, row: 'r4', title: 'Open the door', note: 'The door lock is released.' },
+  { id: 'tkeB', steps: ['CL SENSORS B', 'DR SENSORS B'], col: 1, row: 'r4', title: 'Take the helmet', tag: '④', note: 'Waits until the helmet is out. Door closed with the helmet still inside → notice ④.' },
+  { id: 'clsB', steps: ['CL CLOSE DOOR B', 'DR CLOSE DOOR B'], col: 2, row: 'r4', title: 'Close the door', tag: '④', note: 'Door closed + helmet out → Thank you.' },
+  { id: 'fini', steps: ['CL FINISH', 'DR FINISH'], col: 3, row: 'r4', kind: 'start', title: 'Thank you', note: 'Then back to the start screen.' }
+];
+const OTHERS = [
+  { id: 'cncl', steps: ['CL CANCEL', 'DR CANCEL'], title: '① Cancel? (coin stage)', kind: 'dlg', note: 'Shown by the CANCEL button on INSERT COIN.' },
+  { id: 'abrt', steps: ['CL ABORT', 'DR ABORT'], title: '② Cancel? (during the run)', kind: 'dlg', note: 'Shown by the CANCEL button while cleaning or drying.' },
+  { id: 'nhA', steps: ['CL HELMET NOTICE A', 'DR HELMET NOTICE A'], title: '③ No helmet detected', kind: 'dlg', note: 'Shown 2 s, then back to OPEN THE DOOR.' },
+  { id: 'nhB', steps: ['CL HELMET NOTICE B', 'DR HELMET NOTICE B'], title: '④ Helmet still inside', kind: 'dlg', note: 'Shown 2 s, then back to OPEN THE DOOR.' },
+  { id: 'mnt', steps: ['MAINTENANCE'], title: 'Maintenance', kind: 'dlg', note: 'Technician only: switched on from the LocalServer page.' },
+  { id: 'ooo', steps: ['OUT OF ORDER'], title: 'Out of order', kind: 'fault', note: 'Shown when the sensor board (helmet, enclosure door) or the relay board stops answering: the box cannot run UV safely and takes no coins.' }
+];
+/* notes without a screen (plain text cards) */
+const MEMOS = [{ col: 4, row: 'r1', title: 'Container EMPTY or LOW?', html: 'The box offers <b>DRYING only</b>.<br><br>The <b>Refilling Station</b> fills the container by itself: one valve at a time, EMPTY boxes first, then LOW. Nobody has to do anything; the next customer gets CLEANING again as soon as the container reads MID or more.<br><br>If the station cannot fill it, the owner sees an alert on the Online web page and the LocalServer.' }];
+const TITLE = {}; // step name -> picture title, for the exits
+NODES.concat(OTHERS).forEach(n => n.steps.forEach(s => { TITLE[s] = n.title.replace(/^[①②③④]\s*/, ''); }));
+TITLE['CLEANING BAL'] = 'Cleaning'; TITLE['CL HEATING'] = 'Drying after cleaning'; TITLE['DR COOLDOWN'] = 'Cooling down'; TITLE['DR HEATING'] = 'Drying';
+
+function captionFor(n) {
+  const s = STEP[n.steps[0]]; if (!s) return '<span class="warn">step not found in the file</span>';
+  const out = [];
+  if (n.note === 'PRICE') out.push('<b>' + FLOW.rules.coins + ' coins = ' + FLOW.rules.timeValue + ' ' + (FLOW.rules.timeUnit === 'sec' ? 'sec' : 'min') + '.</b> More coins add time, up to ' + FLOW.rules.maxCoins + ' coins (' + FLOW.rules.maxMinutes + ' min). CANCEL → ①');
+  else if (n.note) out.push(n.note);
+  if (n.kind === 'dlg' || n.kind === 'fault') { if (n.steps[0] !== 'MAINTENANCE' && n.steps[0] !== 'OUT OF ORDER') out.push(exitsText(s)); }
+  else {
+    const m = relayText(s), t = timeText(s), b = btnText(s);
+    if (s.relayBitmask || t) out.push('<b>Machine:</b> ' + m + (t ? ' · <b>' + t + '</b>' : ''));
+    if (b && !/^CANCEL/.test(b)) out.push('Buttons: ' + b);
+  }
+  out.push('<span class="st">' + n.steps.join(' / ') + '</span>');
+  return out.join('<br>');
+}
+
+const chart = document.getElementById('chart');
+const REG = {};
+function place(n, x, y) {
+  const el = document.createElement('div'); el.className = 'node ' + (n.kind || ''); el.style.left = x + 'px'; el.style.top = y + 'px'; el.style.width = NW + 'px'; el.style.height = NH + 'px';
+  const s = STEP[n.steps[0]];
+  el.innerHTML = '<div class="nh">' + n.title + (n.tag && !/^[①②③④]/.test(n.title) ? ' <span class="tag">' + ({ '①': '1', '②': '2', '③': '3', '④': '4' }[n.tag] || '') + '</span>' : '') + '</div><canvas></canvas><div class="nc">' + captionFor(n) + '</div>';
+  chart.appendChild(el);
+  if (s) drawScreen(el.querySelector('canvas'), s);
+  REG[n.id] = { x, y, w: NW, h: NH, cx: x + NW / 2, imgY: y + IMGY + IMGH / 2 };
+}
+const cnt = { checked: 0, bad: [] };
+function verify(pairs, label) {
+  pairs.forEach(([a, b]) => {
+    const sa = STEP[a], sb = STEP[b]; let ok = false;
+    if (sa && sb) ok = sa.branches.some(br => (br.goto === b) || (br.goto === '__next__' && FLOW.steps[sa._i + 1] && FLOW.steps[sa._i + 1].name === b));
+    cnt.checked++; if (!ok) cnt.bad.push(label + ': ' + a + ' → ' + b);
+  });
+}
+
+// header
+chart.insertAdjacentHTML('beforeend', `<h1>JOLLY HELMET · BOX 3</h1><div class="sub">Customer screen flow: what the TFT shows, step by step</div>
+<div class="src">Source: <b>${META.file || 'BOX 3 STEP.txt'}</b> (Box Cycle Designer export)<br>file saved ${META.stamp} · ${FLOW.steps.length} steps · preset “${META.preset}”<br>Pictures are drawn from the screen data in that file (numbers on them are examples).</div>
+<div class="legend"><span class="it"><i class="lstart"></i>start / end screen</span><span class="it"><i></i>screen the customer sees</span><span class="it"><i class="lrun"></i>the machine is running</span><span class="it"><i class="ldlg"></i>side screen (question or notice)</span><span class="it"><i class="lfault"></i>fault</span><span class="it">arrow text = what moves the screen on</span><span class="it"><span class="tag">1</span>&nbsp;side screen shown at the bottom</span></div>`);
+
+const sheetMode = /[?&]sheet/.test(location.search);
+if (sheetMode) { /* contact sheet: every step at 640 x 480, used to cut the single screen pictures */ }
+else {
+  NODES.forEach(n => place(n, colX(n.col), ROW[n.row]));
+  OTHERS.forEach((n, i) => place(n, MX + i * ((W - 2 * MX - NW) / (OTHERS.length - 1)), ROW.r5));
+  MEMOS.forEach(m => { const el = document.createElement('div'); el.className = 'node memo'; el.style.left = colX(m.col) + 'px'; el.style.top = ROW[m.row] + 'px'; el.style.width = NW + 'px'; el.style.height = NH + 'px'; el.innerHTML = '<div class="nh">' + m.title + '</div><div class="mb">' + m.html + '</div>'; chart.appendChild(el); });
+}
+
+/* ------------------------------------------------------------------ arrows */
+const SV = [], LB = [];
+const R = id => REG[id];
+function poly(pts, dashed) { SV.push(`<polyline points="${pts.map(p => p.join(',')).join(' ')}" fill="none" stroke="#111" stroke-width="2.2" ${dashed ? 'stroke-dasharray="7 5"' : ''} stroke-linejoin="round" marker-end="url(#ah)"/>`); }
+function lab(text, x, y, o) { o = o || {}; LB.push(`<div class="lab ${o.left ? 'left' : ''}" style="left:${x}px;top:${y}px;width:${o.w || 98}px;transform:translate(${o.left ? '0' : '-50%'},${o.up === false ? '0' : '-100%'})">${text}</div>`); }
+function hEdge(a, b, text, pairs) { if (pairs) verify(pairs, text); const A = R(a), B = R(b), y = A.imgY; poly([[A.x + A.w, y], [B.x, y]]); lab(text, (A.x + A.w + B.x) / 2, y - 5); }
+function vEdge(a, b, text, pairs, dx, side) { if (pairs) verify(pairs, text); const A = R(a), B = R(b), x = A.cx + (dx || 0); poly([[x, A.y + A.h], [x, B.y]]); lab(text, side === 'l' ? x - 8 : x + 8, (A.y + A.h + B.y) / 2, { left: side !== 'l', w: 86, up: false, }); if (side === 'l') LB[LB.length - 1] = LB[LB.length - 1].replace('translate(-50%,0)', 'translate(-100%,-50%)'); else LB[LB.length - 1] = LB[LB.length - 1].replace('translate(0,0)', 'translate(0,-50%)'); }
+
+if (!sheetMode) {
+  const P = (cl, dr) => [[cl[0], cl[1]], [dr[0], dr[1]]];
+  // row 1
+  hEdge('taps', 'chkC', 'tap', [['TAPS', 'CHECKING C']]);
+  hEdge('chkC', 'welc', 'after 2 s', [['CHECKING C', 'WELCOME']]);
+  hEdge('welc', 'mode', 'tap, container<br>MID or more', [['WELCOME', 'SELECT MODE']]);
+  // EMPTY / LOW container, or the Refilling Station not heard -> dry only (decided at the Welcome tap)
+  { verify([['WELCOME', 'SELECT DRY ONLY']], 'dry only'); const A = R('welc'), B = R('dryo'), x = A.cx + 40, y = B.imgY - 14;
+    poly([[x, A.y + A.h], [x, y], [B.x, y]]); lab('tap, but the container is<br>EMPTY or LOW, or the<br>Refilling Station is silent', x + 8, A.y + A.h + 50, { left: true, w: 150, up: false }); LB[LB.length - 1] = LB[LB.length - 1].replace('translate(0,0)', 'translate(0,-50%)'); }  // select mode -> insert coin (two ways in)
+  { verify([['SELECT MODE', 'CL INSERT COIN'], ['SELECT MODE', 'DR INSERT COIN']], 'mode button'); verify([['SELECT DRY ONLY', 'DR INSERT COIN']], 'dry-only button');
+    const M = R('mode'), D = R('dryo'), C = R('coin'), yG = ROW.r2 - 52, xR = M.x + M.w + 26;
+    poly([[M.x + M.w, M.imgY], [xR, M.imgY], [xR, yG], [C.cx, yG], [C.cx, C.y]]);
+    poly([[D.cx, D.y + D.h], [D.cx, yG]]);
+    lab('CLEANING or DRYING button<br>(DRYING button only, in dry-only)', 700, yG - 3, { w: 330 }); }
+  // row 2
+  hEdge('coin', 'opnA', 'enough coins', [['CL INSERT COIN', 'CL OPEN A'], ['DR INSERT COIN', 'DR OPEN A']]);
+  hEdge('opnA', 'plcA', 'door opened', [['CL OPEN A', 'CL SENSORS A'], ['DR OPEN A', 'DR SENSORS A']]);
+  hEdge('plcA', 'clsA', 'helmet inside', [['CL SENSORS A', 'CL CLOSE DOOR A'], ['DR SENSORS A', 'DR CLOSE DOOR A']]);
+  // fork to the two modes
+  { verify([['CL CLOSE DOOR A', 'CLEANING BAL']], 'to cleaning'); verify([['DR CLOSE DOOR A', 'START HEATING']], 'to drying');
+    const A = R('clsA'), C1 = R('clen'), C2 = R('wait'), yM = ROW.r3 - 52;
+    poly([[A.cx, A.y + A.h], [A.cx, yM], [C1.cx, yM], [C1.cx, C1.y - 6]]);
+    poly([[C2.cx, yM], [C2.cx, C2.y - 6]]);
+    lab('CLEANING chosen:<br>door closed + helmet inside', C1.cx + 12, yM - 3, { w: 190, left: true });
+    lab('DRYING chosen:<br>door closed + helmet inside', C2.cx + 12, yM - 3, { w: 190, left: true }); }
+  // row 3
+  { const a = R('clen'), b = R('cdry'); }
+  hEdge('clen', 'cdry', 'time is up', [['CLEANING BAL', 'CL HEATING']]);
+  hEdge('wait', 'dryg', 'automatic', [['START HEATING', 'DR HEATING']]);
+  hEdge('dryg', 'cool', 'time is up', [['DR HEATING', 'DR COOLDOWN']]);
+  // row 3 -> row 4
+  { verify([['CL HEATING', 'CL OPEN B']], 'dry→open'); verify([['DR COOLDOWN', 'DR OPEN B']], 'cool→open');
+    const D = R('cdry'), K = R('cool'), O = R('opnB'), y1 = ROW.r3 + NH + 30, y2 = ROW.r3 + NH + 54;
+    poly([[D.cx, D.y + D.h], [D.cx, y1], [O.cx - 14, y1], [O.cx - 14, O.y]]);
+    poly([[K.cx, K.y + K.h], [K.cx, y2], [O.cx + 14, y2], [O.cx + 14, O.y]]);
+    lab('time is up', D.cx + 12, y1 - 3, { w: 80, left: true }); lab('time is up', K.cx + 12, y2 - 3, { w: 80, left: true }); }
+  // row 4
+  hEdge('opnB', 'tkeB', 'door opened', [['CL OPEN B', 'CL SENSORS B'], ['DR OPEN B', 'DR SENSORS B']]);
+  hEdge('tkeB', 'clsB', 'helmet taken out', [['CL SENSORS B', 'CL CLOSE DOOR B'], ['DR SENSORS B', 'DR CLOSE DOOR B']]);
+  hEdge('clsB', 'fini', 'door closed,<br>helmet out', [['CL CLOSE DOOR B', 'CL FINISH'], ['DR CLOSE DOOR B', 'DR FINISH']]);
+  // back to the start
+  { verify([['CL FINISH', 'TAPS'], ['DR FINISH', 'TAPS']], 'finish→start'); const F = R('fini'), T = R('taps'), yB = ROW.r4 + NH + 34;
+    poly([[F.cx, F.y + F.h], [F.cx, yB], [24, yB], [24, T.imgY], [T.x, T.imgY]], true);
+    lab('after 5 s: back to the start screen', F.cx - 10, yB - 3, { w: 260, left: false }); }
+  // side screens: only checked against the file (they are linked by the numbers)
+  verify([['CL INSERT COIN', 'CL CANCEL'], ['DR INSERT COIN', 'DR CANCEL'], ['CL CANCEL', 'TAPS'], ['DR CANCEL', 'TAPS']], '① cancel');
+  verify([['CLEANING BAL', 'CL ABORT'], ['CL ABORT', 'CL HEATING'], ['DR HEATING', 'DR ABORT'], ['DR ABORT', 'DR COOLDOWN']], '② abort');
+  verify([['CL SENSORS A', 'CL HELMET NOTICE A'], ['CL CLOSE DOOR A', 'CL HELMET NOTICE A'], ['CL HELMET NOTICE A', 'CL OPEN A'], ['DR SENSORS A', 'DR HELMET NOTICE A'], ['DR CLOSE DOOR A', 'DR HELMET NOTICE A'], ['DR HELMET NOTICE A', 'DR OPEN A']], '③ no helmet');
+  verify([['CL SENSORS B', 'CL HELMET NOTICE B'], ['CL CLOSE DOOR B', 'CL HELMET NOTICE B'], ['CL HELMET NOTICE B', 'CL OPEN B'], ['DR SENSORS B', 'DR HELMET NOTICE B'], ['DR CLOSE DOOR B', 'DR HELMET NOTICE B'], ['DR HELMET NOTICE B', 'DR OPEN B']], '④ helmet inside');
+
+  // clusters
+  const c1 = R('clen'), c2 = R('cool'), w1 = R('wait');
+  const cl = (x0, x1, title, tx) => { chart.insertAdjacentHTML('beforeend', `<div class="cluster" style="left:${x0}px;top:${ROW.r3 - 34}px;width:${x1 - x0}px;height:${NH + 44}px"></div><div class="ctitle" style="left:${tx}px;top:${ROW.r3 - 44}px">${title}</div>`); };
+  cl(R('clen').x - 12, R('cdry').x + NW + 12, 'IF CLEANING WAS CHOSEN', R('cdry').x + NW - 150);
+  cl(R('wait').x - 12, R('cool').x + NW + 12, 'IF DRYING WAS CHOSEN', R('cool').x + NW - 140);
+  chart.insertAdjacentHTML('beforeend', `<div class="ctitle" style="left:${MX}px;top:${ROW.r5 - 40}px;font-size:14px">SIDE SCREENS <span style="font-weight:400">(numbers ① ② ③ ④ in the chart above)</span></div>`);
+
+  // notes
+  const covered = new Set(); NODES.concat(OTHERS).forEach(n => n.steps.forEach(s => covered.add(s)));
+  const missing = FLOW.steps.map(s => s.name).filter(n => !covered.has(n));
+  const verdict = cnt.bad.length ? `<span class="warn">Check: ${cnt.bad.length} of ${cnt.checked} connections are NOT in the file: ${cnt.bad.join('; ')}</span>` : `All ${cnt.checked} connections in this chart were checked against the file: they all exist.`;
+  chart.insertAdjacentHTML('beforeend', `<div class="notes" style="top:${ROW.r5 + NH + 28}px"><b>Notes</b><ul>
+  <li>Steps named <b>CL …</b> (Cleaning) and <b>DR …</b> (Drying) are two copies of the same screens in the Designer; the chart shows each picture once.</li>
+  <li>${verdict}</li>
+  <li>The time on the pictures, the progress bar, the coin count and the status line are examples; on the unit they count live.</li>
+  <li>${missing.length ? '<span class="warn">Steps in the file that are not drawn: ' + missing.join(', ') + '</span>' : 'Every step in the file is drawn.'}</li>
+  <li>SAFETY PAUSE (a door opens during a run) is built into the box and is not a step in this file, so it is not drawn.</li>
+  <li>Removed from the old flow: ratings, time picker, mist choice, free retry and the refill screens (the Refilling Station fills the containers by itself, the box only reads the level).</li></ul></div>`);
+
+  chart.insertAdjacentHTML('afterbegin', `<svg id="lines" width="${W}" height="2640" viewBox="0 0 ${W} 2640"><defs><marker id="ah" markerWidth="11" markerHeight="11" refX="9" refY="5.5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L11,5.5 L0,11 z" fill="#111"/></marker></defs>${SV.join('')}</svg>`);
+  chart.insertAdjacentHTML('beforeend', LB.join(''));
+} else {
+  document.body.classList.add('sheet');
+  const grid = document.createElement('div'); grid.id = 'sheet'; document.body.appendChild(grid); chart.style.display = 'none';
+  FLOW.steps.forEach(s => { const c = document.createElement('canvas'); c.className = 'sheetcell'; grid.appendChild(c); drawScreen(c, s); });
+}
+// fonts: draw again once IBM Plex Mono has arrived (the first draw may have used the fallback)
+if (document.fonts && document.fonts.load) {
+  document.fonts.load("600 16px 'IBM Plex Mono'").then(() => document.fonts.ready).then(() => {
+    if (sheetMode) document.querySelectorAll('canvas.sheetcell').forEach((c, i) => drawScreen(c, FLOW.steps[i]));
+    else document.querySelectorAll('.node canvas').forEach(c => { const n = NODES.concat(OTHERS)[[...document.querySelectorAll('.node canvas')].indexOf(c)]; drawScreen(c, STEP[n.steps[0]]); });
+    document.title += ' [ready]';
+  });
+}
+</script>
+</body></html>

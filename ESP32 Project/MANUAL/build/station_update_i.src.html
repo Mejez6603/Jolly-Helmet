@@ -1,0 +1,88 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Manual v11, part I: technician guide without pumps and the safety slide, new Online Server setup page and web page (2026-11-04)</title></head><body>
+<!-- Run on the output of part H. -->
+<div class="op" data-op="xe-terms">[["Online Server","Online Server"],["Network map (setup page)","Network Map"],["Level dials (early warning)","level dials?"],["Power cut (power-to-unlock)","power-to-unlock"],["Door lock (solenoid)","lock"],["Trapped helmet","trapped helmet"]]</div>
+
+<!-- ============================================================ 0. removals -->
+<div class="op" data-op="delete-para" data-startswith="The enclosure door also has a mechanical safety slide (lower left) that unlocks it by hand"></div>
+<div class="op" data-op="delete-row" data-after="Heading3:Loads" data-n="1" data-row="Drain pump, 5 V"></div>
+<div class="op" data-op="delete-row" data-after="Heading3:What is in each unit" data-n="1" data-row="Drain pumps"></div>
+<div class="op" data-op="delete-section" data-after="Heading3:Safety slide on the enclosure door"></div>
+<div class="op" data-op="delete-row" data-after="Heading3:Calibrate" data-n="1" data-row="Container lines"></div>
+<div class="op" data-op="delete-row" data-after="Heading3:Calibrate" data-n="1" data-row="Water sensors"></div>
+
+<!-- ============================================================ 1. inserted blocks -->
+<div class="ins" data-after="ManualList:One number decides &quot;helmet inside&quot; for S3B, B3 and B1: Helmet counts as inside under (Box 3 page, default 15 cm). B3 and B1 learn it from S3B and keep it in their own memory.">
+<ul>
+<li>There is no mechanical release on the enclosure door. With no power at all (the UPS empty) the lock stays shut until the power is back, so size the UPS for the longest power cut you expect.</li>
+</ul>
+</div>
+
+<!-- ============================================================ 2. small edits -->
+<div class="op" data-op="cell-set" data-after="Heading3:The 14 boards" data-n="1" data-row="A3" data-col="2">12 relays: 4 locks, 3 humidifiers, 2 UV, coin power (2 channels spare). (ESP32_A3)</div>
+<div class="op" data-op="cell-set" data-after="Heading3:The 14 boards" data-n="1" data-row="B3" data-col="2">13 relays (11 used: 4 locks, 3 humidifiers, 2 UV, coin power, heater; the 2 spare channels are never driven). All off after 15 s without S3B; releases a trapped helmet. (ESP32_B3)</div>
+<div class="op" data-op="replace-text" data-from="(heater, UV, mist, pumps, coin power)" data-to="(heater, UV, mist, coin power)"></div>
+
+<div class="op" data-op="cell-set" data-after="Heading3:Loads" data-n="1" data-row="Humidifier (mist maker), 5 V" data-col="2">Box 1: 3, Box 3: 3</div>
+<div class="op" data-op="cell-set" data-after="Heading3:Power and protection" data-n="1" data-row="DC-DC power module, 12 V in, 3.3 V and 5 V out (multi output)" data-col="2">All ESP32 boards, screens, relay boards, sensors, mist makers</div>
+<div class="op" data-op="replace-para" data-startswith="Not electrical: the main containers"><p>Not electrical: the main containers (one per box), one water supply (a tank or a tap) for the Refilling Station, tubing and fittings.</p></div>
+
+<div class="op" data-op="replace-para" data-startswith="B2 (Box 3) reads only the helmet ultrasonic"><p>B2 (Box 3) reads only the helmet ultrasonic (GPIO 26 and 25) and the four door switches (27, 14, 19, 18; the last one is the Side door). The container ultrasonics (32, 33, 23, 22) and the two water sensors (34, 35) are not read by the B2 firmware: the Refilling Station reads the containers. On A2 they belong to the earlier Box 1 program and the Box 3 flow does not use them.</p></div>
+<div class="op" data-op="cell-set" data-after="Heading3:A3 - Box 1 relays (16-channel board)" data-n="1" data-row="18" data-col="2">Humidifier 1</div>
+<div class="op" data-op="cell-set" data-after="Heading3:A3 - Box 1 relays (16-channel board)" data-n="1" data-row="19" data-col="2">Humidifier 2</div>
+<div class="op" data-op="cell-set" data-after="Heading3:A3 - Box 1 relays (16-channel board)" data-n="1" data-row="25" data-col="2">Humidifier 3</div>
+<div class="op" data-op="cell-set" data-after="Heading3:A3 - Box 1 relays (16-channel board)" data-n="1" data-row="33" data-col="2">Spare (not used)</div>
+<div class="op" data-op="cell-set" data-after="Heading3:A3 - Box 1 relays (16-channel board)" data-n="1" data-row="33" data-col="3">-</div>
+<div class="op" data-op="cell-set" data-after="Heading3:A3 - Box 1 relays (16-channel board)" data-n="1" data-row="32" data-col="2">Spare (not used)</div>
+<div class="op" data-op="cell-set" data-after="Heading3:A3 - Box 1 relays (16-channel board)" data-n="1" data-row="32" data-col="3">-</div>
+<div class="op" data-op="replace-text" data-from="Locks and the coin slot are 12 V, humidifiers and drain pumps 5 V." data-to="Locks and the coin slot are 12 V, humidifiers 5 V."></div>
+<div class="op" data-op="replace-para" data-startswith="Box 3 notes: the two drain pump channels"><p>Box 3 notes: the two spare channels (GPIO 33 and 32) are never driven by the B3 firmware, whatever S3B or a dashboard asks. The lock on GPIO 23 is the SIDE LOCK (the lock of the side door).</p></div>
+
+<div class="op" data-op="replace-text" data-from="Every lock, lamp, pump and heater" data-to="Every lock, lamp, mist maker and heater"></div>
+<div class="op" data-op="replace-text" data-from="humidifiers, pumps)" data-to="humidifiers)"></div>
+<div class="op" data-op="replace-text" data-from="Locks, pumps and heaters starting" data-to="Locks and heaters starting"></div>
+<div class="op" data-op="replace-para" data-startswith="The locks are power-to-unlock: the relay is ON only while the door may open"><p>The locks are power-to-unlock: the relay is ON only while the door may open (the OPEN steps, Maintenance, or the trapped-helmet release). With no power a solenoid keeps its door locked. The 1N4007 takes the voltage spike when the relay lets go of the coil. Without it the spike can reset the board and burn the relay contacts.</p></div>
+<div class="op" data-op="replace-para" data-startswith="After a power cut the solenoid locks stay shut"><p>After a power cut the solenoid locks stay shut until the power is back. The UPS on B1, B2, B3 and the lock supply keeps Box 3 able to release a trapped helmet. When power is back, release a lock from the Control Center: Box page, Maintenance, ENCLOSURE LOCK. It switches itself off after 60 seconds.</p></div>
+<div class="op" data-op="replace-para" data-startswith="Hand-set relays in Maintenance switch themselves off after 2 seconds"><p>Hand-set relays in Maintenance switch themselves off after 2 seconds (the box does it by itself; the coin power is exempt, and the tick box Bypass Safety 2 Seconds Relay turns it off). With the bypass the heater still goes off after 5 minutes and the enclosure lock after 60 seconds.</p></div>
+
+<!-- Online monitoring: the setup page is a router-style page now, the web page has dials and a network map -->
+<div class="op" data-op="replace-para" data-startswith="On a phone, join the Wi-Fi JollyHelmet-Online"><p>On a phone, join the Wi-Fi JollyHelmet-Online (password 12345678). The setup page opens by itself. If it does not, open http://192.168.4.1. It looks like a router page: the menu button (three bars, top left) opens Network Map, Internet, Blynk and More settings.</p></div>
+<div class="op" data-op="replace-para" data-startswith="Tap Search for networks and tap your Wi-Fi"><p>Open <b>Internet</b>. Tap Search for networks and tap your Wi-Fi, or type its name (Network name). Type its password (Show lets you check it).</p></div>
+<div class="op" data-op="replace-para" data-startswith="Paste the Blynk Auth Token."><p>Open <b>Blynk</b> and paste the Blynk device Auth Token. The Public status device token is optional (see Customer status page below).</p></div>
+<div class="op" data-op="replace-para" data-startswith="Choose how often to send."><p>Open <b>More settings</b>. Choose how often to send (1 minute is a good start), the time zone (8 for the Philippines) and, if you want the quota line on the web page, the number of Blynk messages your plan gives per month. Tick "single numbers V1 to V4" and "Blynk event" only if you made them in Blynk.</p></div>
+<div class="op" data-op="replace-para" data-startswith="Tap Save and connect. The board tests the Wi-Fi and Blynk at once."><p>Tap <b>Save and connect</b>. The board tests the Wi-Fi and Blynk at once. The setup page may stop answering for a few seconds: this is normal, the board moves to your router's channel. It reconnects by itself and Network Map shows the result.</p></div>
+<div class="op" data-op="replace-png" data-after="Heading3:Step 2 - Set up the Online Server" data-n="1" data-src="images/v11/portal_map_new.png"></div>
+<div class="op" data-op="replace-png" data-after="Heading3:Step 2 - Set up the Online Server" data-n="2" data-src="images/v11/portal_map.png"></div>
+<div class="op" data-op="replace-png" data-after="Heading3:Step 2 - Set up the Online Server" data-n="3" data-src="images/v11/portal_map_bad.png"></div>
+<div class="op" data-op="replace-text" data-from="The setup page: not set up yet, online, not connected (wrong password)" data-to="The Network Map of the setup page: not set up yet, online, not connected (wrong password)"></div>
+<div class="op" data-op="cell-set" data-after="Heading3:Step 2 - Set up the Online Server" data-n="2" data-row="On the setup page" data-col="0" data-bold="yes">On the Network Map</div>
+<div class="op" data-op="cell-set" data-after="Heading3:Step 2 - Set up the Online Server" data-n="2" data-row="Machines heard" data-col="1">Under "Machines heard on the radio": Box 1 4 of 4 boards, Box 2 3 of 3, Box 3 4 of 4 and the Refilling Station heard, 12 boards in all. A grey or amber dot means one is missing.</div>
+<div class="op" data-op="cell-set" data-after="Heading3:Step 2 - Set up the Online Server" data-n="2" data-row="Revenue totals" data-col="1">Under "Server heard": the LocalServer says "totals 6 s ago" when it is on. "Not heard yet": switch it on or reflash it.</div>
+<div class="op" data-op="cell-set" data-after="Heading3:Step 2 - Set up the Online Server" data-n="2" data-row="Revenue totals" data-col="0" data-bold="yes">LocalServer (totals)</div>
+
+<div class="op" data-op="replace-png" data-after="Heading3:Step 3 - Open the web page" data-n="1" data-src="images/v11/web_monitor_desk.png"></div>
+<div class="op" data-op="replace-png" data-after="Heading3:Step 3 - Open the web page" data-n="2" data-src="images/v11/monitor_alerts.png"></div>
+<div class="op" data-op="replace-table" data-after="Heading3:Reading the web page" data-n="1" data-w="1.5,4.5">
+<table><tr><th>Part</th><th>What it shows</th></tr>
+<tr><td>Badge (top right)</td><td>LIVE green: fresh data. DELAYED amber: a little late. OLD DATA red: nothing new for a long time. BAD TOKEN or NO LINK: the page cannot read Blynk. Next to it: "updated 5 s ago".</td></tr>
+<tr><td>Needs attention (red box)</td><td>A box out of order, the Refilling Station offline, a failed refill, a sensor fault, a board that is not heard, or a container getting low (early warning).</td></tr>
+<tr><td>Analytics</td><td>Customers served, revenue, coins counted, average session, today's revenue and customers.</td></tr>
+<tr><td>Levels</td><td>One dial for the main container of each box, read by the Refilling Station: red = EMPTY or LOW, yellow = MID, yellow-green = HIGH, green = MAX. A valve symbol lights while the station fills that container.</td></tr>
+<tr><td>Machines</td><td>A card for Box 1, Box 2 and Box 3: the step (green = running, blue = a customer is using it, amber = needs attention, red = out of order), time left, coins, helmet in or not, the UV lamps, mist makers, heater and fan that are on, the door locks and the level of the main container.</td></tr>
+<tr><td>Last 14 days, Last cycles</td><td>Revenue per day (today on the right) and the last 10 sessions (revenue and length).</td></tr>
+<tr><td>Network map</td><td>Blynk, the Wi-Fi with its signal, the Online Server and the boards it hears on the radio for each box, the Refilling Station and the LocalServer. Green = working, amber = some missing, red = not heard.</td></tr>
+<tr><td>Online Server details</td><td>How long it has run, why it last restarted, the Wi-Fi signal at the site, free memory and the Blynk messages used this month.</td></tr>
+<tr><td>Buttons</td><td>QR: the QR code and the sign for the customer page. The half-moon switches light and dark. Settings: token, Blynk server and refresh time (5 seconds to 1 minute).</td></tr>
+</table></div>
+<div class="op" data-op="replace-para" data-startswith="If a box shows &quot;sensor board offline&quot;"><p>If a box shows "sensor board offline", the page does not hear that board, so it hides that box's doors and helmet instead of showing wrong numbers.</p></div>
+
+<!-- maintenance and calibration -->
+<div class="op" data-op="replace-text" data-from=" Test the safety slide of each enclosure door: with the power off, sliding it down must unlock the door by hand." data-to=""></div>
+<div class="op" data-op="replace-text" data-from="Replace pump tubing and slow pumps." data-to="Replace worn tubing."></div>
+<div class="op" data-op="cell-set" data-after="Heading3:Calibrate" data-n="1" data-row="Helmet distance" data-col="1">Box page, Sensors: put a helmet in, tap use live, raise the number a little, then Send.</div>
+<div class="op" data-op="replace-text" data-from="A spare valve, spare pumps (Box 1 drains) and tubing," data-to="A spare valve and tubing,"></div>
+<div class="op" data-op="cell-set" data-after="Heading2:Hardware troubleshooting" data-n="1" data-row="Screen goes white when a lock or pump switches" data-col="0" data-bold="yes">Screen goes white when a lock or heater switches</div>
+<div class="op" data-op="cell-set" data-after="Heading2:Hardware troubleshooting" data-n="1" data-row="A lock does not release" data-col="2">Measure the solenoid while its relay is ON. Push the door in a little.</div>
+<div class="op" data-op="cell-set" data-after="Heading2:Hardware troubleshooting" data-n="1" data-row="Helmet stuck after a power cut" data-col="1">Locks are power-to-unlock: without power they stay shut</div>
+<div class="op" data-op="cell-set" data-after="Heading2:Hardware troubleshooting" data-n="1" data-row="Helmet stuck after a power cut" data-col="2">Check the UPS and the lock supply. When power is back, test the solenoid with Maintenance, ENCLOSURE LOCK. See the decision tree The door will not open.</div>
+</body></html>

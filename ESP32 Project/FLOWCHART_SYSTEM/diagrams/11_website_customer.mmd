@@ -1,0 +1,42 @@
+---
+title: 11 - The website inside, part 2 - the customer page (status.html, from the QR sticker)
+config:
+  flowchart:
+    wrappingWidth: 380
+---
+flowchart TB
+  classDef cBox fill:#ffffff,stroke:#111111,stroke-width:2px,color:#111111
+  classDef cSrv fill:#ffffff,stroke:#111111,stroke-width:5px,color:#111111
+  classDef cDb fill:#eeeeee,stroke:#111111,stroke-width:3px,color:#111111
+  classDef cPeople fill:#ffffff,stroke:#666666,stroke-width:1.5px,stroke-dasharray:3 3,color:#111111
+  classDef cSide fill:#ffffff,stroke:#111111,stroke-width:2px,stroke-dasharray:5 4,color:#111111
+  classDef cBad fill:#ffffff,stroke:#111111,stroke-width:4px,color:#111111
+
+  OPEN(["A customer scans the QR sticker on the machine<br/>the address is status.html with the PUBLIC token in it"]):::cPeople
+  FILES["The phone downloads the page files from the website (Vercel): HTML, CSS, JS<br/>From here on the page runs inside the phone and talks to Blynk by itself.<br/>The website never sees the data."]:::cSrv
+  PTOK{"public token known?"}
+  PNO["message: there is no information,<br/>please look at the machine itself"]:::cBad
+  BLYNK[("BLYNK CLOUD<br/>the online database<br/>public device: V0 box steps, V5 nicknames<br/>holds only: free, busy or out of order")]:::cDb
+
+  PLOOP["every 30 s, only while the page is open and visible<br/>HTTPS GET the PUBLIC device: V0 (box steps) and V5 (nicknames)"]
+  PUSE{"data usable?"}
+  PBAD["every card: the information is not up to date,<br/>please look at the machine itself"]:::cBad
+  CLS["each box is classed from its step name<br/>board silent: NO INFORMATION · step OUT OF ORDER · step MAINTENANCE<br/>IDLE or TAPS: FREE · SELECT DRY ONLY: drying only<br/>SAFETY PAUSE: IN USE, paused · any other step: IN USE with minutes left"]
+  PCARD["three cards: Box 1, Box 2, Box 3<br/>English / Filipino button, prices and the something-wrong line from js/config.js<br/>redrawn every second (updated x ago, minutes left)"]
+  NAMEQ{"customer taps<br/>Add your name?"}
+  WR["the page writes ONE value, the only write of the whole website:<br/>V5 = the name + the box session counter + time (public token)"]
+  CLR["everybody sees the name on that card, for example Maria's helmet<br/>it clears when the session counter changes (the cycle ended),<br/>or after 45 minutes if there is no counter<br/>the customer's own phone says: your helmet is done"]
+
+  OPEN --> FILES --> PTOK
+  PTOK -->|"no"| PNO
+  PTOK -->|"yes: QR address, js/config.js, saved in the phone,<br/>or a staff phone that has the private token"| PLOOP
+  PLOOP <-->|"public token"| BLYNK
+  PLOOP --> PUSE
+  PUSE -->|"no: an error, or the data is older than<br/>4 min or 4 x interval + 1 min"| PBAD
+  PUSE -->|"yes"| CLS
+  CLS --> PCARD
+  PCARD --> NAMEQ
+  NAMEQ -->|"yes (only on a box<br/>that is running a cycle)"| WR
+  WR -->|"write V5"| BLYNK
+  WR --> CLR
+  PCARD -.->|"wait 30 s, then ask again"| PLOOP

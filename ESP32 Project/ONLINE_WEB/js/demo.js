@@ -10,9 +10,9 @@ function demoAll() {
   const clamp = v => Math.max(0, Math.min(100, Math.round(v)));
   const seq = Math.floor(t / 5);                                      // "new data" every 5 s
 
-  // Box 1 (step numbers of ST13): TAPS 10, RATE A 12, INSERT COIN 14, CLEANING 5, FINISH 8
+  // Box 1 (step numbers of ST13): TAPS 10, INSERT COIN 14, CLEANING 5, FINISH 8
   const p1 = t % 150; let b1;
-  if (p1 < 20) b1 = [10, 0, 0, 0, 0]; else if (p1 < 30) b1 = [12, 0, 0, 0, 0]; else if (p1 < 40) b1 = [14, 0, Math.min(9, Math.floor((p1 - 30) / 1.2)), 0, 0];
+  if (p1 < 30) b1 = [10, 0, 0, 0, 0]; else if (p1 < 40) b1 = [14, 0, Math.min(9, Math.floor((p1 - 30) / 1.2)), 0, 0];
   else if (p1 < 130) b1 = [5, Math.round(130 - p1), 9, 0, 7]; else b1 = [8, 0, 9, p1 < 136 ? 1 : 0, 0];
   const rl1 = b1[0] === 5 ? (1 << 3 | 1 << 4 | 1 << 5 | 1 << 6 | 1 << 7 | 1 << 11) : (b1[0] === 14 ? 1 << 11 : 0);
 
@@ -29,24 +29,25 @@ function demoAll() {
   const rl3 = b3[0] === 31 ? (1 << 12 | 1 << 4 | 1 << 7) : 0;
 
   const cc = ((Date.now() - DEMO_T0) / 1000 + 25) % 120;
-  const cyOos = cycle && cc >= 20 && cc < 50, cyLow = cycle && cc >= 40 && cc < 75, cyEarly = cycle && cc >= 25 && cc < 40, cyTank = cycle && cc >= 60 && cc < 95, cyOff = cycle && cc >= 85 && cc < 110, cyPause = cycle && cc >= 100 && cc < 115;
+  const stOff = cycle && cc >= 60 && cc < 95;                       // the Refilling Station goes offline for a while (?demo=cycle)
+  const cyOos = cycle && cc >= 20 && cc < 50, cyLow = cycle && cc >= 40 && cc < 75, cyEarly = cycle && cc >= 25 && cc < 40, cyOff = cycle && cc >= 85 && cc < 110, cyPause = cycle && cc >= 100 && cc < 115;
   if (alerts || cyOos) b2 = [24, 0, 0, 0, 0];                       // Box 2 OUT OF ORDER
   if (cyPause) b1[0] = 9;                                           // Box 1 SAFETY PAUSE
   const offA2 = alerts || cyOff;
   const box1 = offA2 ? [b1[0], b1[1], b1[2], 0, -1, -1, -1, 0, 0]                                   // Box 1 sensor board (A2) offline: no doors, helmet or levels
-                      : [...b1, clamp(72 + 10 * Math.sin(t / 220)), clamp(55 + 8 * Math.sin(t / 170 + 1)), 0, rl1];
+                      : [...b1, -1, -1, 0, rl1];
+  const rfv = (raw, valve, fail, queued) => { raw = Math.max(0, Math.round(raw)); return [raw, raw <= 0 ? 0 : raw < 500 ? 1 : raw < 1000 ? 2 : raw < 1200 ? 3 : 4, valve, fail, 500, 1000, 1200, queued ? 1 : 0]; };
   const L = {
     seq, ts: Math.floor(Date.now() / 1000), iv: 60,
-    n: offA2 ? '1011111111111' : '1111111111111',
+    n: (offA2 ? '10111111111' : '11111111111') + (stOff ? '0' : '1'),
     b: [
       box1,
       [...b2, -1, -1, 0, rl2],
-      [...b3, clamp((alerts || cyLow) ? 12 : cyEarly ? 26 : 64 + 6 * Math.sin(t / 190)), clamp(41 + 6 * Math.sin(t / 140)), 1, rl3]
+      [...b3, -1, -1, 0, rl3]
     ],
-    a: [
-      [1, 0, 0, 0, 0, clamp(84 + 4 * Math.sin(t / 90)), clamp(66 + 5 * Math.sin(t / 110)), 0, 0],
-      (alerts || cyTank) ? [1, 9, 0, 4, 0, 88, 12, 0, 240] : [1, (Math.floor(t / 20) % 5), 0, 0, 0, 60 + (t % 60) / 3, 70, 0, 0]
-    ]
+    // the Refilling Station: per box [raw, state 0-4 (-2 = not watched), valve open, refill failed, mid edge, high edge, max edge, waiting in the queue]; for now it watches Box 3 only
+    rf: [[0, -2, 0, 0, 500, 1000, 1200, 0], [0, -2, 0, 0, 500, 1000, 1200, 0],
+         alerts ? rfv(0, 0, 1) : cyLow ? rfv(230 + (t % 20) * 12, 1, 0) : cyEarly ? rfv(640, 0, 0) : rfv(1020 + 60 * Math.sin(t / 190), 0, 0)]
   };
 
   const n0 = 41 + Math.floor(t / 150), coins = n0 * 8 + 3, hist = [], dy = [];
@@ -54,9 +55,8 @@ function demoAll() {
   const perDay = [22, 31, 18, 40, 27, 35, 12, 44, 29, 38, 25, 33, 41, 20];       // coins per day (oldest first); the last one is "today"
   perDay.forEach((c, i) => dy.push([c + (i === 13 ? Math.floor(t / 150) * 8 : 0), Math.round(c / 8)]));
   const hr = [0, 0, 0, 0, 0, 1, 3, 6, 9, 12, 14, 11, 8, 10, 13, 15, 18, 22, 25, 19, 11, 6, 2, 1].map(v => v + Math.floor(n0 / 20)), wd = [18, 12, 15, 17, 21, 34, 41];
-  const bx = [[Math.round(n0 * 0.46), Math.round(n0 * 0.46) * 15], [Math.round(n0 * 0.2), Math.round(n0 * 0.2) * 10], [Math.round(n0 * 0.34), Math.round(n0 * 0.34) * 15]];
-  const rs = [2, Math.floor(Date.now() / 1000) - 3 * 86400, 20, 200, 83, coins - 83, 100, 1];          // corrected old data (made up): [update, captured at, customers, coins counted, restated coins, coins since, cv x100, mode]
-  L.st = { cv: 1, ss: n0, cn: coins, rv: coins, ad: 412, rs, h: hist, dy, sn: Math.floor(Date.now() / 1000) - 9 * 86400, bx, hr, wd,
+  const bx = [[Math.round(n0 * 0.46), Math.round(n0 * 0.46) * 15], [Math.round(n0 * 0.2), Math.round(n0 * 0.2) * 15], [Math.round(n0 * 0.34), Math.round(n0 * 0.34) * 15]];
+  L.st = { cv: 1, ss: n0, cn: coins, rv: coins, ad: 412, h: hist, dy, sn: Math.floor(Date.now() / 1000) - 9 * 86400, bx, hr, wd,
     sys: { up: Math.floor(t + 18000), rst: 'power-on', boots: 3, rssi: -58, heap: 162000, mq: 31800 + Math.floor(t % 1000), mqmax: 100000 } };
   return { v0: JSON.stringify(L) };
 }

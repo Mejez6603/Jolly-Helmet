@@ -31,7 +31,11 @@ enum DeviceID : uint8_t {
     DEVICE_S3B    = 12, // Box 3 Internal Server Management (ESP32-S3) - runs the whole Box 3 customer flow, like S3A for Box 1
     // --- 2026-10-03: DEVICE_ACS (3) is now ACS 1 = Box 1's refill system; ACS 2 = Box 3's refill system has its own ID so the two
     // boards never answer each other's boxes (S3A asks DEVICE_ACS, S3B asks DEVICE_ACS2). Both run the same sketch design. ---
-    DEVICE_ACS2   = 13
+    DEVICE_ACS2   = 13,
+    // --- 2026-11-03: the REFILLING STATION ("D1", an ESP32-WROOM with 3 water-level sensors and 3 normally closed solenoid valves, one pair per box)
+    // replaces ACS 1 and ACS 2 (DEVICE_ACS / DEVICE_ACS2 stay here until the ACS firmware is removed everywhere). It works ALONE: it opens a box's valve
+    // when that box's container is EMPTY or LOW and tells everybody the result in a RefillStatusPacket; the boxes never ask it for anything. ---
+    DEVICE_REFILL = 14
 };
 
 // Box 2's state machine - shared here (not Master-local) so both Node S3C (which runs it)
@@ -133,7 +137,12 @@ enum MachineState : uint8_t {
     STATE_SELECT_DRY_ONLY = 30, // same screen with CLEANING greyed out and not pressable (containers low and the refill gave up)
     STATE_DRYING          = 31, // the DRYING procedure's heating step: Heater + UV 1 + UV 2 (the Designer's HEATING / HEATING FREE)
     STATE_COOL_DOWN       = 32, // Box 3's passive wait after the heating (no fan on Box 3): everything off, for a number of seconds
-    STATE_RATE_B1         = 33  // cleaning only: the DRYNESS rating after the clean (the odor rating that follows is STATE_RATE_B)
+    STATE_RATE_B1         = 33, // cleaning only: the DRYNESS rating after the clean (the odor rating that follows is STATE_RATE_B)
+    // --- Added 2026-11-03 for the trimmed Box 3 flow (36 steps, BOX 3 STEP corrected.txt). Appended, never renumbered. ---
+    // Box 3's new flow has no ratings, time picker, mist choice or free retry (RATE_A / TIME_ALLOT / METHOD / RATE_B1 / RATE_B / FREE_RETRY are not used by S3B any more).
+    // CHECKING (2) is the 2-second "Checking Main Container" screen that reads the Refilling Station; REFILLING / CHECKING_SCN / REFILLING_SCN are Box 1's and are not used by S3B.
+    STATE_AUTO_DRY        = 34, // the drying that follows EVERY cleaning (CL HEATING): UV 1 + UV 2 + heater, heater off for its last seconds; an abort during a cleaning goes here too
+    STATE_START_DRY       = 35  // DRYING: the "Please Wait..." hand-over from CLOSE DOOR A to DRYING (START HEATING); re-checks door + helmet
 };
 
 enum CommandOpcode : uint8_t {
@@ -198,8 +207,10 @@ enum CommandOpcode : uint8_t {
                                  // the {STATUS} / {STATUS2} / {STATUS3} tokens. subIndex = line number
                                  // (0 = newest), payloadStr = the text, at most 31 characters (all A1 can
                                  // hold per line of text). An empty payloadStr clears that line.
-    CMD_SET_TOKEN         = 16  // S3A -> A1 (added 2026-10-02): a plain number for a screen token.
+    CMD_SET_TOKEN         = 16, // S3A -> A1 (added 2026-10-02): a plain number for a screen token.
                                  // subIndex = TokenId (below), param16 = the value.
+    CMD_REFILL_TEST       = 17  // LocalServer -> Refilling Station (2026-11-03): manual valve TEST of box subIndex (0..2 = Box 1..3): state 1 = start (the valve
+                                 // opens for the station's testSeconds, only while no refill is running), state 0 = stop at once. Answer: valveMask / testMask.
 };
 
 // Token ids for CMD_SET_TOKEN (A1's TT text interpolates them).
@@ -300,6 +311,9 @@ struct TelemetryPacket {
 } __attribute__((packed));
 
 // ---------------------------------------------------------------------
+// !! OLD - THE ACS WAS REMOVED 2026-11-03 (replaced by the Refilling Station, DEVICE_REFILL / RefillStatusPacket above). Everything from here down to the
+// !! "Refilling Station status" block is kept ONLY because Box 1's S3A (not rebuilt yet) and the archived ACS sketches still refer to it. When Box 1 and Box 2 get
+// !! the Box 3 flow, delete the ACS definitions (DEVICE_ACS / DEVICE_ACS2, CMD_REQUEST_DELIVERY, ACSStatusPacket, ACSTelemetryPacket and the ACS_* constants).
 // ACS 1 (Box 1) / ACS 2 (Box 3) - the refill system, REDESIGNED 2026-10-03 (one design for both, board "E1"): three supply tanks
 // WITHOUT sensors (Water, Alcohol, Scented), two MIXER containers (Alcohol+Water, Scented+Water) each with an ultrasonic (US) and a
 // water-level sensor (WL), six pumps - one runs at a time. The boss's rule: a fill pump runs and the level does not rise => that
@@ -509,6 +523,38 @@ struct CoinBookPacket {
     uint16_t seq;               // +1 on every broadcast
 } __attribute__((packed));      // 8 bytes - must stay different from every other packet's size
 static const uint8_t COINBOOK_MAGIC = 0xC5;
+// Refilling Station status (added 2026-11-03, queue fields 2026-11-03 evening). Broadcast about once a second by the Refilling Station (DEVICE_REFILL).
+// The boxes' S3s read their own container from it (EMPTY or LOW or "station not heard for 15 s" = SELECT DRY ONLY); the LocalServer and the Online Server
+// only listen. The station owns the whole refill logic and NEVER waits for a box to ask:
+//   * ONE VALVE AT A TIME (the three boxes share one water supply). A box whose container is EMPTY or LOW joins a QUEUE; EMPTY boxes go first, LOW boxes
+//     second, first come first served inside each group. A refill that is running is never interrupted.
+//   * the open valve closes at MAX; it also closes (the refill FAILED, the box leaves the queue for the retry time) when the level does not RISE for
+//     stallEmpty seconds (EMPTY: the liquid has not reached the sensor yet) / stallLow seconds (LOW), or the valve has been open maxRefill seconds.
+//   * a failed box tries again after retryS seconds, for ever; failMask stays set until a refill works.
+//   * a MANUAL TEST (CMD_REFILL_TEST from the LocalServer) opens one valve for testSeconds, only while no refill is running (else it is refused).
+// State from the raw sensor value and the box's own edges:  EMPTY = raw <= emptyMax (default 0),  LOW = above that up to midEdge-1,
+// MID = midEdge .. highEdge-1,  HIGH = highEdge .. maxEdge-1,  MAX = maxEdge and above  (defaults 500 / 1000 / 1200).
+// SETTINGS (kept in the station's own flash, pushed by the LocalServer as CMD_SET_CONFIG with targetDeviceID = DEVICE_REFILL and a payloadStr CSV;
+// the station re-broadcasts what it holds as CMD_SET_CONFIG, target 0, state tag 4 = "Refilling Station", same subIndex, so the LocalServer can show it):
+//   subIndex 1 / 2 / 3 = Box 1 / 2 / 3:  emptyMax,midEdge,highEdge,maxEdge,stallEmptyS,stallLowS,maxRefillS,retryS,minRise     (defaults 0,500,1000,1200,30,5,180,60,10)
+//   subIndex 4         = all boxes:      testSeconds                                                                            (default 2)
+// minRise = the smallest rise in the raw value that counts as "the level is rising": the stall timer restarts every time the level has climbed that much above the last counted point.
+enum RefillState : uint8_t { REFILL_EMPTY = 0, REFILL_LOW = 1, REFILL_MID = 2, REFILL_HIGH = 3, REFILL_MAX = 4, REFILL_UNKNOWN = 255, REFILL_OFF = 254 };   // REFILL_OFF (2026-11-04): the station does not watch this box (Box 1 and 2 for now)
+struct RefillStatusPacket {
+    uint8_t  deviceID;          // DEVICE_REFILL
+    uint8_t  magic;             // REFILL_MAGIC
+    uint16_t seq;               // +1 on every broadcast
+    uint16_t raw[3];            // smoothed water-level sensor value of Box 1, Box 2, Box 3
+    uint8_t  state[3];          // RefillState of Box 1, Box 2, Box 3 (REFILL_UNKNOWN = sensor fault, REFILL_OFF = not watched)
+    uint8_t  valveMask;         // bit 0..2: the valve of Box 1..3 is OPEN (refilling or being tested)
+    uint8_t  queueMask;         // bit 0..2: Box 1..3 is WAITING for its turn
+    uint8_t  failMask;          // bit 0..2: the last refill of Box 1..3 FAILED (stays until a refill works)
+    uint8_t  testMask;          // bit 0..2: the open valve of Box 1..3 is a manual TEST
+    uint16_t midEdge[3];        // per box: where MID starts
+    uint16_t highEdge[3];       // per box: where HIGH starts
+    uint16_t maxEdge[3];        // per box: where MAX starts
+} __attribute__((packed));      // 35 bytes - must stay different from every other packet's size
+static const uint8_t REFILL_MAGIC = 0xD1;
 
 // A finished session's record rides in BoxStatusPacket::lastSessionCoins: bit 15 set = the customer ABORTED mid-cycle (shown as
 // "Cancelled" on the LocalServer), clear = the cycle ran to the end ("Finished"). The coin number is the low 15 bits.
@@ -609,5 +655,18 @@ static_assert(sizeof(CoinBookPacket) != sizeof(CommandPacket) &&
               sizeof(CoinBookPacket) != sizeof(ACSStatusPacket) &&
               sizeof(CoinBookPacket) != sizeof(HubStatsPacket),
               "CoinBookPacket collides in size with another packet type - onDataRecv() dispatch-by-length will misroute packets");
+
+static_assert(sizeof(RefillStatusPacket) != sizeof(CommandPacket) &&
+              sizeof(RefillStatusPacket) != sizeof(TelemetryPacket) &&
+              sizeof(RefillStatusPacket) != sizeof(ACSTelemetryPacket) &&
+              sizeof(RefillStatusPacket) != sizeof(Box1ConfigPacket) &&
+              sizeof(RefillStatusPacket) != sizeof(Box2ConfigPacket) &&
+              sizeof(RefillStatusPacket) != sizeof(BoxStatusPacket) &&
+              sizeof(RefillStatusPacket) != sizeof(A3StatusPacket) &&
+              sizeof(RefillStatusPacket) != sizeof(A2SensorPacket) &&
+              sizeof(RefillStatusPacket) != sizeof(ACSStatusPacket) &&
+              sizeof(RefillStatusPacket) != sizeof(HubStatsPacket) &&
+              sizeof(RefillStatusPacket) != sizeof(CoinBookPacket),
+              "RefillStatusPacket collides in size with another packet type - onDataRecv() dispatch-by-length will misroute packets");
 
 #endif // SHARED_COMMON_H

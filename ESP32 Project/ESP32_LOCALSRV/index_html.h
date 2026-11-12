@@ -23,6 +23,11 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
     .chip { display:inline-block; border-radius:10px; padding:2px 9px; margin:2px 4px 2px 0; font-size:0.72rem; font-weight:700; background:#334155; }
     .chip.bad { background:var(--danger); } .chip.good { background:var(--success); color:#000; } .chip.run { background:var(--accent); color:#000; }
     .acs-note { color:var(--warning); font-size:0.78rem; margin-top:4px; }
+    .rf-row { display:flex; align-items:center; gap:10px; margin:10px 0 4px; font-size:0.85rem; }
+    .rf-row .rf-name { min-width:50px; font-weight:700; }
+    .rf-row .bar { flex:1; margin:0; }
+    .bar.lv.s0 i, .bar.lv.s1 i { background:#ef4444; } .bar.lv.s2 i { background:#facc15; } .bar.lv.s3 i { background:linear-gradient(90deg,#facc15,#84cc16); } .bar.lv.s4 i { background:#22c55e; } .bar.lv.sx i { background:#64748b; }
+    .chip.lv.s0, .chip.lv.s1 { background:rgba(239,68,68,.2); color:#fca5a5; } .chip.lv.s2 { background:rgba(250,204,21,.2); color:#fde68a; } .chip.lv.s3 { background:rgba(163,230,53,.2); color:#d9f99d; } .chip.lv.s4 { background:rgba(34,197,94,.2); color:#86efac; } .chip.lv.sx { background:#1c2740; color:#94a3b8; }
     .navbar { display:flex; gap:6px; margin:0 0 14px; overflow-x:auto; scrollbar-width:none; -webkit-overflow-scrolling:touch; }
     .navbar::-webkit-scrollbar { display:none; }
     .nav-pill { flex:none; background:var(--card); border:1px solid var(--card-border); color:var(--muted); border-radius:99px; padding:9px 16px; font-weight:700; font-size:0.85rem; text-decoration:none; white-space:nowrap; cursor:pointer; font-family:inherit; }
@@ -71,14 +76,14 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
       <a class="nav-pill" href="/box1">Box 1</a>
       <a class="nav-pill" href="/box2">Box 2</a>
       <a class="nav-pill" href="/box3">Box 3</a>
-      <a class="nav-pill" href="/acs">ACS 1 / 2</a>
+      <a class="nav-pill" href="/refill">Refilling Station</a>
     </nav>
 
     <div id="pane-dash">
     <div id="heap-alert" style="display:none;margin:10px 0 0;padding:10px 12px;border:1px solid var(--danger);border-radius:10px;background:rgba(239,68,68,0.12);font-size:0.82rem;line-height:1.5;"></div>
     <div id="log-alert" style="display:none;margin:10px 0 0;padding:10px 12px;border:1px solid var(--danger);border-radius:10px;background:rgba(239,68,68,0.12);font-size:0.85rem;line-height:1.5;"></div>
     <details id="devices" class="card">
-      <summary><span id="dev-dot" style="color:var(--muted);">&#9679;</span> Devices: <b id="dev-count">-- of 13</b> online <span style="color:var(--muted);font-weight:500;">(tap to see which)</span></summary>
+      <summary><span id="dev-dot" style="color:var(--muted);">&#9679;</span> Devices: <b id="dev-count">-- of 12</b> online <span style="color:var(--muted);font-weight:500;">(tap to see which)</span></summary>
       <div id="node-list"></div>
     </details>
     <div class="sec-title">The three boxes</div>
@@ -118,24 +123,12 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
       </div>
     </div>
 
-    <div class="sec-title">Refill systems</div>
-    <div class="grid-2">
-      <div class="card">
-        <div class="card-header"><span class="card-title">ACS 1 · Box 1</span><a class="go" href="/acs" style="color:var(--accent);font-size:0.75rem;text-decoration:none;font-weight:700;">settings →</a></div>
-        <div class="row"><span class="label">Status:</span><span id="acs0-step" class="badge">--</span></div>
-        <div class="label">Alcohol mixer container</div><div class="bar"><i id="acs0-pa" style="width:0%"></i></div>
-        <div class="label">Scented mixer container</div><div class="bar"><i id="acs0-ps" style="width:0%"></i></div>
-        <div id="acs0-chips"></div>
-      </div>
-      <div class="card">
-        <div class="card-header"><span class="card-title">ACS 2 · Box 3</span><a class="go" href="/acs" style="color:var(--accent);font-size:0.75rem;text-decoration:none;font-weight:700;">settings →</a></div>
-        <div class="row"><span class="label">Status:</span><span id="acs1-step" class="badge">--</span></div>
-        <div class="label">Alcohol mixer container</div><div class="bar"><i id="acs1-pa" style="width:0%"></i></div>
-        <div class="label">Scented mixer container</div><div class="bar"><i id="acs1-ps" style="width:0%"></i></div>
-        <div id="acs1-chips"></div>
-      </div>
+    <div class="sec-title">Refilling Station</div>
+    <div class="card">
+      <div class="card-header"><span class="card-title">Main Containers · one valve at a time</span><a class="go" href="/refill" style="color:var(--accent);font-size:0.75rem;text-decoration:none;font-weight:700;">settings →</a></div>
+      <div class="row"><span class="label">Station:</span><span id="rf-state" class="badge">--</span></div>
+      <div id="rf-boxes"></div>
     </div>
-
     <div class="sec-title">Statistics &amp; revenue (all three boxes)</div>
     <div class="stats-layout">
       <div class="stat-grid">
@@ -213,8 +206,8 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
     <div class="cfg-links">
       <a href="/box1">📦 Box 1<small>levels · rules · phases · relays</small></a>
       <a href="/box2">🔥 Box 2<small>heat · rules · relays</small></a>
-      <a href="/box3">🧴 Box 3<small>levels · rules · phases · drying</small></a>
-      <a href="/acs">🧪 ACS 1 / 2<small>lines · mix · pumps</small></a>
+      <a href="/box3">🧴 Box 3<small>rules · sensors · drying · relays</small></a>
+      <a href="/refill">💧 Refilling Station<small>levels · valves · test</small></a>
     </div>
 
     <div class="sec-title">Clock, session log and history</div>

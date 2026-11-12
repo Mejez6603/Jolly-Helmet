@@ -3,21 +3,23 @@
 //  SETTINGS HUB (2026-10-03) - how the LocalServer configures EVERY node.
 //
 //  The LocalServer listens (read-only) to the same broadcasts the three settings benches listened to: each box's S3 status, the sensor
-//  board's readings (A2 / B2 / C2), the relay board's mask (A3 / B3), the coin terminal's counter (A1 / B1 / C1), every ACS's
-//  ACSStatusPacket, and the settings lists the S3 nodes and the ACS boards re-broadcast (CMD_SET_CONFIG, target 0; state tag 0 = Box 1's
-//  S3A, 2 = Box 2's S3C, 3 = Box 3's S3B, 4 = ACS 1, 5 = ACS 2). It serves one page per box plus one for both ACS boards
-//  (/box1 /box2 /box3 /acs - see settings_pages.h) and turns the page's buttons into the same CMD_SET_CONFIG / CMD_SET_MAINTENANCE /
+//  board's readings (A2 / B2 / C2), the relay board's mask (A3 / B3), the coin terminal's counter (A1 / B1 / C1), the Refilling Station's
+//  RefillStatusPacket, and the settings lists the S3 nodes and the station re-broadcast (CMD_SET_CONFIG, target 0; state tag 0 = Box 1's
+//  S3A, 2 = Box 2's S3C, 3 = Box 3's S3B, 4 = the Refilling Station). It serves one page per box plus one for the Refilling Station
+//  (/box1 /box2 /box3 /refill - see settings_pages.h) and turns the page's buttons into the same CMD_SET_CONFIG / CMD_SET_MAINTENANCE /
 //  CMD_SET_RELAY_MASK messages the benches sent. The nodes keep every setting in their own flash, so nothing is lost if this board is
-//  swapped or reflashed.
+//  swapped or reflashed. (The ACS 1 / ACS 2 boards and their /acs page were removed 2026-11-03: one Refilling Station replaced them.)
 //
 //  Page API (all GET, JSON answers):
-//    /api/b1/*  /api/b3/*   state | send?kind=levels|rules|phases[|drying]&csv=  | maint?on=0/1 | mask?v= | refresh
+//    /api/b1/*              state | send?kind=levels|rules|phases&csv=           | maint?on=0/1 | mask?v= | refresh
+//    /api/b3/*              state | send?kind=rules|sensors|dry|drying&csv=      | maint?on=0/1 | mask?v= | refresh     (Box 3, new flow 2026-11-03)
 //    /api/b2/*              state | send?kind=rules|heat&csv=                    | maint?on=0/1 | mask?v= | refresh
+//    (Box 3 kinds -> S3B subIndex: rules 1 = rateCoins,rateValue,rateUnitMin,maxCoins | sensors 2 = helmetCm,offlineSec | dry 3 = autoDrySec,heaterOffTailSec | drying 4 = coolDownSec)
 //    (send?kind=autorefresh = seconds between automatic hard refreshes of the touch screen, 0 = never, max 60)
 //    (send?kind=beep = the OPEN A / OPEN B beep, 2 numbers: beep length ms, wait between beeps ms - 0 = a single beep; all three boxes)
 //    (send?kind=refresh = which relays trigger a screen refresh, 2 numbers: on-mask,off-mask)
 //    (refresh = "force refresh the touch screen": CMD_TFT_HARD_REFRESH to the box's S3 node, which re-sends its terminal's page)
-//    /api/acs/*             state | send?kind=levels|timing|mix&csv= | maint?on= | retry | mixok | pump?i=&on= | req?k=&s=    (every call takes u=1|2)
+//    /api/refill/*          state | send?kind=box1|box2|box3|test&csv=  | test?i=0..2&on=1|0      (the Refilling Station: settings per box, manual valve test)
 //
 //  Included from ESP32_LOCALSRV.ino after sendEspNowCmdDirect() / the server object are defined.
 // =====================================================================
@@ -43,14 +45,14 @@ struct HubBox2 {                 // Box 2 (S3C, C1, C2)
     HubTerm t;
     char rules[200]; char heat[200]; char refresh[40]; char autorf[16]; char beep[16];
 };
-struct HubAcs {                  // ACS 1 or ACS 2
-    ACSStatusPacket p; bool seen; uint32_t ms;
-    char levels[200]; char timing[200]; char mix[200];
+struct HubRefill {               // the Refilling Station: its status broadcast and the settings it re-broadcasts (state tag 4)
+    RefillStatusPacket p; bool seen; uint32_t ms;
+    char box[3][64]; char test[16];       // subIndex 1..3 = Box 1..3 (9 numbers each), subIndex 4 = the manual test seconds
 };
 
 HubBox13 hubB[2];                // [0] = Box 1, [1] = Box 3
 HubBox2  hubC;
-HubAcs   hubA[2];                // [0] = ACS 1, [1] = ACS 2
+HubRefill hubR;                  // the one Refilling Station
 volatile uint16_t hubJoins = 0, hubLeaves = 0, hubLeaveWhy = 0;
 static uint8_t hubBypass[3];         // the Maintenance tick box 'Bypass Safety 2 Seconds Relay' as last sent: [0] Box 1, [1] Box 3, [2] Box 2 (the S3 forgets it when maintenance starts or ends)
 static char hubBuf[1800];        // one answer at a time (the web server answers from a single task)
@@ -120,11 +122,9 @@ void hubOnPacket(const uint8_t* d, int len) {
             else if (c.subIndex == 5) hubCopy(hubC.refresh, sizeof(hubC.refresh), c.payloadStr);
             else if (c.subIndex == 6) hubCopy(hubC.autorf, sizeof(hubC.autorf), c.payloadStr);
             else if (c.subIndex == 7) hubCopy(hubC.beep, sizeof(hubC.beep), c.payloadStr);
-        } else if (c.state == 4 || c.state == 5) {                                   // ACS 1 / ACS 2
-            HubAcs& a = hubA[c.state - 4];
-            if (c.subIndex == 1) hubCopy(a.levels, sizeof(a.levels), c.payloadStr);
-            else if (c.subIndex == 2) hubCopy(a.timing, sizeof(a.timing), c.payloadStr);
-            else if (c.subIndex == 3) hubCopy(a.mix, sizeof(a.mix), c.payloadStr);
+        } else if (c.state == 4) {                                                   // the Refilling Station
+            if (c.subIndex >= 1 && c.subIndex <= 3) hubCopy(hubR.box[c.subIndex - 1], sizeof(hubR.box[0]), c.payloadStr);
+            else if (c.subIndex == 4) hubCopy(hubR.test, sizeof(hubR.test), c.payloadStr);
         }
         portEXIT_CRITICAL(&hubMux);
     } else if (len == (int)sizeof(BoxStatusPacket)) {
@@ -160,13 +160,12 @@ void hubOnPacket(const uint8_t* d, int len) {
         else if (t.deviceID == DEVICE_C1) hubTermUpdate(hubC.t, t);
         else if (t.deviceID == DEVICE_C2) { hubC.c2 = t; hubC.c2Seen = true; hubC.c2Ms = now; }
         portEXIT_CRITICAL(&hubMux);
-    } else if (len == (int)sizeof(ACSStatusPacket)) {
-        ACSStatusPacket p;
+    } else if (len == (int)sizeof(RefillStatusPacket)) {
+        RefillStatusPacket p;
         memcpy(&p, d, sizeof(p));
-        if (p.deviceID != DEVICE_ACS && p.deviceID != DEVICE_ACS2) return;
-        HubAcs& a = hubA[p.deviceID == DEVICE_ACS2 ? 1 : 0];
+        if (p.deviceID != DEVICE_REFILL || p.magic != REFILL_MAGIC) return;
         portENTER_CRITICAL(&hubMux);
-        a.p = p; a.seen = true; a.ms = now;
+        hubR.p = p; hubR.seen = true; hubR.ms = now;
         portEXIT_CRITICAL(&hubMux);
     }
 }
@@ -176,10 +175,13 @@ void hubOnPacket(const uint8_t* d, int len) {
 // ---------------------------------------------------------------------
 static void hubBox13Json(uint8_t idx, char* out, size_t n) {
     HubBox13 b;
+    RefillStatusPacket rp;
+    bool rSeen; uint32_t rMs;
     uint32_t now;
     portENTER_CRITICAL(&hubMux);
     now = millis();
     memcpy(&b, &hubB[idx], sizeof(HubBox13));
+    memcpy(&rp, &hubR.p, sizeof(rp)); rSeen = hubR.seen; rMs = hubR.ms;
     portEXIT_CRITICAL(&hubMux);
 
     bool s3Ok = hubFresh(b.s3Seen, b.s3Ms, now);
@@ -187,16 +189,20 @@ static void hubBox13Json(uint8_t idx, char* out, size_t n) {
     bool a3Ok = hubFresh(b.a3Seen, b.a3Ms, now);
     bool t1Ok = hubFresh(b.t.seen, b.t.ms, now);
     long coinAge = b.t.ever ? (long)(now - b.t.changeMs) : -1L;
+    uint8_t rb = (idx == 0) ? 0 : 2;                       // this box's place on the Refilling Station: Box 1 = 0, Box 3 = 2
+    bool rOk = hubFresh(rSeen, rMs, now);
     snprintf(out, n,
              "{\"s3aok\":%d,\"s3aage\":%lu,\"state\":%u,\"timer\":%lu,"
              "\"a2ok\":%d,\"a2age\":%lu,\"helm\":%.1f,\"als\":%.1f,\"sls\":%.1f,\"door\":%d,\"raw0\":%u,\"raw1\":%u,"
              "\"a3ok\":%d,\"a3mask\":%u,\"a3orph\":%d,\"a1ok\":%d,\"coins\":%lu,\"coinage\":%ld,\"raw\":%lu,\"gap\":%.1f,"
+             "\"rf\":[%d,%u,%u,%d,%d,%d],"
              "\"up\":%lu,\"rst\":\"%s\",\"clients\":%d,\"joins\":%u,\"leaves\":%u,\"why\":%u,"
              "\"by\":%u,\"rules\":\"%s\",\"levels\":\"%s\",\"phases\":\"%s\",\"drying\":\"%s\",\"refresh\":\"%s\",\"autorf\":\"%s\",\"beep\":\"%s\"}",
              s3Ok ? 1 : 0, (unsigned long)(b.s3Seen ? now - b.s3Ms : 0), (unsigned)b.s3State, (unsigned long)b.s3Timer,
              a2Ok ? 1 : 0, (unsigned long)(b.a2Seen ? now - b.a2Ms : 0), (double)b.a2.usHelmetCm, (double)b.a2.usMcAlsCm, (double)b.a2.usMcSlsCm,
              b.a2.doorEnclosure ? 1 : 0, (unsigned)b.a2.wsAlsRaw, (unsigned)b.a2.wsSlsRaw,
              a3Ok ? 1 : 0, (unsigned)b.a3Mask, b.a3Orph ? 1 : 0, t1Ok ? 1 : 0, (unsigned long)b.t.pulses, coinAge, (unsigned long)b.t.rawEdges, (double)b.t.minGap,
+             rOk ? 1 : 0, (unsigned)rp.raw[rb], (unsigned)rp.state[rb], (rp.valveMask >> rb) & 1, (rp.queueMask >> rb) & 1, (rp.failMask >> rb) & 1,
              (unsigned long)(now / 1000UL), hubResetReason(), (int)WiFi.softAPgetStationNum(), (unsigned)hubJoins, (unsigned)hubLeaves, (unsigned)hubLeaveWhy,
              (unsigned)hubBypass[idx], b.rules, b.levels, b.phases, b.drying, b.refresh, b.autorf, b.beep);
 }
@@ -228,32 +234,34 @@ static void hubBox2Json(char* out, size_t n) {
              (unsigned)hubBypass[2], b.rules, b.heat, b.refresh, b.autorf, b.beep);
 }
 
-static void hubAcsJson(uint8_t idx, char* out, size_t n) {
-    HubAcs a;
+static void hubRefillJson(char* out, size_t n) {
+    HubRefill r;
     uint32_t now;
     portENTER_CRITICAL(&hubMux);
     now = millis();
-    memcpy(&a, &hubA[idx], sizeof(HubAcs));
+    memcpy(&r, &hubR, sizeof(HubRefill));
     portEXIT_CRITICAL(&hubMux);
-    bool ok = hubFresh(a.seen, a.ms, now);
+    bool ok = hubFresh(r.seen, r.ms, now);
+    const RefillStatusPacket& p = r.p;
     snprintf(out, n,
-             "{\"unit\":%u,\"ok\":%d,\"age\":%lu,\"step\":%u,\"sec\":%u,\"pumps\":%u,\"flags\":%u,\"empty\":%u,\"warn\":%u,"
-             "\"usA\":%.1f,\"usS\":%.1f,\"wlA\":%u,\"wlS\":%u,\"pctA\":%u,\"pctS\":%u,"
+             "{\"ok\":%d,\"age\":%lu,\"seq\":%u,\"raw\":[%u,%u,%u],\"st\":[%u,%u,%u],\"valve\":%u,\"queue\":%u,\"fail\":%u,\"test\":%u,"
+             "\"mid\":[%u,%u,%u],\"high\":[%u,%u,%u],\"max\":[%u,%u,%u],"
              "\"up\":%lu,\"rst\":\"%s\",\"clients\":%d,\"joins\":%u,\"leaves\":%u,\"why\":%u,"
-             "\"levels\":\"%s\",\"timing\":\"%s\",\"mix\":\"%s\"}",
-             (unsigned)(idx + 1), ok ? 1 : 0, (unsigned long)(a.seen ? now - a.ms : 0), (unsigned)a.p.step, (unsigned)a.p.stepSec, (unsigned)a.p.pumpMask, (unsigned)a.p.flags,
-             (unsigned)a.p.empty, (unsigned)a.p.warn,
-             (double)a.p.usAlcCm, (double)a.p.usSctCm, (unsigned)a.p.wlAlcRaw, (unsigned)a.p.wlSctRaw, (unsigned)a.p.levelAlcPct, (unsigned)a.p.levelSctPct,
+             "\"b1\":\"%s\",\"b2\":\"%s\",\"b3\":\"%s\",\"tsec\":\"%s\"}",
+             ok ? 1 : 0, (unsigned long)(r.seen ? now - r.ms : 0), (unsigned)p.seq,
+             (unsigned)p.raw[0], (unsigned)p.raw[1], (unsigned)p.raw[2], (unsigned)p.state[0], (unsigned)p.state[1], (unsigned)p.state[2],
+             (unsigned)p.valveMask, (unsigned)p.queueMask, (unsigned)p.failMask, (unsigned)p.testMask,
+             (unsigned)p.midEdge[0], (unsigned)p.midEdge[1], (unsigned)p.midEdge[2], (unsigned)p.highEdge[0], (unsigned)p.highEdge[1], (unsigned)p.highEdge[2],
+             (unsigned)p.maxEdge[0], (unsigned)p.maxEdge[1], (unsigned)p.maxEdge[2],
              (unsigned long)(now / 1000UL), hubResetReason(), (int)WiFi.softAPgetStationNum(), (unsigned)hubJoins, (unsigned)hubLeaves, (unsigned)hubLeaveWhy,
-             a.levels, a.timing, a.mix);
+             r.box[0], r.box[1], r.box[2], r.test);
 }
-
-// What the home page shows: who is online, each box's step / timer / coins, each ACS's step.
+// What the home page shows: who is online, each box's step / timer / coins, the Refilling Station's levels.
 void hubFillWs(JsonDocument& doc) {
     uint32_t now = millis();
-    bool n[13];
+    bool n[12];
     uint8_t  bs[3]; uint32_t bt[3]; uint32_t bc[3];
-    uint8_t  as[2][9];
+    uint16_t rraw[3]; uint8_t rst[3], rvalve, rqueue, rfail, rtest; uint16_t rmax[3];
     portENTER_CRITICAL(&hubMux);
     n[0]  = hubFresh(hubB[0].t.seen, hubB[0].t.ms, now);        // A1
     n[1]  = hubFresh(hubB[0].a2Seen, hubB[0].a2Ms, now);        // A2
@@ -266,32 +274,24 @@ void hubFillWs(JsonDocument& doc) {
     n[8]  = hubFresh(hubB[1].a2Seen, hubB[1].a2Ms, now);        // B2
     n[9]  = hubFresh(hubB[1].a3Seen, hubB[1].a3Ms, now);        // B3
     n[10] = hubFresh(hubB[1].s3Seen, hubB[1].s3Ms, now);        // S3B
-    n[11] = hubFresh(hubA[0].seen, hubA[0].ms, now);            // ACS 1
-    n[12] = hubFresh(hubA[1].seen, hubA[1].ms, now);            // ACS 2
+    n[11] = hubFresh(hubR.seen, hubR.ms, now);                  // Refilling Station
     bs[0] = hubB[0].s3State; bt[0] = hubB[0].s3Timer; bc[0] = hubB[0].t.pulses;
     bs[1] = hubC.s3State;    bt[1] = hubC.s3Timer;    bc[1] = hubC.t.pulses;
     bs[2] = hubB[1].s3State; bt[2] = hubB[1].s3Timer; bc[2] = hubB[1].t.pulses;
-    for (int i = 0; i < 2; i++) {
-        const ACSStatusPacket& p = hubA[i].p;
-        as[i][0] = p.step; as[i][1] = p.flags; as[i][2] = p.empty; as[i][3] = p.warn; as[i][4] = p.levelAlcPct; as[i][5] = p.levelSctPct; as[i][6] = p.pumpMask;
-        as[i][7] = (uint8_t)(p.stepSec & 0xFF); as[i][8] = (uint8_t)(p.stepSec >> 8);
-    }
+    for (int i = 0; i < 3; i++) { rraw[i] = hubR.p.raw[i]; rst[i] = hubR.p.state[i]; rmax[i] = hubR.p.maxEdge[i]; }
+    rvalve = hubR.p.valveMask; rqueue = hubR.p.queueMask; rfail = hubR.p.failMask; rtest = hubR.p.testMask;
     portEXIT_CRITICAL(&hubMux);
 
-    JsonArray on = doc.createNestedArray("n");
-    for (int i = 0; i < 13; i++) on.add(n[i] ? 1 : 0);
+    JsonArray on = doc["n"].to<JsonArray>();
+    for (int i = 0; i < 12; i++) on.add(n[i] ? 1 : 0);
     doc["b1s"] = bs[0]; doc["b1t"] = bt[0]; doc["b1c"] = bc[0];
     doc["b2s"] = bs[1]; doc["b2t"] = bt[1]; doc["b2c"] = bc[1];
     doc["b3s"] = bs[2]; doc["b3t"] = bt[2]; doc["b3c"] = bc[2];
-    JsonArray acs = doc.createNestedArray("acs");
-    for (int i = 0; i < 2; i++) {
-        JsonArray a = acs.createNestedArray();
-        a.add(n[11 + i] ? 1 : 0);
-        for (int k = 0; k < 7; k++) a.add(as[i][k]);
-        a.add((unsigned)as[i][7] | ((unsigned)as[i][8] << 8));
-    }
+    // rf = [online, valveMask, queueMask, failMask, testMask, then per box: raw, state (0 EMPTY..4 MAX, 255 sensor fault), maxEdge]
+    JsonArray rf = doc["rf"].to<JsonArray>();
+    rf.add(n[11] ? 1 : 0); rf.add(rvalve); rf.add(rqueue); rf.add(rfail); rf.add(rtest);
+    for (int i = 0; i < 3; i++) { rf.add(rraw[i]); rf.add(rst[i]); rf.add(rmax[i]); }
 }
-
 // ---------------------------------------------------------------------
 // Commands
 // ---------------------------------------------------------------------
@@ -314,9 +314,14 @@ static String hubArgStr(AsyncWebServerRequest* r, const char* name) {
 // kind -> subIndex for each node's CMD_SET_CONFIG; 0 = not a kind this node has
 static uint8_t hubSubFor(const String& kind, bool box3) {
     if (kind == "rules")  return 1;
-    if (kind == "levels") return 2;
-    if (kind == "phases") return 3;
-    if (kind == "drying" && box3) return 4;
+    if (box3) {                                       // Box 3's new flow (2026-11-03): sensors 2, dry 3, drying 4 (the old levels / phases kinds are gone)
+        if (kind == "sensors") return 2;
+        if (kind == "dry")     return 3;
+        if (kind == "drying")  return 4;
+    } else {
+        if (kind == "levels") return 2;
+        if (kind == "phases") return 3;
+    }
     if (kind == "refresh") return 5;
     if (kind == "autorefresh") return 6;
     if (kind == "beep") return 7;
@@ -373,43 +378,34 @@ static void hubBox2Handler(AsyncWebServerRequest* r, uint8_t what) {
     hubAnswer(r);
 }
 
-// ---- ACS 1 / ACS 2 ----
-static void hubAcsHandler(AsyncWebServerRequest* r, uint8_t what) {   // what: 0 state, 1 send, 2 maint, 3 retry, 4 mixok, 5 pump, 6 req
-    uint8_t idx = (hubArgInt(r, "u", 1) == 2) ? 1 : 0;
-    uint8_t dev = (idx == 1) ? DEVICE_ACS2 : DEVICE_ACS;
+// ---- the Refilling Station ----
+static void hubRefillHandler(AsyncWebServerRequest* r, uint8_t what) {   // what: 0 state, 1 send, 2 manual valve test
     if (what == 1) {
         String kind = hubArgStr(r, "kind");
-        uint8_t sub = (kind == "levels") ? 1 : ((kind == "timing") ? 2 : ((kind == "mix") ? 3 : 0));
-        hubSendSettings(dev, sub, hubArgStr(r, "csv"), idx == 0 ? "ACS 1" : "ACS 2");
+        uint8_t sub = (kind == "box1") ? 1 : ((kind == "box2") ? 2 : ((kind == "box3") ? 3 : ((kind == "test") ? 4 : 0)));
+        hubSendSettings(DEVICE_REFILL, sub, hubArgStr(r, "csv"), "Refilling Station");
     } else if (what == 2) {
-        sendEspNowCmdDirect(dev, CMD_SET_MAINTENANCE, 0, 0, hubArgInt(r, "on", 0) == 1 ? 1 : 0);
-    } else if (what == 3) {
-        sendEspNowCmdDirect(dev, CMD_SET_MAINTENANCE, 0, 0, 2);          // retry now: forget the EMPTY verdicts
-    } else if (what == 4) {
-        sendEspNowCmdDirect(dev, CMD_SET_MAINTENANCE, 0, 0, 3);          // accept both mixer containers as they are
-    } else if (what == 5) {
         long i = hubArgInt(r, "i", -1);
-        if (i >= 0 && i < ACS_PUMP_COUNT) sendEspNowCmdDirect(dev, CMD_SET_RELAY, (uint8_t)i, 0, hubArgInt(r, "on", 0) == 1 ? 1 : 0);
-    } else if (what == 6) {
-        long k = hubArgInt(r, "k", -1);
-        if (k == 0 || k == 1) sendEspNowCmdDirect(dev, CMD_REQUEST_DELIVERY, (uint8_t)k, 0, hubArgInt(r, "s", 0) == 1 ? 1 : 0);   // pretend to be the box
+        if (i >= 0 && i < 3) {                                           // the station refuses it while a refill is running (the page shows its testMask / queue)
+            sendEspNowCmdDirect(DEVICE_REFILL, CMD_REFILL_TEST, (uint8_t)i, 0, hubArgInt(r, "on", 1) == 1 ? 1 : 0);
+            Serial.printf("[HUB] manual valve test Box %ld: %s\n", i + 1, hubArgInt(r, "on", 1) == 1 ? "start" : "stop");
+        }
     }
-    hubAcsJson(idx, hubBuf, sizeof(hubBuf));
+    hubRefillJson(hubBuf, sizeof(hubBuf));
     hubAnswer(r);
 }
-
 void hubBegin() {
     WiFi.onEvent(hubWifiEvent);
     memset(hubB, 0, sizeof(hubB));
     memset(&hubC, 0, sizeof(hubC));
-    memset(hubA, 0, sizeof(hubA));
+    memset(&hubR, 0, sizeof(hubR));
 }
 
 void hubRegisterRoutes() {
     server.on("/box1", HTTP_GET, [](AsyncWebServerRequest* r) { sendCached(r, "text/html", PAGE_BOX1); });
     server.on("/box2", HTTP_GET, [](AsyncWebServerRequest* r) { sendCached(r, "text/html", PAGE_BOX2); });
     server.on("/box3", HTTP_GET, [](AsyncWebServerRequest* r) { sendCached(r, "text/html", PAGE_BOX3); });
-    server.on("/acs",  HTTP_GET, [](AsyncWebServerRequest* r) { sendCached(r, "text/html", PAGE_ACS); });
+    server.on("/refill", HTTP_GET, [](AsyncWebServerRequest* r) { sendCached(r, "text/html", PAGE_REFILL); });
     server.on("/hub.css", HTTP_GET, [](AsyncWebServerRequest* r) { sendCached(r, "text/css", HUB_CSS); });                  // look of the four pages (hub_theme.h)
     server.on("/hub.js",  HTTP_GET, [](AsyncWebServerRequest* r) { sendCached(r, "application/javascript", HUB_JS); });
 
@@ -431,11 +427,7 @@ void hubRegisterRoutes() {
     server.on("/api/b2/mask",  HTTP_GET, [](AsyncWebServerRequest* r) { hubBox2Handler(r, 3); });
     server.on("/api/b2/refresh", HTTP_GET, [](AsyncWebServerRequest* r) { hubBox2Handler(r, 4); });
 
-    server.on("/api/acs/state", HTTP_GET, [](AsyncWebServerRequest* r) { hubAcsHandler(r, 0); });
-    server.on("/api/acs/send",  HTTP_GET, [](AsyncWebServerRequest* r) { hubAcsHandler(r, 1); });
-    server.on("/api/acs/maint", HTTP_GET, [](AsyncWebServerRequest* r) { hubAcsHandler(r, 2); });
-    server.on("/api/acs/retry", HTTP_GET, [](AsyncWebServerRequest* r) { hubAcsHandler(r, 3); });
-    server.on("/api/acs/mixok", HTTP_GET, [](AsyncWebServerRequest* r) { hubAcsHandler(r, 4); });
-    server.on("/api/acs/pump",  HTTP_GET, [](AsyncWebServerRequest* r) { hubAcsHandler(r, 5); });
-    server.on("/api/acs/req",   HTTP_GET, [](AsyncWebServerRequest* r) { hubAcsHandler(r, 6); });
+    server.on("/api/refill/state", HTTP_GET, [](AsyncWebServerRequest* r) { hubRefillHandler(r, 0); });
+    server.on("/api/refill/send",  HTTP_GET, [](AsyncWebServerRequest* r) { hubRefillHandler(r, 1); });
+    server.on("/api/refill/test",  HTTP_GET, [](AsyncWebServerRequest* r) { hubRefillHandler(r, 2); });
 }

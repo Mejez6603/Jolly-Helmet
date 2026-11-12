@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Refilling Station Simulator</title>
+<style>
+:root{--bg:#090d16;--card:#111827;--well:#0b1220;--line:#1f293d;--line2:#2c3b57;--text:#e8eef7;--muted:#93a3ba;--accent:#2dd4bf;--ok:#4ade80;--warn:#fbbf24;--err:#f87171;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;padding:14px 16px 60px}
+main{max-width:980px;margin:0 auto}
+h1{font-size:1.4rem;margin:6px 0 2px}
+h2{font-size:.95rem;margin:0 0 8px;color:var(--accent)}
+.note{color:var(--muted);font-size:.85rem}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin:12px 0}
+.row{display:flex;flex-wrap:wrap;gap:8px 10px;align-items:center;margin:8px 0}
+button,select,input{font:inherit;font-size:.88rem;color:var(--text);background:#1a2336;border:1px solid var(--line2);border-radius:10px;padding:7px 12px}
+button{cursor:pointer;font-weight:600}button:hover{border-color:var(--accent)}
+button.on{background:var(--accent);color:#04121c;border-color:var(--accent)}
+input[type=number]{width:78px;text-align:center}
+.boxes{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:12px}
+.bar{height:16px;background:#0a101d;border:1px solid var(--line2);border-radius:99px;overflow:hidden;margin:8px 0}
+.bar i{display:block;height:100%;border-radius:99px;transition:width .15s}
+.s0 i,.s1 i{background:#ef4444}.s2 i{background:#facc15}.s3 i{background:linear-gradient(90deg,#facc15,#84cc16)}.s4 i{background:#22c55e}.s255 i{background:#64748b}
+.chip{display:inline-block;margin:2px 4px 2px 0;padding:2px 10px;border-radius:99px;font-size:.76rem;font-weight:700;background:#1c2740;color:#cbd5e1}
+.chip.run{background:rgba(45,212,191,.28);color:#fff}.chip.bad{background:rgba(239,68,68,.2);color:#fca5a5}.chip.q{background:rgba(251,191,36,.18);color:#fde68a}.chip.good{background:rgba(34,197,94,.18);color:#86efac}
+.led{display:inline-block;width:11px;height:11px;border-radius:50%;background:#475569;margin-right:6px;vertical-align:-1px}.led.on{background:#22c55e;box-shadow:0 0 10px #22c55e}
+#log{height:220px;overflow:auto;background:var(--well);border:1px solid var(--line);border-radius:10px;padding:8px 10px;font:12.5px/1.5 ui-monospace,Consolas,monospace;white-space:pre-wrap}
+#tests div{font:13px/1.6 ui-monospace,Consolas,monospace}.pass{color:var(--ok)}.fail{color:var(--err)}
+details{margin-top:6px}summary{cursor:pointer;color:var(--muted);font-size:.85rem}
+table{border-collapse:collapse;width:100%}td{padding:3px 4px;font-size:.85rem}td:first-child{color:var(--muted)}
+</style></head><body><main>
+<h1>Refilling Station simulator</h1>
+<div class="note">The queue, stall and retry logic of <code>ESP32_REFILL.ino</code> ported line for line to JavaScript, with three simulated containers. It is a test bench for the RULES (who goes first, when a refill fails, what happens when two boxes need liquid), not for the hardware. Time here is virtual: pick a speed.</div>
+
+<div class="card">
+ <div class="row"><b>Speed</b><span id="speeds"></span><button id="pause">Pause</button><button id="reset">Reset</button>
+  <select id="scn"></select><button id="runscn">Load scenario</button><span class="note" id="clock"></span></div>
+</div>
+
+<div class="card"><h2>Station</h2><div class="row" id="stline"></div><div class="boxes" id="boxes"></div></div>
+
+<div class="card"><h2>Self-tests of the rules</h2><div class="row"><button id="runtests">Run all tests</button><span class="note" id="testsum"></span></div><div id="tests"></div></div>
+
+<div class="card"><h2>Settings per box <span class="note">(same numbers as the LocalServer page; applied at once)</span></h2><div id="cfgs"></div></div>
+<div class="card"><h2>Event log</h2><div id="log"></div></div>
+
+<script>
+// =====================================================================================================================================
+// THE STATION - a straight port of ESP32_REFILL.ino (same names, same order of the checks). Keep the two in step.
+// =====================================================================================================================================
+const EMPTY = 0, LOW = 1, MID = 2, HIGH = 3, MAX = 4, OFF = 254, UNKNOWN = 255;       // OFF = REFILL_OFF: the station does not watch this box
+const WATCH_DEFAULT = [true, true, true];                      // the sketch has { false, false, true } (Box 3 only, 2026-11-04); the page and most tests use all three, the "Box 3 only" tests set watch = [false, false, true]
+const PH_IDLE = 0, PH_QUEUED = 1, PH_REFILL = 2, PH_RETRY = 3;
+const SAMPLE_MS = 50, AVG_N = 20, TICK_MS = 200, BOOT_QUIET_MS = 3000, VALVE_GAP_MS = 1000, CALM_TICKS = 15;
+const HEALTH_RAIL_RAW = 4090, HEALTH_RAIL_MAXEDGE = 4000, HEALTH_NOISE_RAW = 1500, HEALTH_BAD_TICKS = 25, HEALTH_GOOD_TICKS = 50;     // sensor health (same numbers as the sketch)
+const LVL_NAME = ['EMPTY', 'LOW', 'MID', 'HIGH', 'MAX'];
+const FIELDS = ['emptyMax', 'midEdge', 'highEdge', 'maxEdge', 'stallEmptyS', 'stallLowS', 'maxRefillS', 'retryS', 'minRise'];
+const DEFAULT_CFG = () => ({ emptyMax: 0, midEdge: 500, highEdge: 1000, maxEdge: 1200, stallEmptyS: 30, stallLowS: 5, maxRefillS: 180, retryS: 60, minRise: 10 });
+
+function Station(log) {
+  const S = {
+    cfg: [DEFAULT_CFG(), DEFAULT_CFG(), DEFAULT_CFG()], testSeconds: 2, watch: WATCH_DEFAULT.slice(),
+    box: [0, 1, 2].map(() => ({ phase: PH_IDLE, queuedAtMs: 0, openedMs: 0, progressMs: 0, retryAtMs: 0, peak: 0, lastLvl: UNKNOWN, calm: 0, failed: false })),
+    ring: [[], [], []], rawAvg: [0, 0, 0], rawMin: [0, 0, 0], rawMax: [0, 0, 0], fault: [false, false, false], bad: [0, 0, 0], good: [0, 0, 0], faultWhy: ['', '', ''], lvl: [UNKNOWN, UNKNOWN, UNKNOWN], valveMask: 0, runBox: -1, testBox: -1, testEndMs: 0, lastCloseMs: 0, events: [], maxOpen: 0,
+  };
+  const say = (now, text, ev) => { log(now, text); if (ev) S.events.push(Object.assign({ t: now }, ev)); };
+  const lvlName = s => s < 5 ? LVL_NAME[s] : (s === OFF ? 'NOT WATCHED' : 'UNKNOWN');
+
+  S.sample = function (raw3) {                                   // sampleSensors()
+    for (let i = 0; i < 3; i++) { S.ring[i].push(Math.max(0, Math.min(4095, Math.round(raw3[i])))); if (S.ring[i].length > AVG_N) S.ring[i].shift(); }
+    for (let i = 0; i < 3; i++) { S.rawAvg[i] = Math.floor(S.ring[i].reduce((a, b) => a + b, 0) / S.ring[i].length); S.rawMin[i] = Math.min(...S.ring[i]); S.rawMax[i] = Math.max(...S.ring[i]); }
+  };
+  S.sensorsReady = () => S.ring[0].length >= AVG_N;
+  S.levelOf = function (i, raw) { const c = S.cfg[i]; if (raw >= c.maxEdge) return MAX; if (raw >= c.highEdge) return HIGH; if (raw >= c.midEdge) return MID; if (raw > c.emptyMax) return LOW; return EMPTY; };
+  const needs = i => S.lvl[i] === EMPTY || S.lvl[i] === LOW;
+  S.openValve = function (i) {
+    if (S.valveMask & ~(1 << i)) { return false; }
+    S.valveMask |= (1 << i); S.maxOpen = Math.max(S.maxOpen, bitCount(S.valveMask)); return true;
+  };
+  S.closeValve = function (i) { S.valveMask &= ~(1 << i); };
+  const bitCount = m => (m & 1) + ((m >> 1) & 1) + ((m >> 2) & 1);
+  function finishRefill(i, now) {
+    S.closeValve(i); S.runBox = -1; S.lastCloseMs = now; const b = S.box[i]; b.phase = PH_IDLE; b.failed = false; b.calm = 0;
+    say(now, `Box ${i + 1}: MAX reached after ${Math.floor((now - b.openedMs) / 1000)} s - valve CLOSED, refill worked`, { type: 'done', box: i });
+  }
+  function failRefill(i, now, why) {
+    S.closeValve(i); S.runBox = -1; S.lastCloseMs = now; const b = S.box[i]; b.phase = PH_RETRY; b.failed = true; b.retryAtMs = now + 1000 * S.cfg[i].retryS;
+    say(now, `Box ${i + 1}: refill FAILED (${why}) after ${Math.floor((now - b.openedMs) / 1000)} s - valve CLOSED, trying again in ${S.cfg[i].retryS} s`, { type: 'fail', box: i, why });
+  }
+  const aheadOf = function (a, b) {
+    const ca = S.lvl[a] === EMPTY ? 0 : 1, cb = S.lvl[b] === EMPTY ? 0 : 1;
+    if (ca !== cb) return ca < cb;
+    const d = (S.box[a].queuedAtMs - S.box[b].queuedAtMs) | 0;
+    if (d !== 0) return d < 0;
+    return a < b;
+  };
+  function stopRunForFault(i, now) { S.closeValve(i); S.runBox = -1; S.lastCloseMs = now; S.box[i].phase = PH_IDLE; S.box[i].calm = 0; }
+  function updateHealth(now) {                                    // updateHealth()
+    for (let i = 0; i < 3; i++) {
+      if (!S.watch[i]) { S.fault[i] = false; S.bad[i] = S.good[i] = 0; continue; }
+      const valveOpen = ((S.valveMask >> i) & 1) !== 0; let why = null;
+      if (S.rawAvg[i] >= HEALTH_RAIL_RAW && S.cfg[i].maxEdge < HEALTH_RAIL_MAXEDGE) why = 'reads the 3.3 V rail (shorted wire or broken sensor)';
+      else if (!valveOpen && (S.rawMax[i] - S.rawMin[i]) > HEALTH_NOISE_RAW) why = 'jumps about wildly (floating or loose wire)';
+      if (why) {
+        S.good[i] = 0; if (S.bad[i] < 255) S.bad[i]++;
+        if (!S.fault[i] && S.bad[i] >= HEALTH_BAD_TICKS) { S.fault[i] = true; S.faultWhy[i] = why; say(now, `Box ${i + 1}: SENSOR FAULT - the water-level sensor ${why}. Reporting UNKNOWN, no refill for this box.`, { type: 'sensorfault', box: i, why }); if (S.runBox === i) stopRunForFault(i, now); }
+      } else {
+        S.bad[i] = 0; if (S.good[i] < 255) S.good[i]++;
+        if (S.fault[i] && S.good[i] >= HEALTH_GOOD_TICKS) { S.fault[i] = false; say(now, `Box ${i + 1}: the water-level sensor reads normally again - fault cleared`, { type: 'sensorok', box: i }); }
+      }
+    }
+  }
+  S.logicTick = function (now) {
+    if (!S.sensorsReady() || now < BOOT_QUIET_MS) return;
+    updateHealth(now);
+    for (let i = 0; i < 3; i++) S.lvl[i] = !S.watch[i] ? OFF : (S.fault[i] ? UNKNOWN : S.levelOf(i, S.rawAvg[i]));
+    // 1. the refill whose valve is open
+    if (S.runBox >= 0) {
+      const r = S.runBox, b = S.box[r], c = S.cfg[r];
+      if (S.lvl[r] === MAX) finishRefill(r, now);
+      else {
+        if (b.lastLvl === EMPTY && S.lvl[r] !== EMPTY) b.progressMs = now;
+        b.lastLvl = S.lvl[r];
+        if (S.rawAvg[r] >= b.peak + c.minRise) { b.peak = S.rawAvg[r]; b.progressMs = now; }
+        const stallMs = 1000 * (S.lvl[r] === EMPTY ? c.stallEmptyS : c.stallLowS);
+        if (now - b.progressMs >= stallMs) failRefill(r, now, 'the level does not rise');
+        else if (now - b.openedMs >= 1000 * c.maxRefillS) failRefill(r, now, 'time limit');
+      }
+    }
+    // 2. the other boxes: queue in / out, retry waits, failure flags
+    for (let i = 0; i < 3; i++) {
+      if (i === S.runBox) continue;
+      const b = S.box[i], need = needs(i);
+      if (need) b.calm = 0; else if (b.calm < 255) b.calm++;
+      if (b.failed && S.lvl[i] >= MID && S.lvl[i] <= MAX && b.calm >= CALM_TICKS) {
+        b.failed = false; if (b.phase === PH_RETRY) b.phase = PH_IDLE;
+        say(now, `Box ${i + 1}: reads ${lvlName(S.lvl[i])} again - failure flag cleared`, { type: 'unfail', box: i });
+      }
+      if (b.phase === PH_RETRY && (now - b.retryAtMs) >= 0) b.phase = PH_IDLE;
+      if (b.phase === PH_IDLE && need) { b.phase = PH_QUEUED; b.queuedAtMs = now; say(now, `Box ${i + 1}: ${lvlName(S.lvl[i])} - waiting in the queue`, { type: 'queue', box: i }); }
+      else if (b.phase === PH_QUEUED && !need && b.calm >= CALM_TICKS) { b.phase = PH_IDLE; say(now, `Box ${i + 1}: reads ${lvlName(S.lvl[i])} again - left the queue`, { type: 'unqueue', box: i }); }
+    }
+    // 3. the manual test ends
+    if (S.testBox >= 0 && (now - S.testEndMs) >= 0) { S.closeValve(S.testBox); say(now, `valve ${S.testBox + 1} test over - CLOSED`, { type: 'testend', box: S.testBox }); S.testBox = -1; S.lastCloseMs = now; }
+    // 4. nobody has a valve open: the first box of the queue gets its turn
+    if (S.runBox < 0 && S.testBox < 0 && S.valveMask === 0 && now - S.lastCloseMs >= VALVE_GAP_MS) {
+      let pick = -1;
+      for (let i = 0; i < 3; i++) { if (S.box[i].phase !== PH_QUEUED) continue; if (pick < 0 || aheadOf(i, pick)) pick = i; }
+      if (pick >= 0 && S.openValve(pick)) {
+        const b = S.box[pick]; S.runBox = pick; b.phase = PH_REFILL; b.openedMs = b.progressMs = now; b.peak = S.rawAvg[pick]; b.lastLvl = S.lvl[pick];
+        say(now, `Box ${pick + 1}: ${lvlName(S.lvl[pick])} (raw ${S.rawAvg[pick]}) - valve OPEN`, { type: 'open', box: pick });
+      }
+    }
+  };
+  S.startTest = function (i, now) {
+    if (!S.watch[i]) { say(now, `test of valve ${i + 1} REFUSED: Box ${i + 1} is not watched for now`, { type: 'testrefused', box: i }); return false; }
+    if (!S.sensorsReady() || now < BOOT_QUIET_MS || S.valveMask !== 0 || S.testBox >= 0 || now - S.lastCloseMs < VALVE_GAP_MS) { say(now, `test of valve ${i + 1} REFUSED: busy (a valve is open or just closed)`, { type: 'testrefused', box: i }); return false; }
+    if (!S.openValve(i)) return false;
+    S.testBox = i; S.testEndMs = now + 1000 * S.testSeconds; say(now, `valve ${i + 1} TEST: open for ${S.testSeconds} s`, { type: 'teststart', box: i }); return true;
+  };
+  S.stopTest = function (i, now) { if (S.testBox !== i) return; S.closeValve(i); S.testBox = -1; S.lastCloseMs = now; say(now, `valve ${i + 1} test stopped - CLOSED`, { type: 'teststop', box: i }); };
+  S.queueMask = () => S.box.reduce((m, b, i) => m | (b.phase === PH_QUEUED ? 1 << i : 0), 0);
+  S.failMask = () => S.box.reduce((m, b, i) => m | (b.failed ? 1 << i : 0), 0);
+  return S;
+}
+
+// =====================================================================================================================================
+// THE WORLD - three containers and one supply. Only a stand-in: raw units per second while a valve is open, an air delay before the liquid reaches the sensor.
+// =====================================================================================================================================
+function World() {
+  const W = { raw: [745, 80, 1250], rate: [25, 25, 25], air: [8, 8, 8], openFor: [0, 0, 0] };   // rate = raw units per second of supply; air = seconds until liquid reaches an empty sensor
+  W.step = function (st, dtMs) {
+    for (let i = 0; i < 3; i++) {
+      if ((st.valveMask >> i) & 1) {
+        W.openFor[i] += dtMs / 1000;
+        const sensorDry = W.raw[i] <= 0;
+        if (sensorDry && W.openFor[i] < W.air[i]) continue;                  // the liquid is still on its way up the pipe
+        W.raw[i] = Math.min(4095, W.raw[i] + W.rate[i] * dtMs / 1000);
+      } else W.openFor[i] = 0;
+    }
+  };
+  return W;
+}
+
+// =====================================================================================================================================
+// A virtual-time runner shared by the page and the self-tests
+// =====================================================================================================================================
+function Sim(logFn) {
+  const sim = { now: 0, W: World(), noise: [0, 0, 0], k: 0, log: logFn || (() => {}) };
+  sim.S = Station((t, text) => sim.log(t, text));
+  sim.advance = function (ms) {
+    const end = sim.now + ms;
+    while (sim.now < end) {
+      sim.now += SAMPLE_MS;
+      sim.W.step(sim.S, SAMPLE_MS);
+      sim.k++; sim.S.sample(sim.W.raw.map((v, i) => v + (sim.k % 2 ? sim.noise[i] : -sim.noise[i])));      // noise = a reading that jumps up and down by this much
+      if (sim.now % TICK_MS === 0) sim.S.logicTick(sim.now);
+    }
+  };
+  sim.settle = function () { sim.advance(BOOT_QUIET_MS + 1500); };       // a power-up: the average fills, the quiet time passes
+  return sim;
+}
+const opens = S => S.events.filter(e => e.type === 'open').map(e => e.box + 1);
+
+// =====================================================================================================================================
+// SELF-TESTS
+// =====================================================================================================================================
+const TESTS = [
+  ['EMPTY goes before LOW, whatever the box number', s => { s.W.raw = [300, 0, 300]; s.W.rate = [30, 30, 30]; s.W.air = [5, 5, 5]; s.settle(); s.advance(120000); return opens(s.S).join(',') === '2,1,3'; }],
+  ['first come first served: Box 2 refilling, Box 3 turns LOW, then Box 1 turns LOW - order 2, 3, 1', s => { s.W.raw = [900, 300, 900]; s.settle(); s.advance(1000); s.W.raw[2] = 300; s.advance(1000); s.W.raw[0] = 300; s.advance(200000); return opens(s.S).join(',') === '2,3,1'; }],
+  ['tie in time and class: Box 1, then 2, then 3', s => { s.W.raw = [300, 300, 300]; s.settle(); s.advance(150000); return opens(s.S).join(',') === '1,2,3'; }],
+  ['never more than one valve open (3 boxes EMPTY, slow supply)', s => { s.W.raw = [0, 0, 0]; s.W.rate = [20, 20, 20]; s.settle(); s.advance(400000); return s.S.maxOpen === 1 && opens(s.S).length === 3; }],
+  ['a running LOW refill is NOT interrupted when another box turns EMPTY', s => { s.W.raw = [300, 900, 900]; s.W.rate = [10, 10, 10]; s.settle(); s.advance(10000); s.W.raw[1] = 0; s.advance(5000); const stillOne = s.S.runBox === 0; s.advance(200000); return stillOne && opens(s.S).join(',') === '1,2'; }],
+  ['refill works: valve closes at MAX, flag clear, goes idle', s => { s.W.raw = [300, 900, 900]; s.settle(); s.advance(80000); return s.S.runBox === -1 && s.S.valveMask === 0 && s.S.box[0].phase === PH_IDLE && !s.S.box[0].failed && s.S.lvl[0] === MAX; }],
+  ['EMPTY with no supply: FAILS after about 30 s, retry after 60 s, fails again', s => { s.W.raw = [0, 900, 900]; s.W.rate = [0, 0, 0]; s.settle(); s.advance(35000); const f1 = s.S.events.filter(e => e.type === 'fail'); const okFirst = f1.length === 1 && f1[0].t >= 3000 + 29000 && f1[0].t <= 3000 + 33000 && s.S.box[0].failed && s.S.valveMask === 0; s.advance(70000); return okFirst && opens(s.S).length === 2; }],
+  ['LOW with no supply: FAILS after about 5 s', s => { s.W.raw = [300, 900, 900]; s.W.rate = [0, 0, 0]; s.settle(); s.advance(15000); const f = s.S.events.filter(e => e.type === 'fail'); return f.length === 1 && f[0].t - s.S.events.find(e => e.type === 'open').t <= 6500 && f[0].t - s.S.events.find(e => e.type === 'open').t >= 4500; }],
+  ['too slow to ever reach MAX: the 180 s time limit closes the valve', s => { s.W.raw = [300, 900, 900]; s.W.rate = [4, 4, 4]; s.settle(); s.advance(200000); const f = s.S.events.find(e => e.type === 'fail'); return !!f && f.why === 'time limit' && f.t - s.S.events.find(e => e.type === 'open').t >= 179000 && f.t - s.S.events.find(e => e.type === 'open').t <= 181500; }],
+  ['a failed box lets the next one in at once (no waiting for its retry)', s => { s.W.raw = [0, 300, 900]; s.W.rate = [0, 40, 40]; s.settle(); s.W.rate[0] = 0; s.advance(120000); return opens(s.S).slice(0, 2).join(',') === '1,2'; }],
+  ['the failure flag stays until a refill works (retries for ever)', s => { s.W.raw = [0, 900, 900]; s.W.rate = [0, 0, 0]; s.settle(); s.advance(400000); const fails = s.S.events.filter(e => e.type === 'fail').length; return fails >= 5 && s.S.box[0].failed; }],
+  ['after the supply comes back the failed box refills and the flag clears', s => { s.W.raw = [0, 900, 900]; s.W.rate = [0, 0, 0]; s.settle(); s.advance(40000); s.W.rate[0] = 40; s.advance(150000); return s.S.lvl[0] === MAX && !s.S.box[0].failed; }],
+  ['manual test: opens the valve for 2 s, then closes it, queue untouched', s => { s.W.raw = [900, 900, 900]; s.settle(); const ok = s.S.startTest(1, s.now); s.advance(1000); const open1 = s.S.valveMask === 2; s.advance(1500); return ok && open1 && s.S.valveMask === 0 && s.S.queueMask() === 0; }],
+  ['manual test is REFUSED while a refill runs', s => { s.W.raw = [300, 900, 900]; s.settle(); s.advance(3000); const ok = s.S.startTest(2, s.now); return !ok && s.S.runBox === 0; }],
+  ['a queued box refilled by hand leaves the queue after 3 s', s => { s.W.raw = [300, 300, 900]; s.W.rate = [10, 10, 10]; s.settle(); s.advance(2000); const q = s.S.box[1].phase === PH_QUEUED; s.W.raw[1] = 700; s.advance(4000); return q && s.S.box[1].phase === PH_IDLE; }],
+  ['nothing opens during the boot quiet time', s => { s.W.raw = [0, 0, 0]; s.advance(2900); return s.S.events.filter(e => e.type === 'open').length === 0; }],
+  ['sensor on the 3.3 V rail: SENSOR FAULT after about 5 s (UNKNOWN), no refill, and it clears 10 s after the reading is normal', s => { s.W.raw = [4095, 900, 900]; s.settle(); s.advance(2000); const early = !s.S.fault[0]; s.advance(5000); const f = s.S.fault[0] && s.S.lvl[0] === UNKNOWN; s.W.raw[0] = 900; s.advance(6000); const still = s.S.fault[0]; s.advance(6000); return early && f && still && !s.S.fault[0] && s.S.lvl[0] === MID && opens(s.S).length === 0; }],
+  ['a floating wire (readings jump by thousands) with the valve closed: SENSOR FAULT after about 5 s (UNKNOWN), clears 10 s after it calms down', s => { s.W.raw = [900, 900, 900]; s.noise[1] = 1000; s.settle(); s.advance(8000); const f = s.S.fault[1] && s.S.lvl[1] === UNKNOWN && s.S.queueMask() === 0; s.noise[1] = 0; s.advance(15000); return f && !s.S.fault[1] && s.S.lvl[1] === MID; }],
+  ['a sensor that jumps to the 3.3 V rail during a refill: the valve closes (it looks like MAX), 5 s later SENSOR FAULT, never a failed refill', s => { s.W.raw = [300, 900, 900]; s.W.rate = [0, 0, 0]; s.settle(); s.advance(2500); const open = s.S.runBox === 0; s.W.raw[0] = 4095; s.advance(7000); return open && s.S.valveMask === 0 && !s.S.box[0].failed && s.S.fault[0] && s.S.events.filter(e => e.type === 'fail').length === 0 && s.S.queueMask() === 0; }],  ['splashing while the valve is OPEN (a manual test) is not a fault', s => { s.W.raw = [900, 900, 900]; s.noise[0] = 900; s.S.testSeconds = 20; s.settle(); s.S.startTest(0, s.now); s.advance(12000); return !s.S.fault[0] && s.S.valveMask === 1; }],
+  ['MAX edge set to 4000 or more turns the 3.3 V rail check off (a sensor that saturates when wet)', s => { s.S.cfg[0].maxEdge = 4000; s.W.raw = [4095, 900, 900]; s.settle(); s.advance(10000); return !s.S.fault[0] && s.S.lvl[0] === MAX; }],
+  ['Box 3 only: an EMPTY Box 1 and Box 2 are reported NOT WATCHED, never queued, their valves never open, only Box 3 refills', s => { s.S.watch = [false, false, true]; s.W.raw = [0, 0, 300]; s.settle(); s.advance(3000); const off = s.S.lvl[0] === OFF && s.S.lvl[1] === OFF; const only3 = s.S.runBox === 2 && s.S.valveMask === 4 && s.S.queueMask() === 0; s.advance(80000); return off && only3 && s.S.lvl[2] === MAX && s.S.valveMask === 0 && s.S.lvl[0] === OFF && opens(s.S).length > 0 && opens(s.S).every(b => b === 3); }],
+  ['Box 3 only: a wild or rail reading on an unwatched Box 1 is no sensor fault, and the manual test of its valve is refused', s => { s.S.watch = [false, false, true]; s.W.raw = [4095, 900, 900]; s.noise[1] = 1000; s.settle(); s.advance(10000); const nofault = !s.S.fault[0] && !s.S.fault[1]; const refused = !s.S.startTest(0, s.now) && s.S.valveMask === 0; return nofault && refused && s.S.lvl[2] === MID; }],
+  ['MID and HIGH never start a refill', s => { s.W.raw = [600, 1100, 900]; s.settle(); s.advance(60000); return opens(s.S).length === 0; }],
+];
+function runTests() {
+  const box = document.getElementById('tests'); box.innerHTML = ''; let pass = 0;
+  TESTS.forEach(([name, fn]) => {
+    let ok = false, err = ''; try { ok = !!fn(Sim()); } catch (e) { err = ' (' + e.message + ')'; }
+    if (ok) pass++; const d = document.createElement('div'); d.className = ok ? 'pass' : 'fail'; d.textContent = (ok ? 'PASS  ' : 'FAIL  ') + name + err; box.appendChild(d);
+  });
+  document.getElementById('testsum').textContent = pass + ' of ' + TESTS.length + ' pass';
+  return pass === TESTS.length;
+}
+
+// =====================================================================================================================================
+// THE PAGE
+// =====================================================================================================================================
+let sim, speed = 5, paused = false, lastFrame = 0;
+const $ = id => document.getElementById(id);
+const logEl = $('log');
+function fmtT(ms) { const s = Math.floor(ms / 1000); return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'); }
+function addLog(t, text) { logEl.textContent += fmtT(t) + '  ' + text + '\n'; logEl.scrollTop = logEl.scrollHeight; }
+const SCENARIOS = {
+  'Box 1 LOW, Box 2 MID, Box 3 MAX (only Box 1 refills)': { raw: [300, 700, 1250] },
+  'All three EMPTY (one at a time: 1, 2, 3)': { raw: [0, 0, 0] },
+  'Box 1 LOW, Box 2 EMPTY, Box 3 LOW (EMPTY goes first: 2, 1, 3)': { raw: [300, 0, 300] },
+  'Box 2 has NO supply (fails, retries every 60 s, the others go on)': { raw: [300, 0, 300], rate: [25, 0, 25] },
+  'Slow supply (25 raw/s -> 6 raw/s)': { raw: [300, 900, 900], rate: [6, 6, 6] },
+};
+function load(name) {
+  const sc = SCENARIOS[name]; sim = Sim(addLog); logEl.textContent = '';
+  sim.W.raw = sc.raw.slice(); if (sc.rate) sim.W.rate = sc.rate.slice();
+  buildCfg(); buildBoxes(); paint();
+}
+function buildCfg() {
+  const box = $('cfgs'); box.innerHTML = '';
+  const t = document.createElement('table'); let h = '<tr><td></td>' + [1, 2, 3].map(n => '<td><b>Box ' + n + '</b></td>').join('') + '</tr>';
+  FIELDS.forEach(f => { h += '<tr><td>' + f + '</td>' + [0, 1, 2].map(i => '<td><input type="number" data-b="' + i + '" data-f="' + f + '" value="' + sim.S.cfg[i][f] + '"></td>').join('') + '</tr>'; });
+  t.innerHTML = h; box.appendChild(t);
+  t.querySelectorAll('input').forEach(el => el.addEventListener('input', () => { sim.S.cfg[+el.dataset.b][el.dataset.f] = +el.value; }));
+}
+function buildBoxes() {
+  const box = $('boxes'); box.innerHTML = '';
+  for (let i = 0; i < 3; i++) {
+    const d = document.createElement('div'); d.className = 'card'; d.style.margin = '0'; d.id = 'bx' + i;
+    d.innerHTML = '<div><b>Box ' + (i + 1) + '</b> <span id="bst' + i + '"></span></div><div class="bar" id="bbar' + i + '"><i></i></div><div class="note" id="bnote' + i + '"></div><div id="bchips' + i + '"></div>' +
+      '<details><summary>the world (what the liquid does)</summary>' +
+      '<div class="row"><label>supply</label><input type="number" id="rate' + i + '" min="0" max="200"><span class="note">raw per second while the valve is open (0 = nothing arrives)</span></div>' +
+      '<div class="row"><label>air delay</label><input type="number" id="air' + i + '" min="0" max="120"><span class="note">seconds before liquid reaches an EMPTY sensor</span></div>' +
+      '<div class="row"><button data-use="' + i + '">Customer uses liquid (-400)</button><button data-fill="' + i + '">Fill by hand (+600)</button><button data-test="' + i + '">Test valve</button></div></details>';
+    box.appendChild(d);
+    d.querySelector('#rate' + i).value = sim.W.rate[i]; d.querySelector('#air' + i).value = sim.W.air[i];
+    d.querySelector('#rate' + i).addEventListener('input', e => { sim.W.rate[i] = +e.target.value; });
+    d.querySelector('#air' + i).addEventListener('input', e => { sim.W.air[i] = +e.target.value; });
+    d.querySelector('[data-use]').onclick = () => { sim.W.raw[i] = Math.max(0, sim.W.raw[i] - 400); };
+    d.querySelector('[data-fill]').onclick = () => { sim.W.raw[i] = Math.min(4095, sim.W.raw[i] + 600); };
+    d.querySelector('[data-test]').onclick = () => { sim.S.startTest(i, sim.now); };
+  }
+}
+function paint() {
+  const S = sim.S;
+  for (let i = 0; i < 3; i++) {
+    const st = S.lvl[i], c = S.cfg[i], b = S.box[i];
+    $('bst' + i).innerHTML = '<span class="chip">' + (S.fault[i] ? 'SENSOR FAULT' : (st === UNKNOWN ? 'UNKNOWN' : LVL_NAME[st])) + '</span>';
+    $('bbar' + i).className = 'bar s' + st; $('bbar' + i).firstChild.style.width = Math.min(100, Math.round(100 * S.rawAvg[i] / c.maxEdge)) + '%';
+    $('bnote' + i).textContent = 'raw ' + S.rawAvg[i] + '  (world ' + Math.round(sim.W.raw[i]) + ')  MID ' + c.midEdge + ' / HIGH ' + c.highEdge + ' / MAX ' + c.maxEdge;
+    let ch = '<span class="led' + (((S.valveMask >> i) & 1) ? ' on' : '') + '"></span>valve ' + (((S.valveMask >> i) & 1) ? 'OPEN' : 'closed') + '  ';
+    if (b.phase === PH_REFILL) ch += '<span class="chip run">refilling ' + Math.floor((sim.now - b.openedMs) / 1000) + ' s</span>';
+    if (b.phase === PH_QUEUED) ch += '<span class="chip q">queued</span>';
+    if (b.phase === PH_RETRY) ch += '<span class="chip bad">retry in ' + Math.max(0, Math.ceil((b.retryAtMs - sim.now) / 1000)) + ' s</span>';
+    if (S.testBox === i) ch += '<span class="chip run">TEST</span>';
+    if (b.failed) ch += '<span class="chip bad">last refill FAILED</span>';
+    if (S.fault[i]) ch += '<span class="chip bad">' + S.faultWhy[i] + '</span>';
+    $('bchips' + i).innerHTML = ch;
+  }
+  const open = [1, 2, 3].filter(n => (S.valveMask >> (n - 1)) & 1);
+  $('stline').innerHTML = '<b>' + (open.length ? 'valve ' + open.join(',') + ' open' : 'idle - no valve open') + '</b><span class="note">queue: ' + ([1, 2, 3].filter(n => (S.queueMask() >> (n - 1)) & 1).join(', ') || 'empty') + ' &middot; most valves ever open at once: ' + S.maxOpen + '</span>';
+  $('clock').textContent = 'virtual time ' + fmtT(sim.now);
+}
+function frame(ts) {
+  if (!paused) { const dt = Math.min(100, ts - lastFrame); sim.advance(Math.round(dt * speed / SAMPLE_MS) * SAMPLE_MS); }
+  lastFrame = ts; paint(); requestAnimationFrame(frame);
+}
+[1, 5, 20, 100].forEach(v => { const b = document.createElement('button'); b.textContent = v + '×'; b.onclick = () => { speed = v; document.querySelectorAll('#speeds button').forEach(x => x.classList.remove('on')); b.classList.add('on'); }; if (v === speed) b.classList.add('on'); $('speeds').appendChild(b); });
+Object.keys(SCENARIOS).forEach(n => { const o = document.createElement('option'); o.textContent = n; $('scn').appendChild(o); });
+$('runscn').onclick = () => load($('scn').value); $('reset').onclick = () => load($('scn').value);
+$('pause').onclick = () => { paused = !paused; $('pause').textContent = paused ? 'Resume' : 'Pause'; };
+$('runtests').onclick = runTests;
+load(Object.keys(SCENARIOS)[0]); requestAnimationFrame(t => { lastFrame = t; frame(t); });
+</script></main></body></html>

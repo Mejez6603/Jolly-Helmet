@@ -1,0 +1,17 @@
+- Remove Touch Debug
+- Remove RATING Displays
+- Remove Prefered Time
+- Remove Picking Time just Standard  Time (5 Mins)
+- Change the Settings on the LocalServer to have only "MAX Money Limit" and how much the Per Coin is (1 Coin = Minutes / Coins)
+
+Modified Step Enclosure 1
+1. Welcome
+2. Check Liquid
+3. Mode Selection
+4. Input Coin
+5. Sensors / Open / Close (A)
+6. Clean
+7. Sensors / Open / Close (B)
+8. Thank You
+
+The Panelist said "as a Customer we are not always Reading the Manual, like a TV when we bought it we already know how to use it cause of Common Knowledge, now i want it when i use this Unit and put my Helmet inside i will just wait for it to finish like input process and output, so trim the flow in your unit so we don't want the Customer to waste aits Time, cause not all customer can read and not every day you are here as an Assistant, make it friendly for them to be of use" another Panelist said to just focus on BOX 3 for now cause they want all BOX 1-2 to be a Cleaning/UV and Drying/UV the same thing as BOX 3, and they said to research how UV effects the Helmet how long does UV needs to be on to be able to rid of Bacterias, and how long does Drying Needs for it to be Dried after Cleaning

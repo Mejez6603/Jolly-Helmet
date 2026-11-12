@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<title>3 - Refilling station</title>
+<style>
+  @page { size: 439px 580px; margin: 0 }
+  html, body { margin: 0; background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact }
+  svg { display: block }
+  text { font-family: Tahoma, Verdana, 'DejaVu Sans', Arial, sans-serif; fill: #111; font-size: 9.4px }
+  .b { font-weight: 700 }
+  .i { font-style: italic; font-family: Verdana, Tahoma, 'DejaVu Sans', Arial, sans-serif }
+  .shape { fill: #fff; stroke: #111; stroke-width: 1.5 }
+  .ln { fill: none; stroke: #111; stroke-width: 1.5; stroke-linejoin: miter }
+</style></head>
+<body>
+<svg id="s" width="439" height="580" viewBox="0 0 439 580" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="ah" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#111"/></marker>
+  </defs>
+</svg>
+<script>
+/* 3 - Refilling station - redrawn from the user's picture (439 x 580 units).
+   Change made 2026-11-12: the NO line of "Any container low?" now goes straight into the "Read the 3 water-level sensors" box with its own arrow
+   (before, its arrowhead ended on the long loop line coming from "Close the valve", so the two lines merged). Everything else is as in the picture. */
+const NS = 'http://www.w3.org/2000/svg', svg = document.getElementById('s');
+function mk(tag, attrs, parent) { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); (parent || svg).appendChild(e); return e; }
+function txt(x, y, lines, cls, anchor, size) {   /* lines: string or array, centred on y */
+  lines = [].concat(lines); const lh = 12.2, y0 = y - (lines.length - 1) * lh / 2;
+  lines.forEach((t, i) => { const e = mk('text', { x, y: y0 + i * lh, 'text-anchor': anchor || 'middle', 'dominant-baseline': 'central', class: cls || '' }); e.textContent = t; if (size) e.style.fontSize = size + 'px'; });
+}
+function line(pts) { mk('path', { d: 'M' + pts.map(p => p.join(',')).join(' L'), class: 'ln', 'marker-end': 'url(#ah)' }); }
+function box(x1, y1, x2, y2, t) { mk('rect', { x: x1, y: y1, width: x2 - x1, height: y2 - y1, class: 'shape' }); txt((x1 + x2) / 2, (y1 + y2) / 2, t); }
+function diamond(cx, cy, hw, hh, t) { mk('polygon', { points: `${cx},${cy - hh} ${cx + hw},${cy} ${cx},${cy + hh} ${cx - hw},${cy}`, class: 'shape' }); txt(cx, cy, t); }
+function para(x1, y1, x2, y2, t, sk) { mk('polygon', { points: `${x1 + sk},${y1} ${x2},${y1} ${x2 - sk},${y2} ${x1},${y2}`, class: 'shape' }); txt((x1 + x2) / 2, (y1 + y2) / 2, t); }
+function circle(cx, cy, r, t) { mk('circle', { cx, cy, r, class: 'shape', 'stroke-width': 2 }); txt(cx, cy + 0.5, t, 'b', 'middle', 13); }
+
+const CX = 198;                                   /* centre line */
+/* left edge of the "Read the 3 water-level sensors" parallelogram at height y (it leans: 120 at the top, 109 at the bottom) */
+const readLeft = y => 120 - (y - 139.3) * 11 / 34;
+
+/* title */
+txt(30, 19, '3 - Refilling station', 'b', 'start', 12.6);
+txt(30, 37, 'ESP32-WROOM, 3 sensors, 3 valves', 'i', 'start', 9.4);
+
+/* top right: connector C and "Receive settings via ESP-NOW" */
+circle(353, 50, 12, 'C');
+line([[353, 62], [353, 73]]);
+para(296, 73, 404, 110, ['Receive settings', 'via ESP-NOW'], 10.7);
+line([[353, 110], [353, 153.3], [281, 153.3]]);   /* settings go into the Read box from the right */
+
+/* START */
+mk('rect', { x: 114, y: 67, width: 166, height: 47, rx: 23.5, class: 'shape', 'stroke-width': 1.8 });
+txt(CX, 79.3, 'START', 'b'); txt(CX, 91.5, 'Refilling station (ESP32-WROOM)'); txt(CX, 102.7, 'powers on');
+line([[CX, 114], [CX, 139.3]]);
+
+/* read the 3 water-level sensors: three arrows come in on the left/right edges, each with its own arrowhead */
+para(109, 139.3, 285, 173.3, ['Read the 3 water-level sensors', '(Box 1, 2, 3 containers)'], 11);
+line([[CX, 173.3], [CX, 196.7]]);
+
+/* send levels, then connector B */
+para(108.5, 196.7, 289.5, 222.7, 'Send levels via ESP-NOW', 10.5);
+line([[284, 210], [333, 210]]);
+circle(346, 210, 13, 'B');
+line([[CX, 222.7], [CX, 242]]);
+
+/* any container low? */
+diamond(CX, 274, 68.5, 32, ['Any container', 'low?']);
+txt(110, 265, 'No', 'b', 'start');
+txt(203, 315, 'Yes', 'b', 'start');
+line([[129.5, 274], [79, 274], [79, 165], [readLeft(165), 165]]);          /* CHANGED: No goes straight into the Read box with its own arrow (lower entry) */
+line([[114, 547], [55, 547], [55, 147], [readLeft(147), 147]]);            /* from Close the valve, back to the Read box (upper entry) */
+line([[CX, 306], [CX, 330.7]]);
+
+/* open the valve, read the level */
+box(113, 330.7, 284, 378.3, ["Open that box’s valve", "(one valve at a time), fill", "from the main container"]);
+line([[CX, 378.3], [CX, 399.3]]);
+para(107.5, 399.3, 290.5, 426, 'Read that container’s level', 11);
+line([[CX, 426], [CX, 444]]);
+
+/* container full? */
+diamond(CX, 475.3, 68, 31.5, ['Container', 'full?']);
+txt(110, 466, 'No', 'b', 'start');
+txt(203, 517, 'Yes', 'b', 'start');
+line([[130, 475.3], [78.5, 475.3], [78.5, 353], [113, 353]]);
+line([[CX, 506.8], [CX, 533.3]]);
+
+/* close the valve */
+box(113, 533.3, 284, 560, 'Close the valve');
+</script>
+</body></html>

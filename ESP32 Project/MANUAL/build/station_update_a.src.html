@@ -1,0 +1,186 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Manual v10, part A: customer guide and admin guide</title></head><body>
+<!--
+  v10 (2026-11-04), part A = the Refilling Station replaces the two ACS boards, Box 3 runs the trimmed 36-step flow, OUT OF ORDER never traps a helmet.
+  Run: patch_docx.html?in=JollyHelmet_UserManual_v9.docx&out=build/_v10a.docx&src=station_update_a.src.html      (then part B on the result)
+  Sources of every statement: ESP32_S3B.ino (flow, defaults), S3B_Screens.h / FLOWCHART_BOX3\screens (the pictures), ESP32_REFILL.ino + settings_pages.h (station), ESP32_B1 / ESP32_B3 (OUT OF ORDER).
+-->
+
+<!-- ===================== removals first (done by the tool before anything is inserted) ===================== -->
+<div class="op" data-op="clear-section" data-after="Heading2:Box 3 - Cleaner + Dryer"></div>
+<div class="op" data-op="delete-section" data-after="Heading2:Refill station (ACS)"></div>
+<div class="op" data-op="delete-section" data-after="Heading3:Checklist and Fix it"></div>
+<div class="op" data-op="delete-row" data-after="Heading3:The tabs" data-row="Checklist"></div>
+<div class="op" data-op="delete-row" data-after="Heading3:The tabs" data-row="Fix it"></div>
+<div class="op" data-op="delete-row" data-after="Heading3:The tabs" data-row="Manual"></div>
+<div class="op" data-op="delete-row" data-after="Heading3:Alerts and sounds" data-row="An ACS supply tank is empty"></div>
+<div class="op" data-op="delete-row" data-after="Heading3:Alerts and sounds" data-row="A container is low (under 15 %)"></div>
+<div class="op" data-op="delete-row" data-after="Heading3:Alerts and sounds" data-row="A container is getting low"></div>
+<div class="op" data-op="delete-row" data-after="Heading3:Alerts and sounds" data-row="A maintenance check is overdue"></div>
+
+<!-- ===================== CUSTOMER GUIDE ===================== -->
+<div class="ins" data-anchor="Heading2:Prices and time">
+<p>Box 3 does both jobs. It cleans (UV light and a fine mist), then dries the helmet, or it only dries. There is nothing to rate and no time to type: you pay the coins and the machine runs for the time they buy.</p>
+<div class="shots" data-w="2.05" data-cols="3">
+<figure><img src="images/v10/screens/02_CHECKING_C.png" alt="Checking Main Container"><figcaption>1. CHECKING (2 seconds)</figcaption></figure>
+<figure><img src="images/v10/screens/04_SELECT_MODE.png" alt="SELECT MODE"><figcaption>2. SELECT MODE</figcaption></figure>
+<figure><img src="images/v10/screens/05_SELECT_DRY_ONLY.png" alt="SELECT DRY ONLY"><figcaption>2b. CLEANING greyed out: dry only</figcaption></figure>
+<figure><img src="images/v10/screens/06_CL_INSERT_COIN.png" alt="INSERT THE REQUIRED COIN"><figcaption>3. INSERT THE REQUIRED COIN</figcaption></figure>
+<figure><img src="images/v10/screens/10_CLEANING_BAL.png" alt="Cleaning"><figcaption>4. CLEANING (CANCEL top right)</figcaption></figure>
+<figure><img src="images/v10/screens/11_CL_HEATING.png" alt="Auto dry"><figcaption>5. AUTO DRY after a cleaning</figcaption></figure>
+<figure><img src="images/v10/screens/25_DR_HEATING.png" alt="Drying"><figcaption>DRYING mode: warm air and UV</figcaption></figure>
+<figure><img src="images/v10/screens/26_DR_COOLDOWN.png" alt="Cooling down"><figcaption>COOL DOWN after drying</figcaption></figure>
+<figure><img src="images/v10/screens/16_CL_ABORT.png" alt="Cancel operation"><figcaption>CANCEL: CONFIRM or RESUME</figcaption></figure>
+</div>
+<ol>
+<li>Tap the screen. For 2 seconds it says Checking Main Container: the machine asks the Refilling Station whether the cleaning liquid is high enough. Tap again at WELCOME.</li>
+<li>SELECT MODE: tap CLEANING or DRYING. If CLEANING is grey (SELECT DRY ONLY), the liquid is low or the Refilling Station is not answering: only DRYING can be chosen.</li>
+<li>INSERT THE REQUIRED COIN: insert coins until the count reaches the number asked (15 coins = 5 minutes). CANCEL takes you back to the start.</li>
+<li>OPEN, PLACE, CLOSE: the door unlocks and the buzzer beeps. Open it, put your helmet in, close the door.</li>
+<li>The machine runs for the time your coins bought. CLEANING uses UV light and mist, then AUTO DRY dries the helmet for 3 minutes with UV light and warm air (the warm air stops for the last 30 seconds). DRYING uses warm air and UV light, then COOL DOWN lets the helmet rest for 60 seconds.</li>
+<li>OPEN, TAKE, CLOSE: the door unlocks again. Take your helmet out and close the door. The screen says "Thank you for your patronage!".</li>
+</ol>
+<h3>Adding coins and cancelling</h3>
+<ul>
+<li>You can add coins while a cleaning or a drying is running. Every coin adds time, up to 90 coins (30 minutes) in all. Coins are not taken during AUTO DRY and COOL DOWN.</li>
+<li>CANCEL (top right) asks "Cancel operation? COIN(s) won't be Refunded." CONFIRM stops the run, RESUME carries on. A cancelled cleaning still goes through the 3-minute AUTO DRY, because the helmet is wet. A cancelled drying goes through the 60-second COOL DOWN. Then the door unlocks.</li>
+<li>If you open the door while the machine runs, it pauses (SAFETY PAUSE) and switches the UV light and the heat off. Close the door and it carries on.</li>
+<li>There is no rating and no free retry in Box 3.</li>
+</ul>
+<h3>If the power goes out or Box 3 shows OUT OF ORDER</h3>
+<p>Box 3 never keeps a helmet locked in. If it cannot work, the screen shows OUT OF ORDER. When your helmet is inside and the door is shut, the screen also says "Your helmet is still inside. Take it out, then close the door.", the door unlocks by itself and the buzzer beeps (100 ms on, 500 ms off) until you open the door. If the door stays locked, slide the safety lock down (lower left of the door). A session that was paid but cut by a power failure is not restored.</p>
+<div class="shots" data-w="2.05" data-cols="3">
+<figure><img src="images/v10/screens/ooo_helmet.png" alt="OUT OF ORDER with the helmet message"><figcaption>OUT OF ORDER, helmet still inside</figcaption></figure>
+</div>
+<div class="tip">Tip / Paalala: Kung kulay abo ang CLEANING, DRYING lang ang magagamit. Subukan muli ang CLEANING mamaya. Kung may nakalagay na OUT OF ORDER at nasa loob ang helmet mo, bubukas ang pinto nang kusa at tutunog ang buzzer: kunin ang helmet at isara ang pinto.</div>
+</div>
+
+<div class="op" data-op="replace-para" data-startswith="Box 1 and Box 3 (cleaning): 15 coins = 5 minutes."><p>Box 1 (cleaning): 15 coins = 5 minutes.</p></div>
+<div class="ins" data-after=":Longest session: 30 minutes (90 coins).">
+<p>Box 3 (cleaning or drying): 15 coins = 5 minutes, and nothing else to choose. INSERT THE REQUIRED COIN asks for the first 15 coins; every extra coin adds 20 seconds, up to 90 coins (30 minutes). The 3-minute auto-dry that ends every cleaning is free.</p>
+</div>
+<div class="op" data-op="cell-set" data-after="Heading2:Meet the machines" data-n="2" data-row="Box 3Cleaner + Dryer" data-col="1">One station, two modes. Choose CLEANING or DRYING on the SELECT MODE screen. CLEANING is offered only when the cleaning liquid is high enough; otherwise only DRYING.</div>
+
+<div class="op" data-op="cell-set" data-after="Heading3:Special screens" data-n="2" data-row="OUT OF ORDER" data-col="1">The station cannot work now. If your helmet is inside, the door unlocks by itself and the buzzer beeps: take the helmet out and close the door. Then use another station and tell the staff.</div>
+<div class="op" data-op="cell-set" data-after="Heading3:Special screens" data-n="2" data-row="CLEANING UNAVAILABLE" data-col="0" data-bold="yes">CLEANING greyed out (SELECT DRY ONLY)</div>
+<div class="op" data-op="cell-set" data-after="Heading3:Special screens" data-n="2" data-row="CLEANING greyed out (SELECT DRY ONLY)" data-col="1">The cleaning liquid is low, or the Refilling Station is not answering. DRYING still works. Try CLEANING again later.</div>
+<div class="op" data-op="rows-append" data-after="Heading3:Special screens" data-n="2">
+<table><tr><td>Checking Main Container</td><td>Two seconds after your first tap the machine checks the liquid. Wait.</td></tr>
+<tr><td>AUTO DRY (Drying...)</td><td>The cleaning is over. UV light and warm air dry the helmet for 3 minutes. Wait.</td></tr>
+<tr><td>COOL DOWN</td><td>After DRYING nothing runs for a minute so the helmet can cool. Wait.</td></tr>
+<tr><td>Your helmet is still inside</td><td>The machine is out of order. The door is unlocked and the buzzer beeps: take the helmet out and close the door.</td></tr></table>
+</div>
+<div class="op" data-op="replace-para" data-startswith="In an emergency, tap CANCEL, then CONFIRM."><p>In an emergency, tap CANCEL, then CONFIRM. The machine stops. After the short auto-dry (Box 3 cleaning) or cool-down (dryers) the door unlocks. If you cannot wait, use the safety slide.</p></div>
+<div class="op" data-op="replace-para" data-startswith="If your helmet is stuck after a power cut or a fault"><p>If your helmet is stuck after a power cut or a fault, do not pull on the door. In Box 3 the door unlocks by itself and the buzzer beeps while the screen says OUT OF ORDER. In every box you can also slide the safety lock down (lower left of the enclosure door): the door unlocks at once. Then tell the staff.</p></div>
+<div class="op" data-op="rows-append" data-after="Heading3:Questions" data-n="1">
+<table><tr><td>Why can I only choose DRYING in Box 3?</td><td>CLEANING is greyed out when the liquid is low or the Refilling Station is not answering. Dry only works. Try again later.</td></tr>
+<tr><td>Can I add coins while Box 3 runs?</td><td>Yes. Each coin adds time, up to 90 coins in all. Not during AUTO DRY and COOL DOWN.</td></tr>
+<tr><td>The power went out with my helmet inside.</td><td>Box 3 unlocks the door by itself and beeps: take the helmet out and close the door. If the door stays locked, slide the safety lock down. A paid session that was cut by the power is not restored.</td></tr></table>
+</div>
+
+<!-- ===================== ADMIN GUIDE: Control Center ===================== -->
+<div class="op" data-op="replace-text" data-from="ACS 1 / 2" data-to="Refilling Station"></div>
+<div class="op" data-op="replace-text" data-from="13 of 13" data-to="12 of 12"></div>
+<div class="op" data-op="replace-text" data-from="not one of the 15 boards of the machines" data-to="not one of the 14 boards of the installation"></div>
+<div class="op" data-op="replace-text" data-from="(A1, S3B, ACS 2...)" data-to="(A1, S3B, Refilling Station...)"></div>
+<div class="op" data-op="replace-text" data-from="Fix it: " data-to="Decision tree: "></div>
+<div class="op" data-op="replace-para" data-startswith="Alert banners (red):"><p>Alert banners (red): the Refilling Station offline, a refill that failed, a box out of order, and the two memory and log-storage notes (see Warnings and crash reports).</p></div>
+<div class="op" data-op="replace-para" data-startswith="Refill systems: ACS status"><p>Refilling Station: the three main containers (EMPTY to MAX), who is waiting, which valve is open and a failed refill. Its settings link opens the Refilling Station page.</p></div>
+<div class="op" data-op="replace-para" data-startswith="How to use it (Box 1, Box 2 and Box 3 have the same section)"><p>How to use it (Box 1 and Box 2 have this section; Box 3 is simpler, see "Box 3 settings" below):</p></div>
+<div class="op" data-op="replace-para" data-startswith="Refill tries: tick send the request to the ACS"><p>Refill tries (Box 1 and Box 2, older program): the request to a refill station is only sent when that station works. Box 3 has no container sensors of its own: the Refilling Station reads its container. Then tap Send LEVELS.</p></div>
+<div class="op" data-op="replace-para" data-startswith="Box 3: keep the HEATER in the End part only"><p>Box 3 has no phases: a cleaning always runs UV 1, UV 2 and the three humidifiers, and the auto-dry that follows runs UV and the heater (see Box 3 settings).</p></div>
+<div class="op" data-op="replace-para" data-startswith="Box 3 - Drying: set the cool-down seconds"><p>Box 3 - Drying: set the cool-down seconds, then Send DRYING. The drying time itself is what the customer's coins bought (see Box 3 settings).</p></div>
+<div class="op" data-op="replace-para" data-startswith="Drain pumps and coin power are not part of the 2-second safety"><p>Drain pumps (Box 1 only) and the coin power (Box 1 and Box 3) are not part of the 2-second safety. They stay on until you switch them off.</p></div>
+
+<div class="ins" data-anchor="Heading2:Screen refresh and maintenance">
+<h3>Box 3 settings (coins, sensors, auto-dry)</h3>
+<p>Box 3 runs the trimmed flow: no ratings, no time picker, no mist choice, no free retry. Its page (Box 3 in the navigation bar) has four sections that matter; the Screen, OPEN A / OPEN B beep and Maintenance sections below work like the other boxes.</p>
+<figure data-w="3.6"><img src="images/v10/b3_rules.png" alt="Box 3 rules"><figcaption>Box 3, Rules (coins and time)</figcaption></figure>
+<ul>
+<li>Rules (coins and time): N coins = X minutes (default 15 coins = 5 minutes) and Most coins (default 90). The first N coins are the required coins on the INSERT COIN screen; each coin buys the same share of time (20 seconds at the default). Tap Send RULES to S3B.</li>
+</ul>
+<figure data-w="3.6"><img src="images/v10/b3_sensors.png" alt="Box 3 sensors"><figcaption>Box 3, Sensors and the Refilling Station</figcaption></figure>
+<ul>
+<li>Helmet counts as inside under: put a helmet in, tap use live, raise the number a little (1 to 200 cm, default 15). The screen board and the relay controller use the same number to decide when a helmet is trapped during OUT OF ORDER, and keep it in their own memory, so a power cut does not lose it.</li>
+<li>The Refilling Station counts as offline after: 5 to 120 seconds (default 15). If the station is not heard for this long, or the container is EMPTY or LOW, only DRYING is offered. Tap Send SENSORS to S3B.</li>
+</ul>
+<figure data-w="3.6"><img src="images/v10/b3_dry.png" alt="Box 3 auto-dry and drying"><figcaption>Box 3, Auto-dry after a cleaning and Drying</figcaption></figure>
+<ul>
+<li>Auto-dry after a cleaning: how long it lasts (10 to 900 seconds, default 180) and how long the heater is off at the end (0 to 900, default 30). A cancel during a cleaning jumps straight to it. Tap Send AUTO-DRY to S3B.</li>
+<li>Drying: the cool-down seconds (5 to 900, default 60), also after a cancelled drying. The drying time is what the coins bought. Tap Send DRYING to S3B.</li>
+</ul>
+<div class="tip">Box 1 and Box 2 still run their earlier program (ratings, time picker, free retry) and keep their own sections above. They are to be rebuilt to the Box 3 flow.</div>
+</div>
+
+<div class="ins" data-anchor="Heading2:Troubleshooting and care">
+<h2>Refilling Station</h2>
+<p>One small board (the Refilling Station) keeps the main container of every box full. It has three water-level sensors, one in each container, and three valves, one for each box, all fed from one water supply. It works alone: the boxes never ask it for anything. Box 3 already reads it; Box 1 and Box 2 will do the same when they are rebuilt.</p>
+<figure data-w="6.0"><img src="images/v10/station_water.png" alt="The water path"><figcaption>The water path: one supply, three normally closed valves, three main containers with a water-level sensor each</figcaption></figure>
+<h3>How it works</h3>
+<ul>
+<li>Every second the station reads the three sensors and works out each container's level: EMPTY, LOW, MID, HIGH or MAX.</li>
+<li>A container that is EMPTY or LOW joins the queue. EMPTY containers go first, LOW second; inside a group the one that waited longest goes first.</li>
+<li>Only one valve is ever open. A refill that is running is never interrupted. The valve closes when the container reaches MAX.</li>
+<li>If the level does not rise (30 seconds while EMPTY, 5 seconds while LOW, or the valve has been open 3 minutes) the refill FAILED: the valve closes, a flag is set and the station tries again after 60 seconds, for ever.</li>
+<li>The station tells everybody the levels every second. A box offers CLEANING only when the station was heard in the last 15 seconds and its container is MID or higher; otherwise only DRYING.</li>
+<li>The water supply has no sensor of its own. An empty supply shows as a refill that does not rise.</li>
+</ul>
+<figure data-w="3.5"><img src="images/v10/station_chart.png" alt="What the station does"><figcaption>What the Refilling Station does, from power-on</figcaption></figure>
+<h3>Reading the Refilling Station page</h3>
+<figure data-w="3.6"><img src="images/v10/refill_live.png" alt="Refilling Station page, Live"><figcaption>The Live card: station online, valve 1 open, Box 2 waiting, Box 3 full (example)</figcaption></figure>
+<ul>
+<li>The top line says whether the station is online, which valve is open and who is waiting.</li>
+<li>Each box has a card: its level (EMPTY, LOW, MID, HIGH, MAX), a bar, the raw reading with the MID, HIGH and MAX numbers, and a tag: valve OPEN (refilling), waiting for its turn, full, or FAILED.</li>
+<li>The same three levels sit on the Dashboard under Refilling Station, and on the online page as three dials.</li>
+</ul>
+<h3>Setting up the levels</h3>
+<figure data-w="3.6"><img src="images/v10/refill_levels.png" alt="Refilling Station levels"><figcaption>Levels and refilling, one form per box (Box 1 shown)</figcaption></figure>
+<ol>
+<li>Dry sensor: note the raw value on the Live card. Then put the sensor in the real liquid at the level you want to call LOW, MID, HIGH and MAX, and note the raw value each time (it is 0 when dry and grows as the liquid rises).</li>
+<li>Type the four edges for that box: Empty up to, MID starts, HIGH starts, MAX starts (they must grow in that order, up to 4095). Defaults: 0, 500, 1000, 1200.</li>
+<li>Tap Send Box 1 to the station (or 2, 3). A green tick means the station saved it. Copy Box 1's numbers into Box 2 and Box 3 fills the other forms when the containers are alike.</li>
+</ol>
+<table data-w="2.4,3.6,1.0,1.4">
+<tr><th>Field</th><th>What it does</th><th>Default</th><th>Range</th></tr>
+<tr><td>Empty up to</td><td>At or under this raw value the container is EMPTY.</td><td>0</td><td>0-4095</td></tr>
+<tr><td>MID, HIGH, MAX starts</td><td>Where each level starts. A refill starts at EMPTY or LOW and stops at MAX.</td><td>500 / 1000 / 1200</td><td>1-4095</td></tr>
+<tr><td>Waits for a rise when EMPTY</td><td>How long the level may stay flat while EMPTY before the refill FAILED (the liquid first has to reach the sensor).</td><td>30 s</td><td>1-600 s</td></tr>
+<tr><td>Waits for a rise when LOW</td><td>The same while LOW (the sensor already reads, so flat means nothing arrives).</td><td>5 s</td><td>1-600 s</td></tr>
+<tr><td>Valve open at most</td><td>Longest time one valve may stay open.</td><td>180 s</td><td>10-1800 s</td></tr>
+<tr><td>Tries again after</td><td>Pause before a failed box tries again.</td><td>60 s</td><td>5-3600 s</td></tr>
+<tr><td>Counts as rising</td><td>Smallest step in the raw value that counts as a rise.</td><td>10</td><td>1-500</td></tr>
+</table>
+<h3>Test a valve by hand</h3>
+<figure data-w="3.6"><img src="images/v10/refill_test.png" alt="Manual valve test"><figcaption>Manual valve test</figcaption></figure>
+<ul>
+<li>Set how long a test opens the valve (default 2 seconds, 1 to 30), tap Send, then tap Test valve on a container's card. The valve closes by itself.</li>
+<li>It only works while the station is idle. During a refill the button is greyed out and says busy. A test does not touch the queue or the failed flags.</li>
+<li>Do the first test with the supply connected and a bucket under the tube, one valve at a time.</li>
+</ul>
+<h3>When a refill fails</h3>
+<ul>
+<li>The tag FAILED stays on until a refill works, or the container reads MID or higher for 3 seconds (somebody filled it by hand). The Online Server and the web page raise a warning.</li>
+<li>Check the supply (tank full, tap open), then the decision tree "The Refilling Station does not fill" in the Reference chapter. The station keeps trying every 60 seconds by itself.</li>
+<li>If the station itself is not heard (OFFLINE on the Dashboard), every box offers DRYING only. That raises a critical alert on the online page.</li>
+</ul>
+</div>
+
+<div class="op" data-op="cell-set" data-after="Heading3:Troubleshooting" data-n="1" data-row="Station shows OUT OF ORDER" data-col="1">One board of that box is silent (sensors or relay controller, or the main controller itself). See the offline badges. A helmet inside is released by itself: the door unlocks and the screen board beeps.</div>
+<div class="op" data-op="cell-set" data-after="Heading3:Troubleshooting" data-n="1" data-row="CLEANING is UNAVAILABLE" data-col="0" data-bold="yes">Only DRYING is offered (SELECT DRY ONLY)</div>
+<div class="op" data-op="cell-set" data-after="Heading3:Troubleshooting" data-n="1" data-row="Only DRYING is offered (SELECT DRY ONLY)" data-col="1">The Refilling Station is offline, or the box's container is EMPTY or LOW. Open the Refilling Station page: check the station is online, then the supply and the valve (Refilling Station chapter).</div>
+<div class="op" data-op="rows-append" data-after="Heading3:Troubleshooting" data-n="1">
+<table><tr><td>A helmet is inside during a power cut or OUT OF ORDER</td><td>Box 3 unlocks the door by itself and the buzzer beeps (screen board, relay controller and sensors must still have power). If it stays locked, slide the safety lock down.</td></tr>
+<tr><td>The online page does not show a Checklist, Fix it or Manual tab</td><td>They were taken out on 2026-10-23. The monthly checks are in the Technician guide (Maintenance) and the decision trees are in the Reference chapter.</td></tr></table>
+</div>
+<div class="op" data-op="replace-para" data-startswith="Look at the three ACS supply tanks"><p>Open the Refilling Station page: the station is online, no container is FAILED, and the water supply is connected and full.</p></div>
+
+<!-- ===================== ADMIN GUIDE: Online page ===================== -->
+<div class="op" data-op="cell-set" data-after="Heading3:The tabs" data-n="1" data-row="Monitor" data-col="1">The live state of every box (drawn as a little machine), the level dials of the three containers read by the Refilling Station, the network map, the revenue and the customers served.</div>
+<div class="op" data-op="replace-para" data-startswith="Every container has a dial."><p>Every box has a dial for its main container, read by the Refilling Station. The dial is red when the container is EMPTY or LOW (the box then offers drying only), yellow at MID, yellow-green at HIGH and green at MAX. A small valve symbol above a dial lights blue while the station is filling that container. So you can see a problem before a customer does.</p></div>
+<div class="op" data-op="cell-set" data-after="Heading3:Alerts and sounds" data-n="1" data-row="A box is OUT OF ORDER" data-col="3">See the decision tree "A box shows OUT OF ORDER" in the Reference chapter. Usually a board of that box is offline.</div>
+<div class="op" data-op="cell-set" data-after="Heading3:Alerts and sounds" data-n="1" data-row="An ACS mixer is low, cleaning is switched off, a board is offline" data-col="0" data-bold="yes">Cleaning is switched off (SELECT DRY ONLY), a refill failed, a board is offline</div>
+<div class="op" data-op="cell-set" data-after="Heading3:Alerts and sounds" data-n="1" data-row="Cleaning is switched off (SELECT DRY ONLY), a refill failed, a board is offline" data-col="3">Open the Refilling Station page and the Dashboard. Use the decision trees.</div>
+<div class="op" data-op="rows-append" data-after="Heading3:Alerts and sounds" data-n="1">
+<table><tr><td>The Refilling Station is offline</td><td>Critical</td><td>Alarm.</td><td>Every box then offers DRYING only. Check the station's power. Decision tree: A board shows OFFLINE.</td></tr></table>
+</div>
+</body></html>

@@ -1,0 +1,36 @@
+---
+title: 05 - The Refilling Station (one valve at a time, it works alone)
+---
+flowchart TD
+  classDef cSide fill:#ffffff,stroke:#111111,stroke-width:2px,stroke-dasharray:5 4,color:#111111
+  classDef cFault fill:#ffffff,stroke:#111111,stroke-width:4px,color:#111111
+  classDef cRun fill:#ffffff,stroke:#111111,stroke-width:5px,color:#111111
+
+  P(["Power on: the 3 valves are CLOSED<br/>wait for 1 s of readings and 3 s of quiet"]) --> A
+  A["5 times a second: read the 3 water-level sensors (1 s average)<br/>work out each box's level (a sensor on the 3.3 V rail, or jumping about while its valve is closed, for 5 s = SENSOR FAULT: level UNKNOWN, no refill, the box offers drying only):<br/>EMPTY (0), LOW (up to 499), MID (500), HIGH (1000), MAX (1200 and above)<br/>the numbers are settings of each box (LocalServer, Refilling Station page)"] --> B{"a container is EMPTY or LOW<br/>and not waiting yet?"}
+  B -->|yes| C["it JOINS THE QUEUE"]
+  B -->|no| D
+  C --> D{"is a valve open<br/>(a refill or a manual test)?"}
+  D -->|yes| E["wait: a refill that is running<br/>is NEVER interrupted"]:::cSide
+  E --> A
+  D -->|"no, and 1 s since the last valve closed"| F["pick the next box:<br/>EMPTY boxes first, then LOW boxes<br/>inside a group the one that waited longest<br/>then Box 1, Box 2, Box 3"]
+  F --> G["OPEN that box's valve<br/>(only ONE valve can ever be open)"]:::cRun
+  G --> H{"container reached MAX?"}
+  H -->|yes| I["CLOSE the valve<br/>the refill WORKED, the failure flag is cleared"]
+  I --> A
+  H -->|no| J{"the level does not rise<br/>30 s while EMPTY, 5 s when LOW<br/>or the valve was open 3 minutes?"}
+  J -->|no| H
+  J -->|yes| K["CLOSE the valve<br/>the refill FAILED: flag set,<br/>alert on the Online web page and the LocalServer"]:::cFault
+  K --> L["wait 60 s, then join the queue again<br/>(for ever, until a refill works)"]
+  L --> A
+
+  subgraph TELL["WHAT IT BROADCASTS"]
+    T1["every 1 s, and at once when something changes:<br/>levels and raw values of the 3 containers, which valve is open,<br/>who is waiting, which refill failed, the box's own level edges<br/>The boxes read their own container: EMPTY or LOW or silent for 15 s = DRYING only"]
+  end
+  A -.-> T1
+
+  subgraph TEST["MANUAL VALVE TEST"]
+    M1["Test valve button<br/>(LocalServer, Refilling Station page)"] --> M2{"no valve open and none<br/>closed in the last second?"}
+    M2 -->|yes| M3["open that valve for 2 s (a setting),<br/>then close it. The queue and the flags are not touched"]:::cSide
+    M2 -->|no| M4["refused: the page says Busy"]:::cSide
+  end

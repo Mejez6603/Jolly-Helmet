@@ -1,0 +1,45 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Manual v11, part K: the Refilling Station watches and refills Box 3 only for now (2026-11-04)</title></head><body>
+<!-- Run on the output of part J. Source: ESP32_REFILL.ino (WATCH_BOX = { false, false, true }, REFILL_OFF = 254), Shared_Common.h (REFILL_OFF), LocalServer refill page and Dashboard card, ONLINE_WEB (rf state -2). -->
+<div class="op" data-op="xe-terms">[["Refilling Station","Refilling Station"],["Level dials (early warning)","dials?"]]</div>
+
+<!-- admin guide -->
+<div class="op" data-op="replace-para" data-startswith="Refilling Station: the three main containers (EMPTY to MAX)"><p>Refilling Station: the main container levels (EMPTY to MAX; Box 1 and Box 2 say NOT WATCHED for now), who is waiting, which valve is open and a failed refill. Its settings link opens the Refilling Station page.</p></div>
+<div class="op" data-op="replace-para" data-startswith="One small board (the Refilling Station) keeps the main container of every box full."><p>One small board (the Refilling Station) keeps the main container full. For now it watches and refills Box 3 only: Box 1 and Box 2 are still being worked on and show NOT WATCHED. The board is built for three containers (three water-level sensors, three valves, one water supply) so Box 1 and Box 2 can be switched on later. It works alone: the boxes never ask it for anything, they only listen to what it reports.</p></div>
+<div class="op" data-op="replace-para" data-startswith="Every second the station reads the three sensors"><p>Every second the station reads the sensor of each container it watches (Box 3 for now) and works out the level: EMPTY, LOW, MID, HIGH or MAX.</p></div>
+<div class="op" data-op="bullet-after" data-after="The water supply has no sensor of its own."><ul><li>Box 1 and Box 2 are not watched for now. The station reports them as NOT WATCHED (no level, no warning), never queues them, never opens their valves and refuses the manual test of their valves. Their sensors and valves can stay unconnected.</li></ul></div>
+<div class="op" data-op="replace-para" data-startswith="Each box has a card: its level"><p>Each box has a card: its level (EMPTY, LOW, MID, HIGH, MAX), a bar, the raw reading with the MID, HIGH and MAX numbers, and a tag: valve OPEN (refilling), waiting for its turn, full, or FAILED. A box the station does not watch says NOT WATCHED and its test button is greyed out.</p></div>
+<div class="op" data-op="replace-para" data-startswith="The same three levels sit on the Dashboard"><p>The same levels sit on the Dashboard under Refilling Station, and on the online page as dials.</p></div>
+<div class="op" data-op="replace-text" data-from="The Live card: station online, valve 1 open, Box 2 waiting, Box 3 full (example)" data-to="The Live card: station online, Box 3 refilling with its valve open, Box 1 and Box 2 not watched (example)"></div>
+<div class="op" data-op="replace-text" data-from="one form per box (Box 1 shown)" data-to="one form per box (Box 1 shown; only Box 3 is used for now)"></div>
+<div class="op" data-op="append-para" data-startswith="It only works while the station is idle."><p>Box 1 and Box 2 cannot be tested for now.</p></div>
+<div class="op" data-op="replace-para" data-startswith="Every box has a dial for its main container, read by the Refilling Station."><p>Every box has a dial for its main container, read by the Refilling Station. The dial is red when the container is EMPTY or LOW (the box then offers drying only), yellow at MID, yellow-green at HIGH and green at MAX. A small valve symbol above a dial lights blue while the station is filling that container. A box the station does not watch (Box 1 and Box 2 for now) has a grey dial that says NOT WATCHED and raises no alert. So you can see a problem before a customer does.</p></div>
+<div class="op" data-op="rows-append" data-after="Heading3:Troubleshooting" data-n="1">
+<table><tr><td>A box shows NOT WATCHED on the Refilling Station page, the Dashboard or the online page</td><td>The station is set to watch and refill Box 3 only for now. That is normal for Box 1 and Box 2. They are switched on later (WATCH_BOX in ESP32_REFILL.ino, then reflash the station).</td></tr></table>
+</div>
+
+<!-- technician guide -->
+<div class="op" data-op="cell-set" data-after="Heading3:The 14 boards" data-n="1" data-row="Refilling Station" data-col="1">Boxes 1 to 3 (Box 3 only for now)</div>
+<div class="op" data-op="cell-set" data-after="Heading3:The 14 boards" data-n="1" data-row="Refilling Station" data-col="2">Built for 3 water-level sensors and 3 valves. For now it watches and fills the container of Box 3 only (WATCH_BOX); with more boxes switched on it fills one at a time. (ESP32_REFILL)</div>
+<div class="op" data-op="bullet-after" data-after="The relay pins are not strapping pins"><ul><li>Which boxes the station serves is set by WATCH_BOX in ESP32_REFILL.ino. It is { false, false, true } for now: only Box 3 is read and refilled, and Box 1 and Box 2 are reported as NOT WATCHED (REFILL_OFF, 254). To switch a box on, set its entry to true and reflash the station.</li></ul></div>
+<div class="op" data-op="append-para" data-startswith="Refilling Station: measure the raw value of each sensor dry and in the liquid"><p>For now only Box 3 is watched (WATCH_BOX), so do this for Box 3 first.</p></div>
+<div class="op" data-op="cell-set" data-after="Heading3:Reading the web page" data-n="1" data-row="Levels" data-col="1">One dial for the main container of each box, read by the Refilling Station: red = EMPTY or LOW, yellow = MID, yellow-green = HIGH, green = MAX. A valve symbol lights while the station fills that container. A box the station does not watch (Box 1 and Box 2 for now) shows a grey NOT WATCHED dial.</div>
+
+<!-- reference chapter -->
+<div class="op" data-op="append-para" data-startswith="The Refilling Station keeps the main container of every box topped up"><p>For now only Box 3 is watched: the settings of Box 1 and Box 2 do nothing until WATCH_BOX is switched on for them.</p></div>
+<div class="op" data-op="cell-set" data-after="Heading2:Glossary" data-n="1" data-row="Refilling Station" data-col="1">The one board with three water-level sensors and three valves that keeps the main containers full. For now it watches and refills Box 3 only. It replaced ACS 1 and ACS 2.</div>
+<div class="op" data-op="glossary">
+<table><tr><td>NOT WATCHED</td><td>What the Refilling Station reports for a box it does not serve (Box 1 and Box 2 for now): no level, no refill, no warning. Set by WATCH_BOX in the station's sketch.</td></tr></table>
+</div>
+<div class="op" data-op="replace-text" data-from="(checksum fb00a2ec)" data-to="(checksum 16217b04)"></div>
+<div class="op" data-op="replace-text" data-from="their Control Center pages are not rebuilt yet." data-to="their Control Center pages are not rebuilt yet. The Refilling Station watches and refills Box 3 only for now; Box 1 and Box 2 show NOT WATCHED."></div>
+<div class="op" data-op="append-para" data-startswith="The date is when the sketch file was last saved."><p>When they run the Box 3 flow, switch them on in WATCH_BOX (ESP32_REFILL.ino), otherwise they would offer DRYING only.</p></div>
+
+<!-- pictures -->
+<div class="op" data-op="replace-png" data-after="Heading2:Home page" data-src="images/v11/dash.png"></div>
+<div class="op" data-op="replace-png" data-after="Heading3:Reading the Refilling Station page" data-src="images/v11/refill_live.png"></div>
+<div class="op" data-op="replace-png" data-after="Heading3:Test a valve by hand" data-src="images/v11/refill_test.png"></div>
+<div class="op" data-op="replace-png" data-after="Heading3:Level dials" data-src="images/v11/monitor.png"></div>
+<div class="op" data-op="replace-png" data-after="Heading3:Step 3 - Open the web page" data-n="1" data-src="images/v11/web_monitor_desk.png"></div>
+<div class="op" data-op="replace-png" data-after="Heading3:Step 3 - Open the web page" data-n="2" data-src="images/v11/monitor_alerts.png"></div>
+</body></html>

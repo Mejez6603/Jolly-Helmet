@@ -1,135 +1,107 @@
-# Project Handoff — ESP32 Helmet Vending Machine
+# PROJECT HANDOFF - state of the Jolly Helmet system, 2026-11-03
 
-Last updated: 2026-09-17. Written so a fresh Claude conversation (any machine) can pick up
-exactly where this one left off. If you're Claude reading this cold: read this whole file
-before touching any code, then ask the user what they want to work on next rather than
-assuming.
+Read `README.md` first for what the system is. This file says **what is done, what is not, how to bring it up on the bench, and what is still open.**
 
-## What this project is
+---
 
-A coin-operated helmet cleaning/drying vending system built on ESP32 boards talking over
-ESP-NOW (no Wi-Fi router, no internet dependency). Team project — the user builds/debugs/
-deploys the firmware and dashboard; a friend/teammate handles physical signage.
+## 1. Where things stand
 
-**Nodes:**
-- `Master` / `ESP32_LOCALSRV` — the dashboard ("ESP32 CONTROL CENTER" web UI over WebSocket).
-- `ESP32_S3A` + `ESP32_A1` + `ESP32_A2` — **Box 1**, the Helmet Cleaner (alcohol mist + UV).
-  S3A owns and runs Box 1's entire state machine now; A1 is the coin/TFT/touch terminal; A2 is
-  the relay/sensor actuator hub.
-- `ESP32_S3C` + `ESP32_C1` + `ESP32_C2` — **Box 2**, the Helmet Dryer/Heater. Same split as
-  Box 1: S3C runs the state machine, C1 is the terminal, C2 is the actuator hub (Heater + Fan
-  instead of Humidifier, plus a 6th relay for the Fan that Box 1 doesn't have).
-- `ESP32_ACS` (device D1) — Alcohol Container System: mixes and delivers disinfectant to Box 1
-  on request. Untouched this arc.
-- **Box 3** — a straight hardware/firmware clone of Box 1 (team decision). Finishing Box 1
-  finishes Box 3 automatically.
+**Nothing from 2026-11-03 has been flashed or uploaded.** Everything below was compiled (all firmware projects build) and, where there is no hardware, tested in the browser with simulators that are line-by-line ports of the firmware logic. Treat every board as "compiled, not yet run on hardware" unless you flashed it yourself.
 
-All 8 node folders share one `Shared_Common.h` (identical byte-for-byte, checksum-verified
-after every change — see "How to keep changing things" below).
+| Part | State | How it was checked |
+|---|---|---|
+| Refilling Station `ESP32_REFILL` | written, compiles (69% of the default partition) | `ESP32_REFILL\tools\refill_simulator.html`: 17 rule tests pass (queue order, one valve at a time, stall / time limit / retry, test refusal ...) |
+| Box 3 main controller `ESP32_S3B` | rewritten for the 36-step flow, compiles (28%) | `ESP32_S3B\tools\s3b_flow_test.html`: 31 scenario tests pass (every branch of `BOX 3 STEP corrected.txt`, relays per step, coins, abort, safety pause, station offer) |
+| Box 3 `B1` (TFT) / `B2` (sensors) / `B3` (relays) | `B1`: touch debug off; `B2`: helmet + doors only; `B3`: drain relay bits never driven, Side lock. All compile. | read-through only |
+| LocalServer | Refilling Station page, Box 3 page rewritten, Dashboard card, 12 devices; compiles (41%) | pages tested on a mock server in the browser (forms, send/echo, queue chips, test button, phone width) |
+| Online Server + `ONLINE_WEB` | station support, queue flag; compiles (37%) | `?demo=cycle` of the web page |
+| Box 1 (S3A, A1, A2, A3), Box 2 (S3C, C1, C2) | **unchanged**, still the older flows | compile only |
+| ACS 1 / ACS 2 | **removed** (archived) | - |
 
-## Current status by box
+Older reports (2026-10-03): the user flashed the Box 1/2/3 + ACS + LocalServer builds of that day at the school; builds after that (booked coins / Finished-Cancelled / OPEN beep of 10-13, the Online Server, the ENTRY board) were never confirmed flashed.
 
-### Box 1 — Cleaner: Phase 1 shipped, flashed, confirmed working ✅
-The customer has the unit now for real-world field testing. 16-step flow: Taps → Welcome →
-Rate A → Time Allot → Insert Coin → Checking → Refilling → Instructions → Sensors → Cleaning →
-Rate B → Retrieve → Finish (loops to Taps), plus Abort Confirm / Cancel Confirm / an unwired
-Confirm placeholder.
+---
 
-Files: `ESP32_S3A/ESP32_S3A.ino`, `ESP32_A1/ESP32_A1.ino`, `Shared_Common.h` (all 8 copies),
-`ESP32_LOCALSRV/{ESP32_LOCALSRV.ino,index_html.h,script_js.h}`. `ESP32_A2.ino` needed zero
-changes.
+## 2. What changed on 2026-11-03
 
-**Not started:** Phase 2 (real tap-a-box rating grid + numeric keypad, replacing the current
--/+/OK button-row stand-ins) and Phase 3 (send the two ratings to LocalServer for dashboard
-display). Both are deliberately deferred — don't start either without the user asking.
+1. **The ACS (two alcohol-mixing boards) is gone.** One **Refilling Station** (ESP32-WROOM, 3 water-level sensors, 3 normally-closed valves) keeps the three main containers full from one shared supply. It never waits for a box: it reads the levels, queues, fills, and broadcasts a `RefillStatusPacket` every second.
+2. **The boxes only read the station.** `CHECKING` (2 s) -> `WELCOME`; on the tap CLEANING is offered only when the station was heard within 15 s AND the box's container is MID/HIGH/MAX; otherwise SELECT DRY ONLY. A silent station = dry only. Nothing asks the station for liquid.
+3. **Box 3 flow trimmed** (panelists): no ratings, no time picker, no mist choice, no free retry, no touch debug, no container sensing, no drain pumps. Coins: INSERT COIN asks for one rate step (default 15 coins = 5 min); more coins can be added while cleaning / drying up to the maximum (90). A cleaning always ends with a 3-minute AUTO DRY (heater off for the last 30 s); CANCEL during a cleaning also goes to AUTO DRY, CANCEL during a drying goes to COOL DOWN (60 s).
+4. **Names**: the web page and alerts use plain names (TFT Display, Sensors, Relay Controller, Main Controller, Refilling Station); ACS door lock = Side lock.
+5. **Alerts**: EMPTY / LOW alone is not an alert (the station refills). Alerts = Refilling Station offline, refill failed, board not heard, out of order.
 
-### Box 2 — Dryer: Phase 1 implemented, **not yet compiled/flashed/tested** ⚠️
-Mirrors Box 1's Phase 1 almost line-for-line. 15-step flow: Taps → Welcome → Rate A (moisture)
-→ Time Allot → Insert Coin → Instructions → Sensors → Heating → **Cool Down** → Rate B →
-Retrieve → Finish (loops to Taps), plus Abort Confirm (reachable from Heating *or* Cool Down)
-/ Cancel Confirm / an unwired Confirm placeholder.
+### The contract (`Shared_Common.h`, same file in 22 folders)
 
-**Genuinely new vs. Box 1 — Cool Down**: a Fan-only phase (Heater off) after Heating, so a
-heated helmet doesn't come back too hot to wear. Its length is `coolDownRatio` × however long
-Heating actually ran (`requiredCoinsForSession * secondsPerCoin`) — **not** a fixed value. This
-went through two corrections this session:
-1. First cut used a fixed 20s cooldown — wrong, because a 20-coin/10-minute Heating session
-   needs proportionally longer cooling than a 1-coin/30-second one.
-2. Then made it a straight 1:1 ratio of however long Heating ran — also not quite right, because
-   the user wants to experiment with *shorter* cooldowns once real hardware shows the helmet is
-   already cool enough, without making customers wait the full Heating time every time.
+- `DEVICE_REFILL = 14`; `RefillStatusPacket` (35 bytes, magic `0xD1`): raw[3], state[3] (0 EMPTY .. 4 MAX, 255 fault), valveMask, queueMask, failMask, testMask, midEdge/highEdge/maxEdge[3].
+- `CMD_REFILL_TEST = 17` (LocalServer -> station, subIndex = box 0..2, state 1 start / 0 stop).
+- Station settings: `CMD_SET_CONFIG` to `DEVICE_REFILL`; subIndex 1/2/3 = Box 1/2/3 `emptyMax,midEdge,highEdge,maxEdge,stallEmptyS,stallLowS,maxRefillS,retryS,minRise` (defaults 0,500,1000,1200,30,5,180,60,10), subIndex 4 = `testSeconds` (2). The station echoes them as `CMD_SET_CONFIG` target 0, state tag 4.
+- Box 3 settings (S3B, state tag 3): 1 RULES `rateCoins,rateValue,rateUnitMin,maxCoins`; 2 SENSORS `helmetCm,refillOfflineSec`; 3 AUTO-DRY `autoDrySec,heaterOffTailSec`; 4 DRYING `coolDownSec`; 5 refresh masks; 6 auto refresh; 7 beep.
+- New machine states: `STATE_AUTO_DRY = 34`, `STATE_START_DRY = 35` (appended, nothing renumbered).
 
-Landed on: `coolDownRatio` is its own **independent, dashboard-configurable knob**
-(`Box2ConfigPacket.coolDownRatio`, NVS-persisted on S3C as `cd_ratio`), constrained on the
-dashboard to 4 discrete choices — **Full (1.0)**, **Three Quarter (0.75)**, **Half (0.5)**,
-**Quarter (0.25)** — via a `<select>` on the Dynamic Settings tab (`cfg-cooldown-ratio-c2`),
-next to Box 2's existing Min/Max Coins fields. Default is Full (1.0), so behavior doesn't shift
-until someone deliberately dials it down after seeing real hardware.
+---
 
-Files touched: `ESP32_S3C/ESP32_S3C.ino` (full rewrite), `ESP32_C1/ESP32_C1.ino` (ported A1's
-real anchor/font-size support + any-tap-advances flag), `Shared_Common.h` (all 8 copies —
-`Box2State` enum extended 8→15, `Box2ConfigPacket.coolDownRatio` added, packet grew 15→19
-bytes), `ESP32_LOCALSRV/{ESP32_LOCALSRV.ino,index_html.h,script_js.h}` (state names, the
-cooldown-ratio dropdown, save/render wiring). `ESP32_C2.ino` needed zero changes.
+## 3. Bring-up on the bench (suggested order)
 
-**To do before anything else on Box 2:** compile via Arduino IDE, reflash **S3C + C1** (C2
-does NOT need reflashing), walk the full 15-step cycle once, and specifically check that Cool
-Down actually feels proportional at a couple of different Heating durations.
+Loads (UV, humidifiers, heater, valves) **unplugged** for the first power-up of each board.
 
-**Judgment calls made without re-confirming — flag the user if any read wrong on hardware:**
-- Rate A/B and Time Allot use plain -/+/OK button rows, not a real tap-grid or numpad (neither
-  exists in real firmware yet — see [[esp32_firmware_vs_tool_gap]] equivalent notes in memory).
-- The progress bar (PBAR) shown in the user's design for Heating/Cool Down isn't implemented —
-  not a real firmware tag yet, deferred alongside the widgets above.
-- FINISH's countdown was bumped from a previously-flashed 2s to 4s to match the new design.
-- Abort/Cancel Confirm screens were reskinned to the new wording; Instructions/Sensors/Heating/
-  Retrieve/Finish were deliberately left as-is (already reasonable, not "barebones").
+**A0. Stand-in for the station (while the real one is not finished, 2026-11-03):** flash `ESP32_REFILL_FAKE` on a spare ESP32 (WROOM or S3). It has no sensors / valves and broadcasts the real `RefillStatusPacket` once a second with levels you choose (default all HIGH). Serial 115200: `3 high` / `3 low` / `all mid` / `3 fault`, `off` / `on` (offline), `queue 3` / `valve 3` / `fail 3` (flags for the LocalServer / web page); BOOT button = Box 3 level up one step, hold 1 s = on / off. Box 3 check: `3 high|mid|max` -> tap at WELCOME -> SELECT MODE; `3 low|empty|fault` -> SELECT DRY ONLY; `off` + 15 s -> SELECT DRY ONLY. **From a phone:** the board makes its own Wi-Fi `JollyHelmet-FakeStation` (password `12345678`, channel 1, captive portal): join it and the control page opens by itself (or browse to `http://192.168.4.1/`): level buttons per box, QUEUE / VALVE / FAIL flags, big BROADCASTING / OFFLINE button, and a line saying whether Box 3 will offer CLEANING + DRYING or DRYING only. The page follows the BOOT button and serial changes too. The phone is on the fake's Wi-Fi (no internet, not on `JollyHelmet-Local`), so rejoin the LocalServer afterwards. Never run it together with the real station. Remove it when `ESP32_REFILL` goes in.
 
-## Architecture things worth knowing before you touch this again
+**A. Refilling Station** (nothing else needed)
+1. Pins (**DECIDED 2026-11-03**, also in `RevisedJollyHelmet_Checked.xlsx` as block F1, rows 171-201): water-level sensors (signal wire only) Box 1 = GPIO 34, Box 2 = GPIO 35, Box 3 = GPIO 32 (ADC1 only); valve relay inputs Box 1 = GPIO 21, Box 2 = GPIO 19, Box 3 = GPIO 18 (relay IN1 / IN2 / IN3). Only `SENSOR_PIN` / `VALVE_PIN` change if a pin is ever moved. **Relay level:** `VALVE_ACTIVE_LOW 1` = the project's active-LOW relay modules (LOW = relay on = valve open). If the modules you fit are active-HIGH set it to 0. At the first power-up (valves unplugged) the three relay LEDs must be OFF; the serial banner says which level the sketch assumes. Power the sensors from 3.3 V (expansion board voltage jumper), never 5 V into the ADC. The valve coil voltage (12 V DC / 220 V AC) is still undecided (workbook cell K200 shows "?").
+2. Flash. Serial 115200: `help`. The three valves must be CLOSED at power-up. `raw` streams the readings; `test 1`/`test 2`/`test 3` click each relay for 2 s.
+3. Put each sensor dry, then in the liquid: write down the raw numbers. Set the edges per box on the LocalServer Refilling Station page (EMPTY up to / MID starts / HIGH starts / MAX starts) or with `set <box> <name> <value>`.
+4. With the valves connected and a supply: lower a container below LOW; the valve must open, close at MAX, and only ONE valve may ever be open. Pull the supply: the refill must fail after 30 s (EMPTY) / 5 s (LOW) and retry every 60 s.
+5. No flyback diode / snubber asked for (decided 2026-11-03: the station is isolated from Boxes 1-3, no coin signal). Only if the station resets when a valve switches, add one across that coil.
+6. **Sensor health (added 2026-11-04):** the station reports level UNKNOWN (page: SENSOR FAULT, the box offers drying only, no refill, web alert) when a sensor reads on the 3.3 V rail (>= 4090) or its reading jumps by more than 1500 within a second while its valve is closed, for 5 s; it clears after 10 s of good readings (constants `HEALTH_*` in `ESP32_REFILL.ino`). Console command `sensors` prints average / min / max / spread. A dry sensor reading 0 cannot be told from a dead one by the value (that case = a refill that does not rise = FAILED). **Bench test:** with the sensor in place type `sensors`, then pull the SIG wire and type it again; if a disconnected wire reads like a dry one, tell the programmer so the limits (or a pull-up on SIG) can be changed. Needs the station reflashed; the web alert / dial text needs the `ONLINE_WEB` upload; the new page note needs the LocalServer reflashed (optional).
 
-- **ESP-NOW packets have no type tag.** `onDataRecv()` on every node dispatches purely by raw
-  byte length (`sizeof()`). Every struct in `Shared_Common.h` must stay a pairwise-distinct
-  size or packets silently get memcpy'd into the wrong struct. Current sizes: `CommandPacket`
-  206, `TelemetryPacket` 31, `ACSTelemetryPacket` 30, `Box1ConfigPacket` 23, `Box2ConfigPacket`
-  19, `BoxStatusPacket` 17, `StepAction` 223. Check this table before adding/growing any struct.
-- **"Reuse a free scalar field" convention**: rather than adding new packet fields for every
-  small value, this codebase piggybacks values on otherwise-unused fields of an existing command
-  (e.g. `{MINCOINS}` rides `CMD_SYNC_VARS.subIndex`, `{REQUIREDCOIN}` rides `CMD_SYNC_VARS.state`
-  on both boxes, the any-tap-advances flag rides `CMD_STEP_RENDER.state`). Look for this pattern
-  before assuming a new command/struct is needed.
-- **The Box Cycle Designer tool** (browser-only HTML/JS design tool, no real firmware
-  connection — https://claude.ai/code/artifact/b96aae30-b511-4233-9019-785a165c95e6) is a
-  *design sketchpad*, not source of truth. Its "Copy as Arduino" export uses a `StepAction[]`/
-  `MAX_STEPS` model that is dead code in the real firmware (S3A/S3C are hand-written `switch`
-  statements over `MachineState`/`Box2State`). Treat its output as content reference (screen
-  text, relay masks) only, never paste it in literally.
-- **`char payloadStr[200]`** on `CommandPacket` is a hard cap. Every new screen string has been
-  manually byte-counted against this. If you add a new screen, count it again (`${#str}` in
-  bash is the quick way) before assuming it fits.
-- Both boxes' coin economy (seconds/coin, min/max coins, and now Box 2's cooldown ratio) is
-  fully dashboard-configurable and actively being tuned — don't hardcode current values
-  anywhere that isn't easy to update (this already burned once: the printed panel cards
-  deliberately omit coin/time numbers for this exact reason).
+**B. LocalServer**: flash, join `JollyHelmet-Local`, open `/refill`: the station must show online with its levels; send a settings change and see the green tick; the Dashboard must say "12 of 12" when everything runs.
 
-## Other live things
+**C. Box 3** (loads unplugged): flash **B3, then B2, then B1, then S3B last**.
+1. B3: all relays off at boot; from `/box3` Maintenance each relay tile clicks (bits 8, 9 hidden and never driven).
+2. B2: `[B2] helmet=... doors ...` once a second; open each door reed and watch it change. Set the helmet distance on `/box3` (use live).
+3. B1: calibrate the touch (it still has A1's numbers: run `ESP32_C1_CALIBRATE` at the rotation used). `TOUCH_DEBUG` is 0.
+4. S3B: walk the whole flow with the loads unplugged: TAPS -> tap -> CHECKING 2 s -> WELCOME -> tap -> SELECT MODE (station running and the container MID or more) / SELECT DRY ONLY (unplug the station). Pay 15 coins, open the door, helmet in, close: cleaning (UV 1+2, 3 humidifiers, coin slot ON), then AUTO DRY (heater off for the last 30 s), then OPEN B ... FINISH. Repeat for DRYING (START DRYING "Please Wait", heater, COOL DOWN 60 s). Try CANCEL in both, the safety pause (open the door during a run), and a silent B2 (unplug it at WELCOME: OUT OF ORDER).
+   **Helmet cutoff (2026-11-03 ~10 AM):** "helmet inside" = B2's distance is above 0 and under the LocalServer value (`/box3` -> Sensors -> "Helmet counts as inside under", 1-200 cm, "use live" reads the current distance). S3B, B3 and B1 all use that ONE value: S3B broadcasts it every 2 s and B3 / B1 keep the last one in flash (default 40 cm until they have heard it), so it still works after a power cut. Before this change B3 and B1 had a fixed 15 cm. After flashing B3 and B1, open `/box3` once and check the number (set it a little above the helmet's real reading); B3 / B1 log `Helmet cutoff is now ... cm` when they take it over.
+   **Trapped helmet (added 2026-11-03 ~6 AM):** put a helmet inside, shut the door, then unplug B3 (or B2) at WELCOME -> OUT OF ORDER; after 2 s the enclosure lock must release and the buzzer must beep 100 ms / 500 ms until the door is opened (or 180 s pass); an empty box stays locked and silent. With B2 unplugged the lock gives ONE 15 s blind window, no beep. Then unplug **S3B** itself with a helmet inside and the door shut: after about 15 s B3 releases the lock by itself (watchdog, up to three 60 s windows) and B1 shows OUT OF ORDER and beeps the same way (200 s limit) - if B2 is still powered.
+   **UPS design (user, 2026-11-03):** B1, B2, B3 (+ the enclosure-lock solenoid's supply) on a UPS; the S3s, LocalServer and Online Server on mains only. A power cut silences the S3 -> from ANY step Box 3 goes OUT OF ORDER (B3 turns its outputs off after 15 s, unlocks a trapped helmet; B1 beeps and shows "Your helmet is still inside. Take it out, then close the door." / "Please close the door."). A paid session lost to a power cut is not restored or refunded (decided: the grid is not our fault). **Power back:** the S3 reboots; 10-18 s after boot, if nobody has paid yet and the door is shut with a helmet inside for 3 s, S3B goes to OPEN B first (unlock + beep, take the helmet, close, FINISH) instead of locking it in. Bench test: helmet inside, door shut, unplug and replug S3B only -> after ~12 s the lock releases and the buzzer beeps.
+5. Connect the loads one at a time.
 
-- **Panel/sticker signage** — https://claude.ai/code/artifact/d22318e3-323c-43ca-bda9-efbf06811cef
-  ("Jolly Helmet Panel Cards"), print-ready 5×8" instruction plates for both boxes, derived from
-  the flows above. **Goes stale the same way** if the flow changes again — re-derive its 7-step
-  summary from the real firmware before reprinting, same as it was built.
-- **Coin session reset bug, Offline recovery spec, Node death failure mode** — older, still-open
-  items from earlier work, not touched this arc. Ask the user before assuming any of these are
-  still relevant/current.
-- No git repository in the Arduino project folder — these `.ino`/`.h` files are the only copies.
-  If you're reading this after a USB/cloud transfer to a new machine, double check the files
-  actually came across intact (especially `Shared_Common.h` — it must still match byte-for-byte
-  across all 8 node folders; `md5sum` them and compare) before making further changes.
+**D. Online Server + web**: flash `ESP32_ONLINESRV`, upload the whole `ONLINE_WEB` folder to the web host (the page needs the new `rf` data and the 12-board flags; older firmware shows the percent dials). First check that the Blynk channel-1 return after an upload burst works.
 
-## What's actually next
+**Boxes 1 and 2 are NOT part of this bring-up.** They keep their own firmware (S3A / S3C) until they are rebuilt like Box 3. Their LocalServer pages still use the old settings.
 
-1. User compiles + reflashes Box 2 (S3C + C1) and walks the 15-step cycle on real hardware.
-2. Based on what that surfaces: either fix whatever's wrong, or move on to Phase 2 (real
-   Numpad/Rating widgets) for whichever box the user wants first — don't assume which.
-3. Panel cards may need another revision once Phase 2 lands (the button-row stand-ins would be
-   replaced by real widgets, which doesn't change what the customer sees on the sticker, but
-   worth re-checking).
+### Rollback
+- The ACS firmware, its plan and its LocalServer page are in `ARCHIVE_2026-11-03_BEFORE_REFILLING_STATION\`. The pre-change LocalServer files and the old S3B sketch (and its screens) are in the same folder.
+- Old `B2` = `ESP32_A2` with `DEVICE_B2` as the device id (it was a copy).
+- Keep the `.bin` of whatever is running on a unit before reflashing it.
+
+---
+
+## 4. Open items
+
+**Needs the hardware team:** station pins are DECIDED (see 3.A.1); confirm the relay modules' active level (firmware assumes active-LOW) and the valve coil voltage; sensor type and its raw range; Box 2's three-board split (TFT display, sensors, relay controller) so it can follow the Box 3 build. B1 touch: same as Box 1's numbers for now; flash a calibration only if it proves inaccurate on the test day. Flyback diodes: not needed (station is isolated, no coin signal).
+
+**Decisions made but not built:** Box 1 and Box 2 get the Box 3 flow later (one common main-controller program with a box number is the plan). The station's GPIO pins are decided (section 3.A.1).
+
+**Manual: v10 DONE 2026-11-04** (`MANUAL\JollyHelmet_UserManual_v10.docx` + `.pdf`, 111 pages; v9 + Refilling Station chapter, Box 3 36-step customer pages, UPS / OUT OF ORDER, wiring, charts, settings reference, glossary, Rev 10; Box 1 and Box 2 text unchanged; details in `MANUAL\README.txt`). If the flow or a chart changes after the bench tests, v11 must follow the same change list; the Word file is the master. The original change list (kept for reference) was: the next version must: replace the ACS chapters with a Refilling Station chapter (levels, queue, test button, failure and what to do); rewrite the Box 3 flow and screens to the 36 steps (CHECKING, dry-only, required coin, AUTO DRY, cancel paths); new LocalServer page screenshots (Box 3 page, Refilling Station page, Dashboard card); the plain board names; the web page's dials / alerts / network map; the 12 devices; remove drain pumps, ratings, time picker. Charts for it: `FLOWCHART_SYSTEM\png`.
+
+**Older open items still valid:** alcohol-vapour + heater safety review; UV tube geometry notes; "add little minutes" for coins mid-cycle (seconds per coin); the coin-noise / booked-coins builds were never confirmed flashed; LocalServer heap-crash hunt (check Home -> "last restart", BROWNOUT = supply); `CONCEPTUAL_FRAMEWORK` pictures still show the ACS (superseded by `FLOWCHART_SYSTEM`).
+
+**Housekeeping:** `ESP32_LOCALSRV\tools\build_hub_pages.ps1.obsolete` generated the old settings pages and must not be run: `settings_pages.h` is edited by hand now. The simulators must be kept in step with their sketches when the rules change.
+
+
+## 2026-11-04 - the Refilling Station watches and refills BOX 3 ONLY (for now)
+Why: Box 1 and Box 2 are still being worked on. How: `const bool WATCH_BOX[3] = { false, false, true };` in ESP32_REFILL.ino. An unwatched box is never fault-checked, never queued, its valve never opens
+(also not by the manual test), and the station reports it as `REFILL_OFF` (254, new in Shared_Common.h, all 20 identical copies updated; the checksum of the file is now 16217b04) with raw 0.
+Readers updated: LocalServer (Dashboard card and Refilling Station page say NOT WATCHED, test button greyed), Online Server (`rf` state -2), ONLINE_WEB (grey dial "NOT WATCHED", no alert, demo data),
+ESP32_REFILL_FAKE (reports Box 1/2 as not watched like the real station), refill simulator (24 tests pass). To switch Box 1 or Box 2 on later: set its entry to true in WATCH_BOX and reflash the station.
+NOTE: Box 1 / Box 2 firmware (S3A, S3C) is not rebuilt to the Box 3 flow yet; once it is, switch them on in WATCH_BOX or they would offer DRYING only.
+Reflash needed: ESP32_REFILL, ESP32_LOCALSRV, ESP32_ONLINESRV (the boxes do not need it; the new constant only matters to the readers). All compile (REFILL 69 %, FAKE 73 %, LocalServer 41 %, Online Server 37 %, S3B 28 %, B1 73 %, S3A 29 %).
+Manual v11 (100 pages) already says this (admin Refilling Station chapter, technician board table and pinout note, settings reference, glossary NOT WATCHED, version page).
+
+
+## 2026-11-04 - COIN WAIT in INSERT COIN (a 20-peso coin for 15 required used to buy only 5 minutes)
+Cause: B1 reports its pulse count to S3B once a second, and S3B moved on the moment the required coins were reached and clamped the time to the required coins; the rest of a big coin (the other pulses) arrived
+after the state change and was ignored. Fix (ESP32_S3B.ino, `coinSettleCheck()`): after the required coins are reached INSERT COIN keeps the coin power on and counts until no new pulse has been seen for
+COIN_SETTLE_MS = 1500 ms (longer than B1's 1 s report), at most COIN_SETTLE_MAX_MS = 6000 ms; then ALL coins counted become time (up to maxCoins) and revenue (20 coins = 400 s, 20 booked). Only S3B changes
+(B1 untouched, no new packet). s3b_flow_test.html: 47 of 47 pass (4 new tests). Compiled (S3B 28 %), NOT flashed. Box 1 / Box 2 (S3A, S3C) still have the old clamp until they are rebuilt.

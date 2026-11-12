@@ -10,22 +10,21 @@
 const SEV = { critical: 3, warning: 2, notice: 1, info: 0 };
 const SEV_NAME = { critical: 'CRITICAL', warning: 'WARNING', notice: 'NOTICE', info: 'INFO' };
 
-/* what each kind of alert is called, how serious it is, which sound it starts with, whether it repeats until somebody acknowledges it,
-   and which "Fix it" guide (js/wizard_data.js) can help */
+/* what each kind of alert is called, how serious it is, which sound it starts with, and whether it repeats until somebody acknowledges it */
 const AL_TYPES = {
-  out_of_order:  { sev: 'critical', label: 'A box is OUT OF ORDER',                        sound: 'siren',   repeat: true,  fix: 'tree1' },
-  tank_empty:    { sev: 'critical', label: 'An ACS supply tank is empty',                  sound: 'alarm',   repeat: true,  fix: 'tree5' },
-  all_offline:   { sev: 'critical', label: 'No machine board is heard at all',             sound: 'alarm',   repeat: true,  fix: 'tree2' },
-  safety_pause:  { sev: 'warning',  label: 'A door was opened during a run (SAFETY PAUSE)', sound: 'urgent', repeat: false, fix: null },
-  container_low: { sev: 'warning',  label: 'A main container is LOW (under 15 %)',         sound: 'beeps3',  repeat: false, fix: 'tree5' },
-  mixer_low:     { sev: 'warning',  label: 'An ACS mixer container is low',                sound: 'twotone', repeat: false, fix: 'tree5' },
-  cleaning_off:  { sev: 'warning',  label: 'Cleaning is switched off (a container is low)', sound: 'twotone', repeat: false, fix: 'tree1' },
-  board_offline: { sev: 'warning',  label: 'A board is offline',                           sound: 'twotone', repeat: false, fix: 'tree2' },
-  stale:         { sev: 'warning',  label: 'The data is old, or Blynk cannot be read',     sound: 'descend', repeat: false, fix: 'tree6' },
-  early_low:     { sev: 'notice',   label: 'A container is getting low (early warning)',   sound: 'soft',    repeat: false, fix: 'tree5' },
-  due:           { sev: 'notice',   label: 'A maintenance check is due',                   sound: 'soft',    repeat: false, fix: null },
-  cleared:       { sev: 'info',     label: 'An alert cleared (back to normal)',            sound: 'chime',   repeat: false, fix: null },
-  session:       { sev: 'info',     label: 'A customer finished a session',                sound: 'ding',    repeat: false, fix: null, off: true }
+  out_of_order:  { sev: 'critical', label: 'A box is OUT OF ORDER',                        sound: 'siren',   repeat: true },
+  all_offline:   { sev: 'critical', label: 'No machine board is active at all',            sound: 'alarm',   repeat: true },
+  safety_pause:  { sev: 'warning',  label: 'A door was opened during a run (SAFETY PAUSE)', sound: 'urgent', repeat: false },
+  station_offline: { sev: 'critical', label: 'The Refilling Station is offline (all boxes offer DRYING only)', sound: 'alarm', repeat: false },
+  refill_failed:   { sev: 'warning',  label: 'A refill failed (the level is not rising)',     sound: 'twotone', repeat: false },
+  sensor_fault:    { sev: 'warning',  label: 'A water-level sensor is faulty (the Refilling Station cannot read a container)', sound: 'twotone', repeat: false },
+  container_low: { sev: 'warning',  label: 'A main container is LOW (under 15 %)',         sound: 'beeps3',  repeat: false },
+  cleaning_off:  { sev: 'warning',  label: 'Cleaning is switched off (a container is low)', sound: 'twotone', repeat: false },
+  board_offline: { sev: 'warning',  label: 'A board is offline',                           sound: 'twotone', repeat: false },
+  stale:         { sev: 'warning',  label: 'The data is not yet updated, or Blynk cannot be read', sound: 'descend', repeat: false },
+  early_low:     { sev: 'notice',   label: 'A container is getting low (early warning)',   sound: 'soft',    repeat: false },
+  cleared:       { sev: 'info',     label: 'An alert cleared (back to normal)',            sound: 'chime',   repeat: false },
+  session:       { sev: 'info',     label: 'A customer finished a session',                sound: 'ding',    repeat: false, off: true }
 };
 
 const Alerts = (() => {
@@ -39,14 +38,13 @@ const Alerts = (() => {
   const saveCfg = () => store.set('jh_alert_cfg', JSON.stringify(cfg));
   const saveLog = () => { if (log.length > 300) log.length = 300; store.set('jh_alert_log', JSON.stringify(log)); };
   const when = t => new Date(t).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-  const link = (t, text) => t ? `<button type="button" class="lnk" data-act="fix" data-tree="${t}">${text || 'Fix it'}</button>` : '';
 
   /* ---------------- what is wrong right now ---------------- */
   function detect(L) {
     const out = [], w = warnPct();
     const add = (id, type, text) => out.push({ id, type, text });
     if (S.err) add('stale:err', 'stale', 'Cannot read Blynk: ' + S.err);
-    else if (S.link === 'dead') add('stale:old', 'stale', 'The data on the page is old (the Online Server stopped uploading, or the internet at the site is down)');
+    else if (S.link === 'dead') add('stale:old', 'stale', 'The data on the page is not yet updated');
     if (L) {
       const n = nodeFlags(L);
       (L.b || []).forEach((b, i) => {
@@ -54,27 +52,25 @@ const Alerts = (() => {
         if (n[def.brain]) {
           const name = def.st[b[0]] || '';
           if (name === 'OUT OF ORDER') add('oos:' + i, 'out_of_order', `${def.name} is OUT OF ORDER`);
-          if (name === 'SELECT DRY ONLY') add('dry:' + i, 'cleaning_off', `${def.name}: CLEANING is switched off (a container is low). Drying still works.`);
+          if (name === 'SELECT DRY ONLY') add('dry:' + i, 'cleaning_off', `${def.name}: CLEANING is switched off (its container is low, or the Refilling Station is not heard). Drying still works.`);
           if (name === 'SAFETY PAUSE') add('pause:' + i, 'safety_pause', `${def.name}: paused, a door was opened during a run`);
         }
-        if (def.tanks && n[def.sensors]) [['a', 'alcohol', 5], ['s', 'scented', 6]].forEach(([k, nm, ix]) => {
-          const v = nz(b[ix], -1); if (v < 0) return;
-          if (v < 15) add(`low:${i}${k}`, 'container_low', `${def.name}: ${nm} container is low (${Math.round(v)}%)`);
-          else if (w && v < w) add(`early:${i}${k}`, 'early_low', `${def.name}: ${nm} container is getting low (${Math.round(v)}%)`);
-        });
+        if (L.rf) {                                                    // the Refilling Station reads and refills the container by itself: EMPTY / LOW is normal for a minute, only a FAILED refill is an alert
+          const r = n[STATION] && L.rf[i];
+          if (r && r[3]) add(`rfail:${i}`, 'refill_failed', `${def.name}: the refill failed (the level is not rising, check the supply)`);
+          if (r && r[1] !== -2 && !(r[1] >= 0 && r[1] <= 4)) add(`sfault:${i}`, 'sensor_fault', `${def.name}: the water-level sensor of its container is faulty (reads the 3.3 V rail or jumps about wildly): check its wiring. The box offers drying only.`);
+        } else if (n[def.sensors]) {                                   // firmware without the Refilling Station: the box's own percent reading
+          const v = nz(b[5], -1);
+          if (v >= 0 && v < 15) add(`low:${i}`, 'container_low', `${def.name}: main container is low (${Math.round(v)}%)`);
+          else if (v >= 0 && w && v < w) add(`early:${i}`, 'early_low', `${def.name}: main container is getting low (${Math.round(v)}%)`);
+        }
       });
-      (L.a || []).forEach((a, i) => {
-        if (!a || !a[0]) return; const t = 'ACS ' + (i + 1), flags = a[2], empty = a[3];
-        [[1, 'WATER'], [2, 'ALCOHOL'], [4, 'SCENTED']].forEach(([bit, nm]) => { if (empty & bit) add(`tank:${i}${bit}`, 'tank_empty', `${t}: ${nm} supply tank is empty`); });
-        [[1, 'alcohol', 5, 'a'], [4, 'scented', 6, 's']].forEach(([bit, nm, ix, k]) => {
-          if (flags & bit) add(`mix:${i}${k}`, 'mixer_low', `${t}: ${nm} mixer container is low`);
-          else { const v = nz(a[ix], -1); if (w && v >= 0 && v < w && v >= 15) add(`mixe:${i}${k}`, 'early_low', `${t}: ${nm} mixer container is getting low (${Math.round(v)}%)`); }
-        });
-      });
+      if (L.rf && L.n != null && !nodeFlags(L)[STATION]) add('rs:off', 'station_offline', 'The Refilling Station is offline: the containers cannot be read, so every box offers DRYING only');
       if (L.n != null) {
-        const off = n.map((v, i) => v ? -1 : i).filter(i => i >= 0);
-        if (off.length === 13) add('off:all', 'all_offline', 'The Online Server hears no machine board at all (radio or power problem at the site)');
-        else off.forEach(i => add('off:' + i, 'board_offline', NODES[i] + ' is offline'));
+        const check = n.map((v, i) => i).filter(i => i !== STATION || L.rf);     // firmware without the Refilling Station: place 12 is not the station
+        const off = check.filter(i => !n[i]);
+        if (off.length === check.length) add('off:all', 'all_offline', 'The Online Server hears no machine board at all (radio or power problem at the site)');
+        else off.forEach(i => { if (i !== STATION) add('off:' + i, 'board_offline', NODES[i] + ' is offline'); });     // the station has its own alert above
       }
     }
     return out.concat(extra);
@@ -142,7 +138,7 @@ const Alerts = (() => {
     const draw = () => {
       const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d');
       if (logoImg && logoImg.complete && logoImg.naturalWidth) g.drawImage(logoImg, 0, 4, 56, 56 * logoImg.naturalHeight / logoImg.naturalWidth);
-      g.fillStyle = sev === 'critical' ? '#d32f2f' : sev === 'warning' ? '#f59e0b' : '#1c5fa8'; g.beginPath(); g.arc(46, 18, 17, 0, 7); g.fill();
+      g.fillStyle = sev === 'critical' ? '#d32f2f' : sev === 'warning' ? '#ee7d0b' : '#1c5fa8'; g.beginPath(); g.arc(46, 18, 17, 0, 7); g.fill();
       g.fillStyle = '#fff'; g.font = 'bold 22px Arial'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(n > 9 ? '9+' : String(n), 46, 19);
       iconEl.href = c.toDataURL('image/png');
     };
@@ -160,14 +156,16 @@ const Alerts = (() => {
   }
 
   /* ---------------- drawing ---------------- */
-  const sevChip = s => `<span class="chip ${s === 'critical' ? 'bad' : s === 'warning' ? 'warn' : s === 'notice' ? 'use' : ''}">${SEV_NAME[s]}</span>`;
+  const sevChip = s => `<span class="sev ${s}">${SEV_NAME[s]}</span>`;                  // critical red, warning orange, notice blue, info grey (css: .sev)
   function banner() {                                             // the box at the top of the Monitor tab
     const c = counts(), parts = [];
     if (Sound.st.on && !Sound.ready() && !Sound.dismissed) parts.push(`<div class="note" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span>&#128263; Alert sounds are waiting: the browser needs one tap before it lets this page make noise.</span><button class="btn" data-act="sound-on" type="button" style="margin:0">Turn on alert sounds</button></div>`);
     if (c.all.length) {
       const sorted = c.all.slice().sort((a, b) => SEV[b.sev] - SEV[a.sev]);
-      parts.push(`<div class="alert ${c.top}"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center"><span>Needs attention (${c.all.length})</span>${c.unacked.length ? '<button class="btn" data-act="ack-all" type="button" style="margin:0;padding:5px 12px">Acknowledge (stop the repeating sound)</button>' : '<span class="chip">acknowledged</span>'}</div><ul>` +
-        sorted.map(a => `<li>${sevChip(a.sev)} ${esc(a.text)} ${link(AL_TYPES[a.type].fix)}</li>`).join('') + '</ul></div>');
+      const counts = ['critical', 'warning', 'notice', 'info'].map(s => [s, c.all.filter(a => a.sev === s).length]).filter(x => x[1]);     // "1 CRITICAL  7 WARNING"
+      parts.push(`<div class="alert ${c.top}"><div class="al-head"><span>Needs attention (${c.all.length})</span>${c.unacked.length ? '<button class="btn" data-act="ack-all" type="button" style="margin:0;padding:5px 12px">Acknowledge (stop the repeating sound)</button>' : '<span class="chip">acknowledged</span>'}</div>` +
+        `<div class="al-counts">${counts.map(([s, k]) => `<span class="sev ${s}">${k} ${SEV_NAME[s]}</span>`).join('')}</div><ul>` +
+        sorted.map(a => `<li class="${a.sev}">${sevChip(a.sev)}<span>${esc(a.text)}</span></li>`).join('') + '</ul></div>');
     }
     return parts.join('');
   }
@@ -183,7 +181,7 @@ const Alerts = (() => {
     const c = counts(), now = Date.now();
     // active
     $('alActive').innerHTML = `<div class="card-h"><div><b>Active now</b><small>${c.all.length ? c.all.length + ' alert' + (c.all.length > 1 ? 's' : '') + (c.unacked.length ? '' : ', all acknowledged') : 'nothing needs attention'}</small></div>${c.unacked.length ? '<button class="btn" data-act="ack-all" type="button" style="margin:0;padding:6px 12px">Acknowledge all</button>' : ''}</div>` +
-      (c.all.length ? c.all.slice().sort((a, b) => SEV[b.sev] - SEV[a.sev]).map(a => `<div class="row"><span>${sevChip(a.sev)} ${esc(a.text)}<br><small>since ${when(a.t0)} (${ago((now - a.t0) / 1000)})</small></span><span>${link(AL_TYPES[a.type].fix)}</span></div>`).join('') : '<div class="empty">All clear.</div>');
+      (c.all.length ? c.all.slice().sort((a, b) => SEV[b.sev] - SEV[a.sev]).map(a => `<div class="row al-row ${a.sev}"><span>${sevChip(a.sev)} ${esc(a.text)}<br><small>since ${when(a.t0)} (${ago((now - a.t0) / 1000)})</small></span></div>`).join('') : '<div class="empty">All clear.</div>');
     // sounds + notifications
     const perm = ('Notification' in window) ? Notification.permission : 'unsupported';
     const opts = cur => Object.keys(Sound.PATTERNS).map(k => `<option value="${k}"${k === cur ? ' selected' : ''}>${esc(Sound.PATTERNS[k].label)}</option>`).join('');
@@ -210,7 +208,6 @@ const Alerts = (() => {
     else if (a === 'sound-on') { Sound.set('on', true); Sound.unlock(); setTimeout(() => { if (Sound.ready()) Sound.play('chime'); refreshUi(); }, 150); }
     else if (a === 'sound-test') { Sound.set('on', true); Sound.unlock(); setTimeout(() => { Sound.play('chime'); refreshUi(); }, 150); }
     else if (a === 'sound-try') { const t = b.dataset.type; Sound.unlock(); setTimeout(() => Sound.test(typeCfg(t).sound), 120); }
-    else if (a === 'fix') { if (typeof Wizard !== 'undefined') Wizard.open(b.dataset.tree); }
     else if (a === 'log-csv') download('jolly_helmet_alert_log.csv', csv());
     else if (a === 'log-clear') { if (confirm('Clear the alert log of this browser?')) { log = log.filter(x => !x.t1 ? true : false); saveLog(); drawTab(); } }
   });

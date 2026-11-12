@@ -11,7 +11,7 @@ const WIZARD_TREES = [
    },
    "Q1": {
     "k": "dec",
-    "t": "Home page: is a board OFFLINE?"
+    "t": "Dashboard: is a board of that box OFFLINE?"
    },
    "A1": {
     "k": "act",
@@ -19,19 +19,19 @@ const WIZARD_TREES = [
    },
    "Q2": {
     "k": "dec",
-    "t": "A container LOW, or an ACS tank EMPTY?"
+    "t": "Door shut with a helmet inside?"
    },
    "A2": {
     "k": "act",
-    "t": "Fill it. See \"Refill station does not refill\""
+    "t": "The lock opens by itself and the buzzer beeps: take the helmet out, close the door"
    },
    "Q3": {
     "k": "dec",
-    "t": "Is the container really low?"
+    "t": "After a power cut?"
    },
    "A3": {
     "k": "act",
-    "t": "No: the LEVELS lines are wrong. Use live again, or switch Check levels OFF"
+    "t": "The box S3 restarts by itself. Still stuck: power-cycle the S3, check the UPS"
    },
    "E": {
     "k": "end",
@@ -67,12 +67,12 @@ const WIZARD_TREES = [
    {
     "a": "Q3",
     "b": "A3",
-    "l": "no"
+    "l": "yes"
    },
    {
     "a": "Q3",
     "b": "E",
-    "l": "yes"
+    "l": "no"
    }
   ]
  },
@@ -203,7 +203,7 @@ const WIZARD_TREES = [
    },
    "E": {
     "k": "end",
-    "t": "Pulses arrive: check the coin pin (GPIO23) and the coins-per-pulse setting"
+    "t": "Pulses arrive: check the coin pin (GPIO 23, C1: 32) and the coins-per-pulse setting"
    }
   },
   "edges": [
@@ -252,77 +252,86 @@ const WIZARD_TREES = [
     "k": "start",
     "t": "The door will not open (helmet stuck)"
    },
-   "F": {
-    "k": "act",
-    "t": "FIRST: slide the safety lock DOWN (lower left of the enclosure door). The door unlocks at once, with or without power."
-   },
    "Q1": {
     "k": "dec",
-    "t": "Is the machine switched on?"
+    "t": "Is a run still going?"
    },
    "A1": {
     "k": "act",
-    "t": "No: locks need power to unlock. Power on, then Maintenance > ENCLOSURE LOCK"
+    "t": "Yes: wait, or CANCEL, CONFIRM. After the auto-dry or cool down the door unlocks"
    },
    "Q2": {
     "k": "dec",
-    "t": "Does the lock click in Maintenance?"
+    "t": "Is the machine switched on?"
    },
    "A2": {
     "k": "act",
-    "t": "Yes: mechanical. Push the door in a little, check the latch"
+    "t": "No: locks need power to unlock. Restore the power, then Maintenance > ENCLOSURE LOCK"
    },
    "Q3": {
     "k": "dec",
-    "t": "12 V at the solenoid when the relay is ON?"
+    "t": "Does the lock click in Maintenance?"
    },
    "A3": {
+    "k": "act",
+    "t": "Yes: mechanical. Push the door in a little, check the latch"
+   },
+   "Q4": {
+    "k": "dec",
+    "t": "12 V at the solenoid when the relay is ON?"
+   },
+   "A4": {
     "k": "act",
     "t": "No: relay, 12 V supply or wiring (A3, B3, C2)"
    },
    "E": {
     "k": "end",
-    "t": "The solenoid or its diode is faulty: replace it. The slide still opens the door."
+    "t": "The solenoid or its diode is faulty: replace it"
    }
   },
   "edges": [
    {
     "a": "S",
-    "b": "F",
-    "l": ""
-   },
-   {
-    "a": "F",
     "b": "Q1",
-    "l": "then find the cause"
+    "l": ""
    },
    {
     "a": "Q1",
     "b": "A1",
-    "l": "no"
+    "l": "yes"
    },
    {
     "a": "Q1",
     "b": "Q2",
-    "l": "yes"
+    "l": "no"
    },
    {
     "a": "Q2",
     "b": "A2",
-    "l": "yes"
+    "l": "no"
    },
    {
     "a": "Q2",
     "b": "Q3",
-    "l": "no"
+    "l": "yes"
    },
    {
     "a": "Q3",
     "b": "A3",
-    "l": "no"
+    "l": "yes"
    },
    {
     "a": "Q3",
+    "b": "Q4",
+    "l": "no"
+   },
+   {
+    "a": "Q4",
+    "b": "A4",
+    "l": "no"
+   },
+   {
+    "a": "Q4",
     "b": "E",
     "l": "yes"
    }
@@ -330,47 +339,47 @@ const WIZARD_TREES = [
  },
  {
   "id": "tree5",
-  "title": "A mixer is LOW or a tank is EMPTY",
+  "title": "A container stays EMPTY or LOW",
   "nodes": {
    "S": {
     "k": "start",
-    "t": "A mixer is LOW or a tank is EMPTY"
+    "t": "A container stays EMPTY or LOW"
    },
    "Q1": {
     "k": "dec",
-    "t": "Does the page say a TANK is EMPTY?"
+    "t": "Is the Refilling Station ONLINE on the Dashboard?"
    },
    "A1": {
     "k": "act",
-    "t": "Yes: fill that tank, then Retry now on the ACS page"
+    "t": "No: see \"A board shows OFFLINE\""
    },
    "Q2": {
     "k": "dec",
-    "t": "Is the ACS board ONLINE on Home?"
+    "t": "Is the water supply on and connected?"
    },
    "A2": {
     "k": "act",
-    "t": "No: see \"A board shows OFFLINE\""
+    "t": "No: connect it, open the tap. The station tries again every 60 s"
    },
    "Q3": {
     "k": "dec",
-    "t": "In Maintenance, does each pump move its liquid?"
+    "t": "Test valve on the station page: does water flow?"
    },
    "A3": {
     "k": "act",
-    "t": "No: wrong pump on the input, kinked tube, air, dead pump, 5 V supply"
+    "t": "No: valve, relay LED clicks?, valve supply, blocked filter or tube"
    },
    "Q4": {
     "k": "dec",
-    "t": "Does the mixer level rise while it fills?"
+    "t": "Does the level rise while it fills?"
    },
    "A4": {
     "k": "act",
-    "t": "No: aim or calibrate the sensors (use live). No rise means \"empty\" to the ACS"
+    "t": "No: sensor in the wrong place or the edges are wrong. Watch the raw value"
    },
    "E": {
     "k": "end",
-    "t": "Check the LEVELS lines and the MIX water share"
+    "t": "Check \"Waits for a rise\" and \"Valve open at most\" of that box"
    }
   },
   "edges": [
@@ -382,12 +391,12 @@ const WIZARD_TREES = [
    {
     "a": "Q1",
     "b": "A1",
-    "l": "yes"
+    "l": "no"
    },
    {
     "a": "Q1",
     "b": "Q2",
-    "l": "no"
+    "l": "yes"
    },
    {
     "a": "Q2",

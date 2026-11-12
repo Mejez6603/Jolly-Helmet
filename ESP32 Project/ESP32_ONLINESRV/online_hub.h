@@ -27,12 +27,12 @@ struct SnapBox2 {                   // Box 2 (S3C, C1, C2)
     TelemetryPacket c2; bool c2Seen; uint32_t c2Ms;
     SnapTerm t;
 };
-struct SnapAcs { ACSStatusPacket p; bool seen; uint32_t ms; };
+struct SnapRefill { RefillStatusPacket p; bool seen; uint32_t ms; };      // the Refilling Station (replaces ACS 1 and ACS 2, 2026-11-03)
 struct SnapStats { HubStatsPacket p; bool seen; uint32_t ms; };
 
 static SnapBox13 snapB[2];          // [0] = Box 1, [1] = Box 3
 static SnapBox2  snapC;
-static SnapAcs   snapA[2];          // [0] = ACS 1, [1] = ACS 2
+static SnapRefill snapR;
 static SnapStats snapS;
 static uint32_t  snapPackets = 0;   // every packet of a known kind (diagnostic)
 // Restated old data from the spare ESP32_RESTATE board (its Update button). Kept in flash by loop() (snapRsDirty), so the board can be unplugged.
@@ -95,13 +95,12 @@ void onlineOnPacket(const uint8_t* d, int len) {
         else if (t.deviceID == DEVICE_C1) snapTerm(snapC.t, t, now);
         else if (t.deviceID == DEVICE_C2) { snapC.c2 = t; snapC.c2Seen = true; snapC.c2Ms = now; }
         portEXIT_CRITICAL(&snapMux);
-    } else if (len == (int)sizeof(ACSStatusPacket)) {
-        ACSStatusPacket p;
+    } else if (len == (int)sizeof(RefillStatusPacket)) {              // the Refilling Station (about once a second)
+        RefillStatusPacket p;
         memcpy(&p, d, sizeof(p));
-        if (p.deviceID != DEVICE_ACS && p.deviceID != DEVICE_ACS2) return;
+        if (p.deviceID != DEVICE_REFILL || p.magic != REFILL_MAGIC) return;
         portENTER_CRITICAL(&snapMux);
-        SnapAcs& a = snapA[p.deviceID == DEVICE_ACS2 ? 1 : 0];
-        a.p = p; a.seen = true; a.ms = now;
+        snapR.p = p; snapR.seen = true; snapR.ms = now;
         portEXIT_CRITICAL(&snapMux);
     } else if (len == (int)sizeof(HubStatsPacket)) {
         HubStatsPacket p;
@@ -132,14 +131,14 @@ void onlineOnPacket(const uint8_t* d, int len) {
 // ---------------------------------------------------------------------
 struct SnapAll {
     uint32_t now;
-    SnapBox13 b[2]; SnapBox2 c; SnapAcs a[2]; SnapStats s;
+    SnapBox13 b[2]; SnapBox2 c; SnapRefill r; SnapStats s;
     RestatePacket rs; bool rsHave;  // the restated old data, if the spare board published it
-    bool on[13];                    // A1, A2, A3, S3A, C1, C2, S3C, B1, B2, B3, S3B, ACS 1, ACS 2 (the Control Center Home order)
+    bool on[12];                    // A1, A2, A3, S3A, C1, C2, S3C, B1, B2, B3, S3B, Refilling Station (D1)
 };
 static void snapTake(SnapAll& s) {
     portENTER_CRITICAL(&snapMux);
     s.now = millis();
-    memcpy(s.b, snapB, sizeof(snapB)); memcpy(&s.c, &snapC, sizeof(snapC)); memcpy(s.a, snapA, sizeof(snapA)); memcpy(&s.s, &snapS, sizeof(snapS));
+    memcpy(s.b, snapB, sizeof(snapB)); memcpy(&s.c, &snapC, sizeof(snapC)); memcpy(&s.r, &snapR, sizeof(snapR)); memcpy(&s.s, &snapS, sizeof(snapS));
     memcpy(&s.rs, &snapRs, sizeof(snapRs)); s.rsHave = snapRsHave;
     portEXIT_CRITICAL(&snapMux);
     uint32_t n = s.now;
@@ -148,13 +147,13 @@ static void snapTake(SnapAll& s) {
     s.on[4]  = snapFresh(s.c.t.seen, s.c.t.ms, n);        s.on[5]  = snapFresh(s.c.c2Seen, s.c.c2Ms, n);        s.on[6]  = snapFresh(s.c.s3Seen, s.c.s3Ms, n);
     s.on[7]  = snapFresh(s.b[1].t.seen, s.b[1].t.ms, n);  s.on[8]  = snapFresh(s.b[1].a2Seen, s.b[1].a2Ms, n);  s.on[9]  = snapFresh(s.b[1].a3Seen, s.b[1].a3Ms, n);
     s.on[10] = snapFresh(s.b[1].s3Seen, s.b[1].s3Ms, n);
-    s.on[11] = snapFresh(s.a[0].seen, s.a[0].ms, n);      s.on[12] = snapFresh(s.a[1].seen, s.a[1].ms, n);
+    s.on[11] = snapFresh(s.r.seen, s.r.ms, n);
 }
-static int snapHeardCount(const SnapAll& s) { int k = 0; for (int i = 0; i < 13; i++) if (s.on[i]) k++; return k; }
+static int snapHeardCount(const SnapAll& s) { int k = 0; for (int i = 0; i < 12; i++) if (s.on[i]) k++; return k; }
 
-static const char* const NODE_NAMES[13] = {
-    "A1 Terminal (Box 1)", "A2 Sensors (Box 1)", "A3 Relays (Box 1)", "S3A Brain (Box 1)", "C1 Terminal (Box 2)", "C2 Hub (Box 2)", "S3C Brain (Box 2)",
-    "B1 Terminal (Box 3)", "B2 Sensors (Box 3)", "B3 Relays (Box 3)", "S3B Brain (Box 3)", "ACS 1 (Box 1)", "ACS 2 (Box 3)"
+static const char* const NODE_NAMES[12] = {            // plain names (the codes A1.. B3, S3A.. stay in the firmware); used in the alert messages
+    "Box 1 TFT Display", "Box 1 Sensors", "Box 1 Relay Controller", "Box 1 Main Controller", "Box 2 TFT Display", "Box 2 Sensors / Relay Controller", "Box 2 Main Controller",
+    "Box 3 TFT Display", "Box 3 Sensors", "Box 3 Relay Controller", "Box 3 Main Controller", "Refilling Station"
 };
 
 // ---------------------------------------------------------------------
@@ -183,43 +182,29 @@ static int levelPct(float cm, float lowCm, float highCm) {
 
 // ---------------------------------------------------------------------
 // Alerts (each has a fixed id so a new one can be told from one that was already active)
-//   0-2 box out of order   3-8 ACS tank empty (unit*3 + water/alcohol/scented)   9-12 ACS mixer low (unit*2 + alcohol/scented)
-//   13-16 box container low (<15 %) (box13*2 + alcohol/scented)   17-29 a board is not heard (index = Home order)
+//   0-2 box out of order   3 the Refilling Station is not heard   4-6 a refill failed (Box 1..3)   7-17 a box board is not heard (index = Home order + 7)
+// A container that is merely EMPTY or LOW is NOT an alert: the station is refilling it by itself. Only a FAILED refill is.
 // ---------------------------------------------------------------------
-#define ALERT_COUNT 30
+#define ALERT_COUNT 18
 static uint32_t alertsNow(const SnapAll& s, uint32_t uptimeSec) {
     uint32_t m = 0;
     if (s.b[0].s3Seen && s.on[3] && s.b[0].s3State == STATE_OUT_OF_ORDER) m |= 1u << 0;
     if (s.c.s3Seen && s.on[6] && s.c.s3State == B2_STATE_OUT_OF_ORDER)   m |= 1u << 1;
     if (s.b[1].s3Seen && s.on[10] && s.b[1].s3State == STATE_OUT_OF_ORDER) m |= 1u << 2;
-    for (int u = 0; u < 2; u++) {
-        if (!s.on[11 + u]) continue;
-        const ACSStatusPacket& p = s.a[u].p;
-        for (int k = 0; k < 3; k++) if (p.empty & (1 << k)) m |= 1u << (3 + u * 3 + k);
-        if (p.flags & ACS_F_ALC_LOW) m |= 1u << (9 + u * 2);
-        if (p.flags & ACS_F_SCT_LOW) m |= 1u << (10 + u * 2);
+    if (s.on[11]) for (int i = 0; i < 3; i++) if (s.r.p.failMask & (1 << i)) m |= 1u << (4 + i);
+    if (uptimeSec > 240 && snapHeardCount(s) > 0) {                   // not right after power-up: the boards need a moment to be heard
+        if (!s.on[11]) m |= 1u << 3;
+        for (int i = 0; i < 11; i++) if (!s.on[i]) m |= 1u << (7 + i);
     }
-    for (int i = 0; i < 2; i++) {
-        float line[4];
-        if (!s.on[i == 0 ? 1 : 8] || !levelsParse(s.b[i].levels, line)) continue;
-        int a = levelPct(s.b[i].a2.usMcAlsCm, line[0], line[1]), c = levelPct(s.b[i].a2.usMcSlsCm, line[2], line[3]);
-        if (a >= 0 && a < 15) m |= 1u << (13 + i * 2);
-        if (c >= 0 && c < 15) m |= 1u << (14 + i * 2);
-    }
-    if (uptimeSec > 240 && snapHeardCount(s) > 0)                     // not right after power-up: the boards need a moment to be heard
-        for (int i = 0; i < 13; i++) if (!s.on[i]) m |= 1u << (17 + i);
     return m;
 }
 static void alertText(uint8_t id, char* out, size_t n) {
-    static const char* const WHAT[3] = {"WATER", "ALCOHOL", "SCENTED"};
     if (id <= 2)       snprintf(out, n, "Box %d is OUT OF ORDER", id + 1);
-    else if (id <= 8)  snprintf(out, n, "ACS %d: %s tank is empty", (id - 3) / 3 + 1, WHAT[(id - 3) % 3]);
-    else if (id <= 12) snprintf(out, n, "ACS %d: %s mixer container is low", (id - 9) / 2 + 1, ((id - 9) % 2) ? "scented" : "alcohol");
-    else if (id <= 16) snprintf(out, n, "Box %d: %s container is low", ((id - 13) / 2) ? 3 : 1, ((id - 13) % 2) ? "scented" : "alcohol");
-    else if (id < ALERT_COUNT) snprintf(out, n, "%s is not heard", NODE_NAMES[id - 17]);
+    else if (id == 3)  snprintf(out, n, "Refilling Station is offline: every box offers DRYING only");
+    else if (id <= 6)  snprintf(out, n, "Box %d: the refill failed (the level is not rising, check the supply)", id - 3);
+    else if (id < ALERT_COUNT) snprintf(out, n, "%s is not heard", NODE_NAMES[id - 7]);
     else out[0] = '\0';
 }
-
 // ---------------------------------------------------------------------
 // The "live" part of the Blynk JSON (everything except "st"). Returns the length; the caller appends  ,"st":{...}}
 // ---------------------------------------------------------------------
@@ -236,23 +221,20 @@ static void jadd(char* out, size_t cap, size_t& len, const char* fmt, ...) {
 static size_t liveJson(const SnapAll& s, char* out, size_t cap, uint32_t seq, uint32_t ts, uint32_t ivSec) {
     size_t len = 0;
     jadd(out, cap, len, "{\"seq\":%lu,\"ts\":%lu,\"iv\":%lu,\"n\":\"", (unsigned long)seq, (unsigned long)ts, (unsigned long)ivSec);
-    for (int i = 0; i < 13; i++) jadd(out, cap, len, "%c", s.on[i] ? '1' : '0');
+    for (int i = 0; i < 12; i++) jadd(out, cap, len, "%c", s.on[i] ? '1' : '0');
     jadd(out, cap, len, "\",\"b\":[");
     // Box 1 and Box 3
     for (int i = 0; i < 2; i++) {
         const SnapBox13& b = s.b[i];
         bool a2 = s.on[i == 0 ? 1 : 8], a3 = s.on[i == 0 ? 2 : 9], s3 = s.on[i == 0 ? 3 : 10], term = s.on[i == 0 ? 0 : 7];
-        int doors = 0, wet = 0, alc = -1, scn = -1; float helmet = -1.0f;
+        int doors = 0; float helmet = -1.0f;                                   // the container level is not read by the box any more: the Refilling Station sends it (rf)
         if (a2) {
             doors  = (b.a2.doorEnclosure ? 1 : 0) | (b.a2.doorPanel ? 2 : 0) | (b.a2.doorBackdoor ? 4 : 0) | (b.a2.doorAcsSide ? 8 : 0);
-            wet    = (b.a2.wsAlsWet ? 1 : 0) | (b.a2.wsSlsWet ? 2 : 0);
             helmet = b.a2.usHelmetCm;
-            float line[4];
-            if (levelsParse(b.levels, line)) { alc = levelPct(b.a2.usMcAlsCm, line[0], line[1]); scn = levelPct(b.a2.usMcSlsCm, line[2], line[3]); }
         }
         if (i) jadd(out, cap, len, ",");
-        jadd(out, cap, len, "[%u,%lu,%lu,%d,%.0f,%d,%d,%d,%u]", s3 ? (unsigned)b.s3State : 0u, s3 ? (unsigned long)b.s3Timer : 0ul, term ? (unsigned long)b.t.pulses : 0ul,
-             doors, (double)helmet, alc, scn, wet, a3 ? (unsigned)b.a3Mask : 0u);
+        jadd(out, cap, len, "[%u,%lu,%lu,%d,%.0f,-1,-1,0,%u]", s3 ? (unsigned)b.s3State : 0u, s3 ? (unsigned long)b.s3Timer : 0ul, term ? (unsigned long)b.t.pulses : 0ul,
+             doors, (double)helmet, a3 ? (unsigned)b.a3Mask : 0u);
         if (i == 0) {                                                      // Box 2 goes between Box 1 and Box 3
             const SnapBox2& c = s.c;
             bool c2 = s.on[5], s3c = s.on[6], t1 = s.on[4];
@@ -265,12 +247,14 @@ static size_t liveJson(const SnapAll& s, char* out, size_t cap, uint32_t seq, ui
             jadd(out, cap, len, ",[%u,%lu,%lu,%d,%.0f,-1,-1,0,%u]", s3c ? (unsigned)c.s3State : 0u, s3c ? (unsigned long)c.s3Timer : 0ul, t1 ? (unsigned long)c.t.pulses : 0ul, d2, (double)h2, rl);
         }
     }
-    jadd(out, cap, len, "],\"a\":[");
-    for (int u = 0; u < 2; u++) {
-        const ACSStatusPacket& p = s.a[u].p;
-        if (u) jadd(out, cap, len, ",");
-        if (s.on[11 + u]) jadd(out, cap, len, "[1,%u,%u,%u,%u,%u,%u,%u,%u]", (unsigned)p.step, (unsigned)p.flags, (unsigned)p.empty, (unsigned)p.warn, (unsigned)p.levelAlcPct, (unsigned)p.levelSctPct, (unsigned)p.pumpMask, (unsigned)p.stepSec);
-        else               jadd(out, cap, len, "[0,0,0,0,0,0,0,0,0]");
+    jadd(out, cap, len, "],\"rf\":[");                                  // the Refilling Station: per box [raw, state 0-4 (-1 unknown, -2 not watched: the station watches Box 3 only for now), valve open, refill failed, mid edge, high edge, max edge, waiting in the queue]
+    for (int i = 0; i < 3; i++) {
+        if (i) jadd(out, cap, len, ",");
+        if (s.on[11]) {
+            const RefillStatusPacket& p = s.r.p;
+            jadd(out, cap, len, "[%u,%d,%d,%d,%u,%u,%u,%d]", (unsigned)p.raw[i], p.state[i] <= REFILL_MAX ? (int)p.state[i] : (p.state[i] == REFILL_OFF ? -2 : -1), (p.valveMask >> i) & 1, (p.failMask >> i) & 1,
+                 (unsigned)p.midEdge[i], (unsigned)p.highEdge[i], (unsigned)p.maxEdge[i], (p.queueMask >> i) & 1);
+        } else jadd(out, cap, len, "[0,-1,0,0,500,1000,1200,0]");
     }
     jadd(out, cap, len, "]");
     return len;

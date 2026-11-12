@@ -5,19 +5,28 @@
 function tickStatus() {
   const pill = $('pill'), t = $('pillT'), ag = $('agoText');
   const was = S.link;
+  /* The badge says only two things: "Status: Active" (data is arriving) or "Status: Inactive" (no link, bad token, no data yet, or old data).
+     The reason is in the tooltip and in the banner above the machines. S.link keeps the finer states ('live', 'late', 'dead', 'err', 'nodata') for the code. */
+  const setPill = (active, why) => { pill.className = 'pill ' + (active ? 'live' : 'dead'); t.textContent = 'Status: ' + (active ? 'Active' : 'Inactive') + (active && DEMO ? ' (demo)' : ''); pill.title = why; };
   if (S.err) {
     S.link = 'err';
-    pill.className = 'pill dead'; t.textContent = /token/i.test(S.err) ? 'BAD TOKEN' : 'NO LINK';
+    setPill(false, /token/i.test(S.err) ? 'The Blynk token is wrong' : 'Cannot reach Blynk');
     ag.textContent = S.okAt ? 'last answer ' + ago((Date.now() - S.okAt) / 1000) + ' ago' : ''; return;
   }
-  if (!S.okAt) { S.link = 'wait'; pill.className = 'pill'; t.textContent = 'CONNECTING'; ag.textContent = ''; return; }
-  if (!S.live) { S.link = 'nodata'; pill.className = 'pill late'; t.textContent = 'NO DATA'; ag.textContent = ''; return; }
+  if (!S.okAt) { S.link = 'wait'; pill.className = 'pill'; t.textContent = 'Status: ...'; pill.title = 'Connecting'; ag.textContent = ''; return; }
+  if (!S.live) { S.link = 'nodata'; setPill(false, 'Connected to Blynk, but the Online Server has not written any data yet'); ag.textContent = ''; return; }
   const iv = nz(S.live.iv, 60), now = Date.now();
   const age = (S.live.ts > 1.6e9) ? Math.max(0, now / 1000 - S.live.ts) : (now - S.lastChange) / 1000;   // device time if it has one
   ag.textContent = 'updated ' + ago(age) + ' ago';
-  if (age <= iv * 2 + 15)      { S.link = 'live'; pill.className = 'pill live'; t.textContent = DEMO ? 'DEMO' : 'LIVE'; }
-  else if (age <= iv * 6 + 30) { S.link = 'late'; pill.className = 'pill late'; t.textContent = 'DELAYED'; }
-  else                         { S.link = 'dead'; pill.className = 'pill dead'; t.textContent = 'OLD DATA'; }
+  if (age <= iv * 2 + 15)      { S.link = 'live'; setPill(true, 'Data is arriving'); }
+  else if (age <= iv * 6 + 30) { S.link = 'late'; setPill(true, 'Data is arriving, but later than usual'); }
+  else                         { S.link = 'dead'; setPill(false, 'The data is not yet updated: nothing new has arrived for a while'); }
+  /* a link that turns stale (or comes back) changes the machine cards and the map (Active / Inactive), not only the badge */
+  const staleOf = l => l === 'dead' || l === 'err';
+  if (was !== S.link) {
+    if (staleOf(was) !== staleOf(S.link) && S.live && typeof renderAll === 'function') renderAll();
+    else if (typeof renderSys === 'function') renderSys();
+  }
   if (was !== S.link && (S.link === 'dead' || was === 'dead') && typeof Alerts !== 'undefined') Alerts.update(S.live);   // the data went stale (or came back) between two readings
 }
 
@@ -31,14 +40,14 @@ async function loop(force) {
       S.err = (e && e.message) || 'network error';
       if (/Failed to fetch|NetworkError|Load failed|abort/i.test(S.err)) S.err = 'no internet, or Blynk did not answer.';
     }
-    renderAll(); tickStatus(); Alerts.update(S.live);
+    renderAll(); tickStatus(); renderSys(); Alerts.update(S.live);
   }
   timer = setTimeout(loop, (S.err && /token/i.test(S.err) ? 30 : cfg.pollSec) * 1000);
 }
 document.addEventListener('visibilitychange', () => { if (!document.hidden) loop(); });
 
 function start() {
-  if (!DEMO && !cfg.token) { $('connect').hidden = false; $('view').hidden = true; $('pillT').textContent = 'NOT CONNECTED'; return; }
+  if (!DEMO && !cfg.token) { $('connect').hidden = false; $('view').hidden = true; $('pillT').textContent = 'Status: Inactive'; $('pill').className = 'pill dead'; $('pill').title = 'Not connected: no Blynk token yet'; return; }
   if (DEMO) $('foot').textContent = 'DEMO MODE: the numbers on this page are made up. Read-only monitor.';
   loop(true); setInterval(tickStatus, 1000);
 }
@@ -68,6 +77,5 @@ if (store.get('jh_theme')) document.documentElement.dataset.theme = store.get('j
 const qTheme = new URLSearchParams(location.search).get('theme');          // index.html?theme=light or ?theme=dark (handy for screenshots)
 if (qTheme === 'light' || qTheme === 'dark') document.documentElement.dataset.theme = qTheme;
 
-Checklist.publish();
 start();
 Tabs.route();                                          // open the tab named in the address (#alerts, #reports ...)

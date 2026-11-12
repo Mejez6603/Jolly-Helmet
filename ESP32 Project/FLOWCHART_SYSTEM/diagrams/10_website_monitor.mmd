@@ -1,0 +1,61 @@
+---
+title: 10 - The website inside, part 1 - the Monitor (index.html, for the owner and the team)
+config:
+  flowchart:
+    wrappingWidth: 380
+---
+flowchart TB
+  classDef cBox fill:#ffffff,stroke:#111111,stroke-width:2px,color:#111111
+  classDef cSrv fill:#ffffff,stroke:#111111,stroke-width:5px,color:#111111
+  classDef cDb fill:#eeeeee,stroke:#111111,stroke-width:3px,color:#111111
+  classDef cPeople fill:#ffffff,stroke:#666666,stroke-width:1.5px,stroke-dasharray:3 3,color:#111111
+  classDef cSide fill:#ffffff,stroke:#111111,stroke-width:2px,stroke-dasharray:5 4,color:#111111
+  classDef cBad fill:#ffffff,stroke:#111111,stroke-width:4px,color:#111111
+
+  OPEN(["The owner or team opens the website address (index.html)"]):::cPeople
+  FILES["The browser downloads the page files from the website (Vercel): HTML, CSS, JS<br/>From here on the page runs inside the browser and talks to Blynk by itself.<br/>It only READS: it never writes to Blynk. The website never sees the data."]:::cSrv
+  TOK{"Blynk token known?"}
+  CONN["Connect screen: paste the token<br/>or try the demo (made-up data)"]:::cSide
+  SAVE["token saved in this browser only, the page reloads"]:::cSide
+  BLYNK[("BLYNK CLOUD<br/>the online database<br/>private device: V0 live JSON")]:::cDb
+
+  LOOP["REFRESH LOOP: every 10 s (Settings can change it)<br/>only while the tab is open and visible, wrong token: every 30 s"]
+  GET["HTTPS GET getAll from blynk.cloud (gives up after 12 s)"]
+  ANS{"what came back?"}
+  OKD["V0 read as JSON: the 3 boxes, levels, board flags, statistics<br/>remember when the counter seq last changed<br/>keep the last 90 container levels for the little graphs"]
+  TICK{"how old is the data?<br/>(checked every second)"}
+  ACT["Status: Active<br/>(fresh, or later than usual)"]
+  INACT["Status: Inactive<br/>machine cards and level dials say Inactive, the network map turns red<br/>tooltip: token wrong / cannot reach Blynk / no data yet / data not yet updated"]:::cBad
+  DRAW["DRAW THE PAGE AGAIN, after every reading"]
+
+  MONTAB["MONITOR tab<br/>badge Status Active / Inactive + updated x ago<br/>the 3 boxes drawn as machines<br/>3 level dials from the Refilling Station<br/>network map, analytics tiles"]
+  REPTAB["REPORTS tab<br/>revenue and customers per day (14 days, 7-day average)<br/>this week against last, busiest hours and weekdays<br/>what each box earns, day-by-day table<br/>CSV download, Print / save as PDF"]
+  DET["ALERTS: work out what is wrong right now<br/>data not yet updated · board not active · no board active at all<br/>box OUT OF ORDER · door opened during a run · container low<br/>refill failed · Refilling Station not active"]
+  TOOLS["Buttons: QR (QR code, link and printable sign for the customer page)<br/>Settings (token, server, refresh time) · light / dark"]:::cSide
+  NEWA{"a new alert,<br/>or one cleared?"}
+  SHOW["banner Needs attention: one coloured row per alert, highest first<br/>CRITICAL red · WARNING orange · NOTICE blue · INFO grey<br/>ALERTS tab: Active now + the LOG (kept in this browser, CSV download)<br/>number in the tab title and icon"]
+  SND["its own sound, optional browser notification<br/>CRITICAL repeats every minute until Acknowledge<br/>cleared: a chime"]
+
+  OPEN --> FILES --> TOK
+  TOK -->|"no"| CONN --> SAVE
+  SAVE -->|"reload"| LOOP
+  TOK -->|"yes: token in the address,<br/>in js/config.js, or saved in this browser"| LOOP
+  LOOP --> GET
+  GET <-->|"private token"| BLYNK
+  GET --> ANS
+  ANS -->|"error: wrong token, no internet,<br/>or Blynk did not answer"| INACT
+  ANS -->|"V0 empty: the Online Server<br/>has not written anything yet"| INACT
+  ANS -->|"V0 has data"| OKD
+  OKD --> TICK
+  TICK -->|"fresh: within 2 x interval + 15 s<br/>later than usual: within 6 x interval + 30 s"| ACT
+  TICK -->|"older than that"| INACT
+  ACT --> DRAW
+  INACT --> DRAW
+  DRAW --> MONTAB
+  DRAW --> REPTAB
+  DRAW --> DET
+  MONTAB -.-> TOOLS
+  DET --> NEWA
+  NEWA -->|"yes"| SHOW
+  NEWA -->|"yes"| SND
+  DRAW -.->|"wait for the next reading"| LOOP

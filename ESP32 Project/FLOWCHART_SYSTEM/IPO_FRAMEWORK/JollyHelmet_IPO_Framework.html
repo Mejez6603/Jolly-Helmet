@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<title>Jolly Helmet - conceptual framework (IPO)</title>
+<style>
+  @page { size: 2000px 1056px; margin: 0 }
+  * { box-sizing: border-box }
+  html, body { margin: 0; background: #fff; font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif; color: #000; -webkit-print-color-adjust: exact; print-color-adjust: exact }
+  #c { position: relative; width: 2000px; background: #fff; overflow: hidden }
+  #cap { position: absolute; left: 50px; top: 26px; font-size: 25px; line-height: 1.3 }
+  #cap b { font-weight: 700 } #cap i { font-style: italic }
+  .box { position: absolute; border: 2.5px solid #000; background: #fff; padding: 0 26px 18px }
+  .box > h2 { margin: 0 -26px 14px; padding: 15px 0 13px; text-align: center; font-size: 30px; letter-spacing: 2px; font-weight: 700; border-bottom: 2.5px solid #000 }
+  .grp { font-weight: 700; font-size: 19px; margin: 14px 0 5px }
+  ul { margin: 0; padding: 0; list-style: none }
+  li { font-size: 17.5px; line-height: 1.32; margin: 3px 0; padding-left: 20px; position: relative }
+  li::before { content: "\2022"; position: absolute; left: 4px }
+  .sub { border: 1.5px solid #000; padding: 11px 16px 12px; margin-top: 14px; background: #fff }
+  .sub:first-of-type { margin-top: 0 }
+  .sub h3 { margin: 0 0 8px; font-size: 19px; font-weight: 700 }
+  .sub ol { margin: 0; padding: 0; list-style: none; counter-reset: n }
+  .sub ol li { padding-left: 24px } .sub ol li::before { counter-increment: n; content: counter(n) "."; left: 0 }
+  .sub p { margin: 0; font-size: 17.5px; line-height: 1.42 }
+  .fb p { margin: 0; text-align: center; font-size: 18px; line-height: 1.42 }
+  .fb h2 { margin-bottom: 12px }
+  svg#w { position: absolute; left: 0; top: 0; pointer-events: none }
+</style></head>
+<body>
+<div id="c">
+  <div id="cap"><b>Figure 1</b><br><i>Conceptual Framework of the JOLLY HELMET (Input-Process-Output with Feedback)</i></div>
+  <svg id="w" xmlns="http://www.w3.org/2000/svg">
+    <defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#000"/></marker></defs>
+  </svg>
+
+  <div class="box" id="bi"><h2>INPUT</h2>
+    <div class="grp" style="margin-top:0">Hardware and materials</div>
+    <ul>
+      <li>ESP32 / ESP32-S3 microcontrollers</li>
+      <li>Touch screen and coin acceptor</li>
+      <li>Ultrasonic, door and water-level sensors</li>
+      <li>Relays, fogging nozzles, UV-C lamps (254 nm), heater and fan</li>
+      <li>Solenoid door locks and valves</li>
+      <li>Helmet disinfectant fogging solution</li>
+      <li>Power supply</li>
+    </ul>
+    <div class="grp">Software and tools</div>
+    <ul>
+      <li>Arduino IDE (C++ firmware), ESP-NOW radio</li>
+      <li>Blynk cloud</li>
+      <li>Web page (HTML, JavaScript) on GitHub and Vercel</li>
+    </ul>
+    <div class="grp">User and administrator input</div>
+    <ul>
+      <li>Helmet and coins</li>
+      <li>Mode choice: cleaning and drying, or drying only</li>
+      <li>Coin rate, refill and sensor settings</li>
+      <li>Records of the previous customers (ENTRY board)</li>
+    </ul>
+  </div>
+
+  <div class="box" id="bp"><h2>PROCESS</h2>
+    <div class="sub"><h3>A. System development (prototype model)</h3>
+      <ol>
+        <li>Requirements and design of the three boxes</li>
+        <li>Wiring, enclosure and sensor placement</li>
+        <li>Firmware for each board (state machines)</li>
+        <li>LocalServer Control Center, Online Server and website</li>
+        <li>Bench testing, then implementation and testing with the users</li>
+        <li>Evaluation and revision based on the users' feedback</li>
+      </ol></div>
+    <div class="sub"><h3>B. Machine operation for each customer</h3>
+      <p>Insert coins &rarr; choose the mode &rarr; sensors check the helmet, the door and the container &rarr; CLEANING: disinfectant fogging + UV-C (254 nm) &rarr; DRYING: heater + fan &rarr; the door opens, take the helmet</p></div>
+    <div class="sub"><h3>C. Data flow</h3>
+      <p>Machine boards &rarr; (ESP-NOW) &rarr; Local Server &rarr; Online Server &rarr; (Blynk) &rarr; website<br>
+      The Refilling Station keeps the main container filled<br>
+      Sessions, statistics and alerts are kept on both servers</p></div>
+  </div>
+
+  <div class="box" id="bo"><h2>OUTPUT</h2>
+    <div class="grp" style="margin-top:0">For the customer</div>
+    <ul>
+      <li>Cleaned, disinfected and dried helmet</li>
+      <li>Status page: FREE, IN USE, OUT OF ORDER</li>
+    </ul>
+    <div class="grp">For the owner and administrator</div>
+    <ul>
+      <li>Revenue and usage statistics (customers, coins, session time)</li>
+      <li>Real-time monitoring: Control Center and online page</li>
+      <li>Alerts: container low, out of order, door opened during a run</li>
+      <li>Reports (CSV, print or PDF)</li>
+    </ul>
+    <div class="grp">For the team</div>
+    <ul>
+      <li>User manual and technician guide</li>
+      <li>Tested prototype, revised after the users' feedback</li>
+    </ul>
+  </div>
+
+  <div class="box fb" id="bf"><h2>FEEDBACK</h2>
+    <p>The comments and observations of the users (odor that was not fully removed, ease of use, requests to clean other items), the sales statistics and the fault alerts guide the revisions to the cleaning solution, the UV-C lamp and the customer flow, the price and time settings, the refilling of the container, and the maintenance of the machine.</p>
+  </div>
+</div>
+
+<script>
+const NOCAP = new URLSearchParams(location.search).has('nocap');
+const T = NOCAP ? 34 : 112, BH = 650, FH = 176, GAP = 84;      // page height = T + BH + GAP + FH + 34  (1056 with the caption, 978 without)
+const H = T + BH + GAP + FH + 34;
+const c = document.getElementById('c'); c.style.height = H + 'px';
+if (NOCAP) document.getElementById('cap').style.display = 'none';
+const place = (id, x, y, w, h) => { const e = document.getElementById(id); e.style.cssText += `;left:${x}px;top:${y}px;width:${w}px;height:${h}px`; };
+place('bi', 50, T, 560, BH); place('bp', 700, T, 600, BH); place('bo', 1390, T, 560, BH);
+place('bf', 500, T + BH + GAP, 1000, FH);
+const svg = document.getElementById('w'); svg.setAttribute('width', 2000); svg.setAttribute('height', H); svg.setAttribute('viewBox', `0 0 2000 ${H}`);
+const wire = (pts, arrow) => {
+  const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  p.setAttribute('d', 'M' + pts.map(q => q.join(',')).join(' L')); p.setAttribute('fill', 'none'); p.setAttribute('stroke', '#000'); p.setAttribute('stroke-width', '3');
+  p.setAttribute('stroke-linejoin', 'miter'); if (arrow) p.setAttribute('marker-end', 'url(#ah)'); svg.appendChild(p);
+};
+const my = T + BH / 2;
+wire([[610, my], [700, my]], true);            // input -> process
+wire([[1300, my], [1390, my]], true);          // process -> output
+const fy = T + BH + GAP + FH / 2;
+wire([[1670, T + BH], [1670, fy], [1500, fy]], true);   // output -> feedback
+wire([[500, fy], [330, fy], [330, T + BH]], true);      // feedback -> input
+</script>
+</body></html>

@@ -1,12 +1,32 @@
 JOLLY HELMET USER MANUAL - how to edit
 ======================================
+* BOOKS\ = the three printable books made from v11 (Customer 12 pages, Admin 48, Technician 68), book style (cover, colophon, contents, chapters on right-hand pages, mirrored margins, page count a multiple of 4). Each book has a second PDF ending in _BOOKLET: landscape sheets in folding order (last page | page 1 ...), print double-sided, flip on the SHORT edge, 100 %, then fold and staple (made by build\impose_booklet.ps1; build\rebuild_books.ps1 redoes all three books + booklets). Read BOOKS\README_PRINT.txt.
+  They are rebuilt from the full manual with build\book_build.ps1 (Word on a copy). 2026-11-04 the full manual also got part M (the coin wait, see below).
+* JollyHelmet_UserManual_v11.docx = the NEWEST editable Word version (2026-11-04), made from v10 in parts H, I, J, K, L (build\station_update_h ... l.src.html, run by build\patch_docx.html; new ops delete-table, delete-pic,
+                                   remove-xe, data-n for replace-png / replace-image; the run needs build\serve_manual.ps1 on port 8766). It takes out what no longer exists (ratings, time picker, mist choice, free retry, the safety slide,
+                                   the ENTRY board, the pumps and the drain pump warning), writes Box 1, Box 2 and Box 3 as one Cleaner + Dryer (two charts, one price list, one box page), has new pictures (images\v11: Control Center,
+                                   Maintenance, Online Server setup page = Network Map, web page) and says the Refilling Station watches and refills Box 3 only for now (Box 1 and Box 2 = NOT WATCHED, WATCH_BOX in ESP32_REFILL.ino).
+                                   Rev 11 on the version page. Open it in Word and click Yes to update the contents and the index. NOT yet checked by eye: PDF pages 12 to 100 except a few; "Prices and time" still starts a new page.
+* JollyHelmet_UserManual_v11.pdf  = the PDF Word makes of v11 (100 pages). v10 stays as it was.
+* JollyHelmet_UserManual_v10.docx = the PREVIOUS editable Word version (2026-11-04). It is v9 exactly as it was saved on disk (v9 had no changes of yours after 2026-10-16 09:31) plus the Refilling Station
+                                   and the trimmed Box 3: a new admin chapter "Refilling Station" (water path, how it works, the page, levels, test valve, failed refill) replacing the ACS chapter;
+                                   Box 3 customer pages rewritten to the 36-step flow with 10 touch-screen pictures (CHECKING, SELECT MODE / SELECT DRY ONLY, required coins, cleaning, auto-dry, drying, cool down, cancel,
+                                   OUT OF ORDER with the helmet message), prices, special screens, questions; "Box 3 settings" in the admin guide with 3 new pictures; Dashboard / navigation bar now "Refilling Station" and
+                                   12 devices; online page chapter fixed (3 dials read by the station, no Checklist / Fix it / Manual tabs, new alerts, new Monitor picture); technician guide: "The 14 boards", component list,
+                                   unit table, B2 / B3 notes, UPS design, new pinout "Refilling Station - sensors and valves" with a wiring drawing; reference: OUT OF ORDER never traps a helmet, restart check, firmware safety rows,
+                                   Box 3 charts 5 and 6 and decision trees 1 and 5 redrawn (black and white), settings reference (Box 3 and Refilling Station), schematics (station wiring), policies (power cut), glossary
+                                   (+10 terms), version page, firmware dates, Rev 10. Box 1 and Box 2 text is unchanged (they still run their earlier program). Open it in Word and click Yes to update fields.
+                                   Work in v10 from now on; close v9 in Word first. Made in 5 steps by build\patch_docx.html (new ops: clear-section, delete-section, delete-row, replace-table, replace-text, shots rows of
+                                   pictures) with build\station_update_a ... e.src.html; the run needs build\serve_manual.ps1 (the helper server on port 8766). Pictures: images\v10 (LocalServer pages from the real page code,
+                                   TFT screens from FLOWCHART_BOX3\screens, drawings by build\draw_v10.html); charts by build\flowgen.html (+ the Refilling Station chart); build\word_pdf.ps1 makes the PDF.
+* JollyHelmet_UserManual_v10.pdf  = the PDF Word makes of v10 (111 pages). The web page has no Manual tab any more, so it is not put into ONLINE_WEB.
 * JollyHelmet_UserManual_v9.docx = the NEWEST editable Word version (2026-10-16). It is v8 as it was SAVED on disk (every change typed in Word until then is kept) plus the new Control Center:
                                    one navigation bar and the Devices line (the old Home page text), the day viewer (Machine / JSON tabs), the combined Finished and cancelled tally, the Settings tab
                                    (clock, session log, backup restore, previous data), crash reports kept on the board, the ENTRY board chapter, the OPEN A / OPEN B beep, the Maintenance
                                    2-second safety with its bypass and the drain pump warning, C1 coin on GPIO 32, optional customer names (Blynk V5), policies, glossary, settings reference,
                                    firmware dates and Rev 9. All Control Center pictures are new (images\v9). Revision 9. Work in v9 from now on; close v8 in Word first (v8 has no changes of yours after 2026-10-16 03:47,
                                    or they are not in v9). Made by build\patch_docx.html?in=<copy of v8>&out=JollyHelmet_UserManual_v9.docx&src=home_update.src.html (new ops: replace-png, cell-set).
-* JollyHelmet_UserManual_v9.pdf  = the PDF Word makes of v9. The web copy (ONLINE_WEB\manual) comes from the same file.
+* JollyHelmet_UserManual_v9.pdf  = the PDF Word makes of v9. The web copy (build_web_manual.ps1) comes from the same file; since 2026-10-23 the online web page has no Manual tab, so it is no longer put in ONLINE_WEB.
 * JollyHelmet_UserManual_v8.docx = v7 with the LocalServer Wi-Fi renamed ESP32_LOCAL -> JollyHelmet-Local (2026-10-16).
 * JollyHelmet_UserManual_v7.docx = the editable Word version of 2026-10-11. It is YOUR v6 (every change you typed in Word is kept) with the 6 box flowcharts and the
                                    7 troubleshooting decision trees redrawn in BLACK AND WHITE (no colours): black box = start or end, thick border = the machine is running (or "do this"),
@@ -66,8 +86,9 @@ The settings reference (defaults and ranges) was read from the firmware sketches
 EDITED IN WORD? MAKE THE PDF AND THE WEB MANUAL FROM THE WORD FILE  (added 2026-10-10)
 * build_web_manual.ps1  = right-click > Run with PowerShell. Needs Microsoft Word on this PC (Word may stay open with your file: only a copy is used).
     - writes JollyHelmet_UserManual_v4.pdf next to the Word file (a PDF of exactly your Word file, with its contents, index and bookmarks);
-    - rewrites ..\ONLINE_WEB\manual\ (customer_guide.pdf = public, team_manual.js = the whole manual ENCRYPTED with the team password,
-      customer_index.js = chapter list and search text) for the Manual tab of the online web page.
+    - rewrites ..\ONLINE_WEB_REMOVED\manual\ (customer_guide.pdf = public, team_manual.js = the whole manual ENCRYPTED with the team password,
+      customer_index.js = chapter list and search text). These were for the Manual tab of the online web page, which was taken out on 2026-10-23;
+      run it only to get the PDF, or copy that folder back into ONLINE_WEB together with the removed js files if the Manual tab is ever wanted again.
     - It asks for the team password (min. 6 characters). Use the same one every time or tell the team the new one.
   Before you run it: in Word press Ctrl+A, then F9 (updates the contents page and the index), and save. (Or run it as
   build_web_manual.ps1 -UpdateFields and it updates them in its own copy.)

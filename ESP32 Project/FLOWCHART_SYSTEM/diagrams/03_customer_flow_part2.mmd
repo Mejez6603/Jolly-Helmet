@@ -1,0 +1,59 @@
+---
+title: 03 - Customer flow of a box, part 2 - door, run, drying, finish (same for Box 1, 2 and 3)
+---
+flowchart TD
+  classDef cStart fill:#111111,stroke:#111111,color:#ffffff
+  classDef cRun fill:#ffffff,stroke:#111111,stroke-width:5px,color:#111111
+  classDef cSide fill:#ffffff,stroke:#111111,stroke-width:2px,stroke-dasharray:5 4,color:#111111
+  classDef cFault fill:#ffffff,stroke:#111111,stroke-width:4px,color:#111111
+  classDef cLink fill:#ffffff,stroke:#111111,stroke-width:2px,color:#111111
+
+  FROM(["from part 1<br/>the coins are paid"]):::cLink
+  OA["OPEN THE DOOR<br/>door lock released"]
+  PL["PLACE THE HELMET"]
+  CL["CLOSE THE DOOR"]
+  NH["NO HELMET DETECTED<br/>2 s"]:::cSide
+  CLN["CLEANING<br/>UV 1 + 2, 3 humidifiers, coin slot ON<br/>time = coins bought"]:::cRun
+  DAC["DRYING after cleaning<br/>3:00 fixed, UV, heater<br/>heater OFF for the last 30 s"]:::cRun
+  WT["PLEASE WAIT"]
+  DRY["DRYING<br/>UV 1 + 2, heater, coin slot ON<br/>time = coins bought"]:::cRun
+  COOL["COOLING DOWN<br/>60 s, everything off"]:::cRun
+  AB1["CANCEL?<br/>coins will not be refunded"]:::cSide
+  AB2["CANCEL?<br/>coins will not be refunded"]:::cSide
+  OB["OPEN THE DOOR<br/>door lock released"]
+  TK["TAKE THE HELMET"]
+  CB["CLOSE THE DOOR"]
+  HI["HELMET STILL INSIDE<br/>2 s"]:::cSide
+  TY(["THANK YOU<br/>5 s"]):::cStart
+  BACK(["back to part 1<br/>START SCREEN"]):::cLink
+  SAFE["SAFETY PAUSE (built into the box)<br/>a door opens during a run:<br/>UV, mist and heater switch off<br/>until the door is closed"]:::cFault
+
+  FROM --> OA
+  OA -->|door opened| PL
+  PL -->|helmet inside| CL
+  PL -.->|door closed, no helmet| NH
+  CL -.->|no helmet| NH
+  NH --> OA
+  CL -->|"door closed + helmet<br/>CLEANING chosen"| CLN
+  CL -->|"door closed + helmet<br/>DRYING chosen"| WT
+  WT -->|automatic| DRY
+  CLN -->|time is up| DAC
+  DRY -->|time is up| COOL
+  CLN -->|CANCEL button| AB1
+  AB1 -->|CONFIRM| DAC
+  AB1 -->|RESUME| CLN
+  DRY -->|CANCEL button| AB2
+  AB2 -->|CONFIRM| COOL
+  AB2 -->|RESUME| DRY
+  DAC -->|time is up| OB
+  COOL -->|time is up| OB
+  OB -->|door opened| TK
+  TK -->|helmet taken out| CB
+  TK -.->|door closed, helmet inside| HI
+  CB -.->|helmet inside| HI
+  HI --> OB
+  CB -->|door closed, helmet out| TY
+  TY -->|after 5 s| BACK
+  CLN -.-> SAFE
+  DRY -.-> SAFE
+  DAC -.-> SAFE

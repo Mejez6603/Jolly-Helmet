@@ -1,0 +1,15 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Manual v10, part F: leftovers found in the double check (2026-11-04)</title></head><body>
+<!-- Run on JollyHelmet_UserManual_v10.docx: the hardware troubleshooting row about "the wrong pump" (it was an ACS row), spare parts, an obsolete online-page row, and a warning about a dead water-level sensor. -->
+<div class="op" data-op="delete-row" data-after="Heading3:Online page problems" data-row="A dial says &quot;watching the trend&quot;"></div>
+<div class="op" data-op="replace-text" data-from="Spare pumps and tubing" data-to="A spare valve, spare pumps (Box 1 drains) and tubing"></div>
+<div class="op" data-op="cell-set" data-after="Heading2:Hardware troubleshooting" data-n="1" data-row="A pump runs but the wrong liquid moves" data-col="2">Use Test valve on the Refilling Station page, one valve at a time, and fix the wiring.</div>
+<div class="op" data-op="cell-set" data-after="Heading2:Hardware troubleshooting" data-n="1" data-row="A pump runs but the wrong liquid moves" data-col="1">Relay input wired to the wrong valve</div>
+<div class="op" data-op="cell-set" data-after="Heading2:Hardware troubleshooting" data-n="1" data-row="A pump runs but the wrong liquid moves" data-col="0" data-bold="yes">A valve opens for the wrong box</div>
+<div class="op" data-op="rows-append" data-after="Heading2:Hardware troubleshooting" data-n="1">
+<table><tr><td>A container overflows, or the station keeps opening a valve</td><td>The water-level sensor reads 0 (loose or wrong wire, probe out of the liquid) while the container is full, so it looks EMPTY</td><td>Close the water supply. On the Refilling Station page read the raw value of that sensor (a dry one reads 0), fix the SIG wire and the probe, then set the edges again. The station tries again every 60 seconds by itself.</td></tr></table>
+</div>
+<div class="op" data-op="bullet-after" data-after="The tag FAILED stays on until a refill works">
+<ul><li>A sensor that is unplugged or reads 0 looks like an EMPTY container, so the station keeps trying (valve open up to 30 seconds, then a pause of 60 seconds). If a container is really full, close the supply and fix the sensor wire first. A drip tray under the containers is a good idea.</li></ul>
+</div>
+</body></html>

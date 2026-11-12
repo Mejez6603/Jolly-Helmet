@@ -1,0 +1,105 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Drawings for manual v10</title>
+<style>body{font:12px Consolas,monospace;margin:10px;background:#ddd}img{background:#fff;max-width:900px;display:block;margin:8px 0;border:1px solid #999}</style></head><body>
+<!--
+  Draws three pictures for manual v10 and saves them through the manual helper server (needs serve_manual.ps1, http://localhost:8766/m/build/draw_v10.html):
+    images/v10/screens/ooo_helmet.png   B1's OUT OF ORDER screen with the "helmet still inside" words (drawn like B1 draws it: 320 x 240 at 2x)
+    images/v10/station_water.png        the water path of the Refilling Station
+    images/v10/station_wiring.png       the wiring of the Refilling Station board (pins as in ESP32_REFILL.ino)
+-->
+<pre id="log">working...</pre><div id="out"></div>
+<script>
+const LOG = m => { document.getElementById('log').textContent += '\n' + m; };
+const NAVY = '#14325c', AMB = '#f59e0b', INK = '#1d2433', GREY = '#6b7280', PALE = '#eef2fa', WARM = '#fff4d1';
+const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+function box(x, y, w, h, lines, o = {}) {
+  const fill = o.fill || "#fff", stroke = o.stroke || NAVY, ty = o.top ? y + 22 : y + h / 2 - (lines.length - 1) * 7 + 4;
+  let s = `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="6" fill="${fill}" stroke="${stroke}" stroke-width="${o.sw || 1.6}"${o.dash ? ' stroke-dasharray="4 3"' : ''}/>`;
+  lines.forEach((l, i) => { s += `<text x="${x + w / 2}" y="${(ty + i * 14).toFixed(1)}" text-anchor="middle" font-size="${i === 0 && lines.length > 1 ? 12 : 11}" ${i === 0 ? 'font-weight="700"' : ''} fill="${o.color || INK}">${esc(l)}</text>`; });
+  return s;
+}
+const line = (x1, y1, x2, y2, o = {}) => `<path d="M${x1} ${y1} L${x2} ${y2}" fill="none" stroke="${o.color || NAVY}" stroke-width="${o.w || 2}"${o.dash ? ' stroke-dasharray="4 3"' : ''}${o.arrow ? ' marker-end="url(#ar)"' : ''}/>`;
+const text = (x, y, s, o = {}) => `<text x="${x}" y="${y}" text-anchor="${o.a || 'start'}" font-size="${o.sz || 11}" ${o.b ? 'font-weight="700"' : ''} fill="${o.color || INK}">${esc(s)}</text>`;
+const defs = `<defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="${NAVY}"/></marker></defs>`;
+const wrap = (w, h, inner) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" font-family="Arial,Helvetica,sans-serif">${defs}<rect width="${w}" height="${h}" fill="#fff"/>${inner}</svg>`;
+
+/* ---- water path */
+function water() {
+  let s = box(20, 90, 130, 70, ['WATER SUPPLY', 'tank or tap', 'one for all boxes'], { fill: PALE });
+  s += line(150, 125, 215, 125, { arrow: false }) + line(215, 52, 215, 198);
+  [52, 125, 198].forEach((y, i) => {
+    s += line(215, y, 268, y, { arrow: true });
+    s += box(270, y - 24, 118, 48, ['VALVE ' + (i + 1), 'normally closed'], { fill: WARM, stroke: AMB });
+    s += line(388, y, 448, y, { arrow: true });
+    s += box(450, y - 30, 175, 60, ['BOX ' + (i + 1), 'MAIN CONTAINER'], { fill: PALE });
+    s += `<rect x="600" y="${y - 24}" width="8" height="44" rx="2" fill="#fff" stroke="${NAVY}" stroke-width="1.4"/>`;
+    s += line(608, y - 6, 650, y - 6, { w: 1.2 }) + text(655, y - 2, 'water-level sensor ' + (i + 1), { sz: 11 });
+  });
+  s += text(20, 242, 'Only ONE valve is ever open (the three boxes share the supply). A valve opens when its container is EMPTY or LOW and closes at MAX.', { sz: 10.5, color: GREY });
+  return wrap(840, 256, s);
+}
+
+/* ---- wiring */
+function wiring() {
+  let s = box(250, 40, 180, 330, ['ESP32-WROOM', 'on the expansion board'], { fill: PALE, top: true });
+  // left pins: sensors
+  [[110, 34, 1], [160, 35, 2], [210, 32, 3]].forEach(([y, g, n]) => {
+    s += box(20, y - 20, 130, 40, ['SENSOR ' + n + ' (Box ' + n + ')', 'signal wire'], {}) + line(150, y, 250, y, { arrow: true });
+    s += text(258, y + 4, 'GPIO ' + g, { b: true });
+  });
+  s += box(20, 270, 130, 64, ['SENSOR POWER', '3.3 V and GND', 'never 5 V'], { fill: WARM, stroke: AMB });
+  s += line(150, 290, 250, 290) + line(150, 316, 250, 316) + text(258, 294, '3V3', { b: true }) + text(258, 320, 'GND', { b: true });
+  // right pins: relays
+  [[110, 21, 1], [160, 19, 2], [210, 18, 3]].forEach(([y, g, n]) => {
+    s += text(422, y + 4, 'GPIO ' + g, { b: true, a: 'end' }) + line(430, y, 500, y, { arrow: true });
+    s += text(508, y + 4, 'IN' + n);
+  });
+  s += box(500, 60, 150, 290, ['RELAY MODULE', '3 channels used', 'active-LOW'], { fill: PALE, top: true });
+  // restore labels over the module box (drawn after the box so they stay visible)
+  [[110, 1], [160, 2], [210, 3]].forEach(([y, n]) => { s += text(508, y + 4, 'IN' + n); });
+  s += line(430, 290, 500, 290) + line(430, 316, 500, 316) + text(422, 294, '5V', { b: true, a: 'end' }) + text(422, 320, 'GND', { b: true, a: 'end' });
+  s += text(508, 294, 'VCC') + text(508, 320, 'GND');
+  // relay contacts to valves
+  [[110, 1], [160, 2], [210, 3]].forEach(([y, n]) => {
+    s += line(650, y, 710, y, { arrow: true }) + box(712, y - 20, 110, 40, ['VALVE ' + n + ' coil', 'normally closed'], { fill: WARM, stroke: AMB });
+  });
+  s += box(690, 262, 150, 74, ['VALVE SUPPLY', '12 V DC or 220 V AC', '(not decided yet)'], { fill: '#fff', dash: true });
+  s += text(20, 392, 'Each valve coil is switched by its relay contact (COM / NO), fed from the valve supply. LOW at an IN pin = that valve is open.', { sz: 10.5, color: GREY });
+  s += text(20, 28, 'Refilling Station: pins as in ESP32_REFILL.ino (sensors on ADC1 pins; relay pins are not boot pins)', { sz: 11.5, b: true, color: NAVY });
+  return wrap(850, 404, s);
+}
+
+/* ---- B1's OUT OF ORDER screen with the helmet words (320x240 TFT, drawn at 2x like the other screen pictures) */
+function oooCanvas() {
+  const c = document.createElement('canvas'); c.width = 640; c.height = 480; const g = c.getContext('2d');
+  g.fillStyle = '#000'; g.fillRect(0, 0, 640, 480);
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillStyle = '#ff0000'; g.font = 'bold 54px Arial'; g.fillText('OUT OF', 320, 170); g.fillText('ORDER', 320, 270);
+  g.fillStyle = '#ffffff'; g.font = '24px Arial'; g.fillText('Your helmet is still inside.', 320, 370); g.fillText('Take it out, then close the door.', 320, 420);
+  return c;
+}
+
+async function savePng(canvas, path) {
+  const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
+  const res = await fetch('/save/' + path, { method: 'POST', body: blob }); LOG(await res.text());
+}
+async function svgToCanvas(svg, w, h, scale) {
+  const img = new Image(); await new Promise((res, rej) => { img.onload = res; img.onerror = () => rej(new Error('svg render failed')); img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg); });
+  const c = document.createElement('canvas'); c.width = w * scale; c.height = h * scale; const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(img, 0, 0, c.width, c.height); return c;
+}
+(async () => {
+  try {
+    await savePng(oooCanvas(), 'images/v10/screens/ooo_helmet.png');
+    const w = water(), wi = wiring();
+    await savePng(await svgToCanvas(w, 840, 256, 2), 'images/v10/station_water.png');
+    await savePng(await svgToCanvas(wi, 850, 404, 2), 'images/v10/station_wiring.png');
+    // the Refilling Station chart made by flowgen.html (fig-station in figs_ref.html) as a PNG
+    const figs = await (await fetch('/m/build/figs_ref.html?x=' + Date.now())).text();
+    const m = /<div class="f" id="fig-station">\s*(<svg[\s\S]*?<\/svg>)/.exec(figs); if (!m) throw new Error('fig-station not found');
+    const vb = /viewBox="0 0 (\d+) (\d+)"/.exec(m[1]);
+    await savePng(await svgToCanvas(m[1].replace(/<svg([^>]*?)>/, (mm, a) => '<svg' + a.replace(/\s(width|height)="[^"]*"/g, '') + ` width="${vb[1]}" height="${vb[2]}">`), +vb[1], +vb[2], 3), 'images/v10/station_chart.png');
+    document.getElementById('out').innerHTML = '<img src="/m/images/v10/station_water.png?x=' + Date.now() + '"><img src="/m/images/v10/station_wiring.png?x=' + Date.now() + '"><img src="/m/images/v10/screens/ooo_helmet.png?x=' + Date.now() + '" style="width:320px">';
+    LOG('DONE');
+  } catch (e) { LOG('FAILED: ' + e.message); }
+})();
+</script></body></html>

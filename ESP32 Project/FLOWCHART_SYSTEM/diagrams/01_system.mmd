@@ -1,0 +1,69 @@
+---
+title: 01 - The whole system (three boxes, the Refilling Station, the servers)
+---
+flowchart TB
+  classDef cBox fill:#ffffff,stroke:#111111,stroke-width:2px,color:#111111
+  classDef cSrv fill:#ffffff,stroke:#111111,stroke-width:5px,color:#111111
+  classDef cCloud fill:#eeeeee,stroke:#111111,stroke-width:2px,stroke-dasharray:6 4,color:#111111
+  classDef cPeople fill:#ffffff,stroke:#666666,stroke-width:1.5px,stroke-dasharray:3 3,color:#111111
+  classDef cTank fill:#ffffff,stroke:#111111,stroke-width:2px,stroke-dasharray:2 3,color:#111111
+  classDef cRadio fill:#111111,stroke:#111111,color:#ffffff
+
+  CUST(["CUSTOMER<br/>touch screen, coins, helmet"]):::cPeople
+
+  subgraph BOXES["THE THREE BOXES"]
+    subgraph BX1["BOX 1"]
+      S3A["S3A main controller<br/>runs the customer flow"]:::cBox
+      T1["A1 TFT display, coin slot, buzzer<br/>A2 sensors: helmet, doors<br/>A3 relay controller"]:::cBox
+      MC1["MAIN CONTAINER<br/>one cleaning liquid"]:::cTank
+    end
+    subgraph BX2["BOX 2"]
+      S3C["S3C main controller<br/>runs the customer flow"]:::cBox
+      T2["C1 TFT display, coin slot, buzzer<br/>C2 sensors + relays today<br/>(to be built like Box 3)"]:::cBox
+      MC2["MAIN CONTAINER<br/>one cleaning liquid"]:::cTank
+    end
+    subgraph BX3["BOX 3"]
+      S3B["S3B main controller<br/>runs the customer flow"]:::cBox
+      T3["B1 TFT display, coin slot, buzzer<br/>B2 sensors: helmet, doors<br/>B3 relay controller + heater"]:::cBox
+      MC3["MAIN CONTAINER<br/>one cleaning liquid"]:::cTank
+    end
+  end
+
+  RADIO{{"ESP-NOW RADIO, channel 1<br/>broadcast, no router, no internet<br/>all boards, boxes and servers hear each other"}}:::cRadio
+
+  SUPPLY["LIQUID SUPPLY<br/>one supply for all three boxes"]:::cTank
+  STATION["REFILLING STATION (ESP32-WROOM)<br/>3 water-level sensors, 3 valves<br/>works alone: one valve at a time,<br/>EMPTY first, then LOW<br/>tells everybody the levels"]:::cBox
+
+  STAFF(["OWNER / TECHNICIAN<br/>phone or laptop"]):::cPeople
+  LOCAL["LOCAL SERVER (ESP32-S3)<br/>Wi-Fi JollyHelmet-Local, 192.168.4.1<br/>Control Center, session log, totals,<br/>settings, Refilling Station page"]:::cSrv
+  ONLINE["ONLINE SERVER (ESP32-S3)<br/>listens only, never sends<br/>snapshot + statistics"]:::cSrv
+  TEAM(["TEAM<br/>types the previous customers"]):::cPeople
+  ENTRY["ENTRY board (spare ESP32)<br/>Wi-Fi JollyHelmet-Entry, 192.168.5.1<br/>form for the previous customers"]:::cBox
+
+  BLYNK["BLYNK CLOUD<br/>private device: V0 live data<br/>public device: V0 box steps, V5 nicknames<br/>event: alert"]:::cCloud
+
+  WEB["ONLINE WEB PAGE<br/>Monitor: boxes drawn as machines,<br/>level dials, network map<br/>Alerts, Reports<br/>static site on any web host"]:::cBox
+  STATUS["status.html (customer page)<br/>FREE / IN USE / OUT OF ORDER<br/>optional nickname"]:::cBox
+  APP["Blynk app on a phone<br/>push alerts"]:::cBox
+  OWNER(["OWNER / TEAM<br/>phone or PC, anywhere"]):::cPeople
+  CPHONE(["CUSTOMER PHONE<br/>scans the QR sticker"]):::cPeople
+
+  CUST <-->|touch, coins, helmet| BOXES
+  BOXES <-->|ESP-NOW| RADIO
+  STATION <-->|"levels, queue, failures out<br/>settings and valve test in"| RADIO
+  SUPPLY -->|through the valves| STATION
+  STATION ==>|"fills each main container<br/>and reads its level"| BOXES
+  RADIO <-->|status in, settings and commands out| LOCAL
+  RADIO -->|listen only| ONLINE
+  LOCAL -->|HubStatsPacket every 10 s:<br/>totals + last 10 sessions| ONLINE
+  STAFF <-->|Wi-Fi JollyHelmet-Local| LOCAL
+  TEAM --> ENTRY
+  ENTRY -->|joins JollyHelmet-Local,<br/>POST history.json| LOCAL
+
+  ONLINE -->|Wi-Fi, HTTPS,<br/>every 1 min| BLYNK
+  BLYNK -->|HTTPS GET every 10 s,<br/>private token| WEB
+  BLYNK -->|event alert| APP
+  STATUS <-->|GET every 30 s, public token<br/>optional: write nickname V5| BLYNK
+  OWNER --> WEB
+  CPHONE --> STATUS
+  APP --> STAFF

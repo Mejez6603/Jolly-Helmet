@@ -1,0 +1,251 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Manual v10, part B: technician guide and reference</title></head><body>
+<!--
+  v10 (2026-11-04), part B. Run on the result of part A:
+  patch_docx.html?in=build/_v10a.docx&out=JollyHelmet_UserManual_v10.docx&src=station_update_b.src.html
+  Rule used in this file: an op that finds a heading or a row by its OLD text comes before the op that renames it.
+-->
+
+<!-- ===================== removals first ===================== -->
+<div class="op" data-op="delete-section" data-after="Heading3:ACS 1 and ACS 2 - refill stations"></div>
+<div class="op" data-op="delete-section" data-after="Heading3:Refill station: ACS 1 and ACS 2"></div>
+<div class="op" data-op="delete-row" data-after="Heading3:The 15 boards" data-row="ACS 1"></div>
+<div class="op" data-op="delete-row" data-after="Heading3:The 15 boards" data-row="ACS 2"></div>
+<div class="op" data-op="delete-row" data-after="Heading3:Cleaning phases (Box 1 and Box 3)" data-row="Heater (Box 3 only)"></div>
+<div class="op" data-op="delete-row" data-after="Heading3:Online web page (kept in each browser)" data-row="Team password"></div>
+<div class="op" data-op="delete-row" data-after="Heading2:Glossary" data-row="Mixer"></div>
+<div class="op" data-op="delete-row" data-after="Heading2:Glossary" data-row="Team password"></div>
+<div class="op" data-op="delete-row" data-after="Heading3:Firmware in this manual" data-row="ESP32_ACS2"></div>
+
+<!-- ===================== global wording ===================== -->
+<div class="op" data-op="replace-text" data-from="The 15 boards" data-to="The 14 boards"></div>
+<div class="op" data-op="replace-text" data-from="Terminals (A, B, C, ACS)" data-to="Terminals (A, B, C, Refilling Station)"></div>
+<div class="op" data-op="replace-text" data-from="Terminals (the A, B, C and ACS boards)" data-to="Terminals (the A, B, C boards and the Refilling Station)"></div>
+<div class="op" data-op="replace-text" data-from="and the ACS boards." data-to="and the Refilling Station."></div>
+<div class="op" data-op="replace-text" data-from="or an ACS board" data-to="or the Refilling Station"></div>
+<div class="op" data-op="replace-text" data-from=", ESP32_ACS_CONFIG_BENCH" data-to=", ESP32_REFILL_FAKE (the stand-in station)"></div>
+<div class="op" data-op="replace-text" data-from="enclosure lock after 60 seconds; ACS pumps after 60 seconds." data-to="enclosure lock after 60 seconds."></div>
+<div class="op" data-op="replace-text" data-from="Box 1, Box 2, Box 3, ACS 1 and ACS 2." data-to="Box 1, Box 2, Box 3 and the Refilling Station."></div>
+<div class="op" data-op="replace-text" data-from="Look at the 3 supply tanks in each ACS and the 2 main containers." data-to="Look at the Refilling Station page (online, no FAILED container) and the water supply."></div>
+<div class="op" data-op="replace-text" data-from="Look for leaks at pump tubes and mixers." data-to="Look for leaks at the valves, the tubes and the containers."></div>
+<div class="op" data-op="replace-text" data-from="Brain (S3) or ACS replaced" data-to="Brain (S3) or Refilling Station replaced"></div>
+<div class="op" data-op="replace-text" data-from="B3, ACS, plus" data-to="B3, the Refilling Station, plus"></div>
+<div class="op" data-op="replace-text" data-from="Containers in Box 1 and Box 3, ACS tanks" data-to="Containers in every box, the supply tank"></div>
+<div class="op" data-op="replace-text" data-from="Pumps, mixers, humidifiers, drain" data-to="Valves, tubes, humidifiers, drain"></div>
+<div class="op" data-op="replace-text" data-from="locks after 60 seconds and the ACS pumps after 60 seconds" data-to="locks after 60 seconds"></div>
+<div class="op" data-op="replace-text" data-from="With level checks on, a box with too little alcohol or scented liquid shows OUT OF ORDER (Box 3 keeps DRYING) and asks the ACS to refill." data-to="Box 3: when its container is EMPTY or LOW, or the Refilling Station is silent, only DRYING is offered; the station refills the container by itself."></div>
+<div class="op" data-op="replace-text" data-from="and of a hand-set ACS pump, in Maintenance." data-to="in Maintenance."></div>
+<div class="op" data-op="replace-text" data-from="Box 3 lets everything rest, for 60 seconds by default. Also after a cancel." data-to="Box 3 lets everything rest, for 60 seconds by default. Also after a cancel (a cancelled Box 3 cleaning goes through its 3-minute auto-dry first)."></div>
+<div class="op" data-op="replace-text" data-from="Box 3, ACS) where settings" data-to="Box 3, Refilling Station) where settings"></div>
+<div class="op" data-op="replace-text" data-from="the three boxes, the refill stations, the statistics" data-to="the three boxes, the Refilling Station, the statistics"></div>
+<div class="op" data-op="replace-text" data-from="0 is the refill line." data-to="Red = EMPTY or LOW, green = MAX."></div>
+<div class="op" data-op="replace-text" data-from="odor (Box 1 and cleaning in Box 3) or dryness (Box 2 and drying)" data-to="odor (Box 1) or dryness (Box 2). Box 3 has no rating"></div>
+<div class="op" data-op="replace-text" data-from="near the ACS" data-to="near the machines"></div>
+<div class="op" data-op="replace-text" data-from="Rating the helmet before and after is part of the run." data-to="In Box 1 and Box 2 rating the helmet before and after is part of the run (Box 3 has no rating)."></div>
+
+<!-- ===================== TECHNICIAN GUIDE ===================== -->
+<div class="op" data-op="replace-image" data-after="Heading2:How it is built" data-figs="figs.html" data-fig="system"></div>
+<div class="op" data-op="replace-para" data-startswith="The whole installation: three boxes, two refill stations"><p>The whole installation: three boxes, the Refilling Station, the LocalServer and the Online Server</p></div>
+<div class="op" data-op="replace-table" data-after="Heading3:The 14 boards" data-n="1" data-w="1.3,1.5,5.9">
+<table><tr><th>Board</th><th>Where</th><th>What it does (sketch folder)</th></tr>
+<tr><td>S3A</td><td>Box 1</td><td>Main controller (brain). Runs every step and keeps the settings. (ESP32_S3A)</td></tr>
+<tr><td>A1</td><td>Box 1</td><td>Touch screen, coin slot, buzzer. (ESP32_A1)</td></tr>
+<tr><td>A2</td><td>Box 1</td><td>Sensors: 4 doors, helmet, 2 containers, 2 water sensors. (ESP32_A2)</td></tr>
+<tr><td>A3</td><td>Box 1</td><td>12 relays: 4 locks, 3 humidifiers, 2 UV, 2 drain pumps, coin power. (ESP32_A3)</td></tr>
+<tr><td>S3C</td><td>Box 2</td><td>Main controller. (ESP32_S3C)</td></tr>
+<tr><td>C1</td><td>Box 2</td><td>Touch screen, coin slot, buzzer. (ESP32_C1)</td></tr>
+<tr><td>C2</td><td>Box 2</td><td>3 door sensors, helmet sensor and 6 relays: 3 locks, heater, UV, fan. (ESP32_C2)</td></tr>
+<tr><td>S3B</td><td>Box 3</td><td>Main controller. Runs the 36-step flow and reads the Refilling Station. (ESP32_S3B)</td></tr>
+<tr><td>B1</td><td>Box 3</td><td>Touch screen, coin slot, buzzer. Shows OUT OF ORDER by itself and beeps when S3B is silent. (ESP32_B1)</td></tr>
+<tr><td>B2</td><td>Box 3</td><td>Sensors: the helmet ultrasonic and the four door switches only. (ESP32_B2)</td></tr>
+<tr><td>B3</td><td>Box 3</td><td>13 relays (the two drain pump channels are never driven), including the heater. All off after 15 s without S3B; releases a trapped helmet. (ESP32_B3)</td></tr>
+<tr><td>Refilling Station</td><td>Boxes 1 to 3</td><td>3 water-level sensors and 3 valves. Fills the three main containers from one supply, one valve at a time. (ESP32_REFILL)</td></tr>
+<tr><td>LocalServer</td><td>Control Center</td><td>Wi-Fi JollyHelmet-Local, settings pages, revenue. Also broadcasts its revenue totals for the Online Server. (ESP32_LOCALSRV)</td></tr>
+<tr><td>Online Server</td><td>Online</td><td>Listens to the machines and sends a snapshot to Blynk for the web page. Never controls anything. (ESP32_ONLINESRV)</td></tr></table>
+</div>
+<div class="op" data-op="bullet-after" data-after="If a terminal hears nothing from its brain for 15 seconds">
+<ul><li>Box 3 never traps a helmet. If the main controller S3B is silent, the relay controller B3 releases the enclosure lock when the sensors B2 see a helmet inside with the door shut, and the screen board B1 shows OUT OF ORDER with "Your helmet is still inside" and beeps. If S3B is alive but B2 or B3 is silent, S3B does the same. After a power cut, when S3B restarts, it hands a helmet that is still shut inside back first (OPEN B).</li>
+<li>UPS for Box 3: put B1, B2, B3 and the supply of the enclosure lock on a UPS, and leave the S3 boards, the LocalServer and the Online Server on mains. A power cut then silences the S3 and Box 3 goes OUT OF ORDER from any step, so the customer can take the helmet out. A paid session cut by the power is not restored.</li>
+<li>One number decides "helmet inside" for S3B, B3 and B1: Helmet counts as inside under (Box 3 page, default 15 cm). B3 and B1 learn it from S3B and keep it in their own memory.</li></ul>
+</div>
+<div class="op" data-op="cell-set" data-after="Heading3:Boards and display" data-n="1" data-row="ESP32 DevKit (ESP32-WROOM-32) with screw-terminal expansion board" data-col="1">9</div>
+<div class="op" data-op="cell-set" data-after="Heading3:Boards and display" data-n="1" data-row="ESP32 DevKit (ESP32-WROOM-32) with screw-terminal expansion board" data-col="2">A1 A2 A3 B1 B2 B3 C1 C2 Refilling Station</div>
+<div class="op" data-op="cell-set" data-after="Heading3:Sensors" data-n="1" data-row="Ultrasonic distance sensor HC-SR04 (5 V)" data-col="1">5</div>
+<div class="op" data-op="cell-set" data-after="Heading3:Sensors" data-n="1" data-row="Ultrasonic distance sensor HC-SR04 (5 V)" data-col="2">Helmet: 3 (one per box). Main containers: 2 (Box 1 only; Box 3's are not used any more).</div>
+<div class="op" data-op="cell-set" data-after="Heading3:Sensors" data-n="1" data-row="Analog water-level sensor" data-col="1">5</div>
+<div class="op" data-op="cell-set" data-after="Heading3:Sensors" data-n="1" data-row="Analog water-level sensor" data-col="2">Box 1: 2, Refilling Station: 3 (one in each box's main container)</div>
+<div class="op" data-op="cell-set" data-after="Heading3:Relay boards" data-n="1" data-row="8-channel relay module with JD-VCC" data-col="1">1</div>
+<div class="op" data-op="cell-set" data-after="Heading3:Relay boards" data-n="1" data-row="8-channel relay module with JD-VCC" data-col="2">Refilling Station (3 used)</div>
+<div class="op" data-op="cell-set" data-after="Heading3:Relay boards" data-n="1" data-row="8-channel relay module with JD-VCC" data-col="0" data-bold="yes">Relay module, 3 channels or more, active-LOW</div>
+<div class="op" data-op="cell-set" data-after="Heading3:Loads" data-n="1" data-row="Drain pump, 5 V" data-col="1">2</div>
+<div class="op" data-op="cell-set" data-after="Heading3:Loads" data-n="1" data-row="Drain pump, 5 V" data-col="2">Box 1: 2 (Box 3's two are not used any more: its drain is a manual valve)</div>
+<div class="op" data-op="cell-set" data-after="Heading3:Loads" data-n="1" data-row="Refill pump, 5 V" data-col="1">3</div>
+<div class="op" data-op="cell-set" data-after="Heading3:Loads" data-n="1" data-row="Refill pump, 5 V" data-col="2">Refilling Station: one per box (coil voltage still to be decided: 12 V DC or 220 V AC)</div>
+<div class="op" data-op="cell-set" data-after="Heading3:Loads" data-n="1" data-row="Refill pump, 5 V" data-col="0" data-bold="yes">Solenoid valve, normally closed</div>
+<div class="op" data-op="replace-para" data-startswith="Not electrical:"><p>Not electrical: the main containers (Box 1: alcohol and scented; every other box: one container), one water supply (a tank or a tap) for the Refilling Station, tubing and fittings.</p></div>
+<div class="op" data-op="replace-table" data-after="Heading3:What is in each unit" data-n="1" data-w="3,1,1,1,1.6">
+<table><tr><th>Item</th><th>Box 1</th><th>Box 2</th><th>Box 3</th><th>Refilling Station</th></tr>
+<tr><td>ESP32 terminal boards</td><td>3</td><td>2</td><td>3</td><td>1</td></tr>
+<tr><td>ESP32-S3 main controller</td><td>1</td><td>1</td><td>1</td><td>-</td></tr>
+<tr><td>Touch screen, coin slot, buzzer</td><td>1</td><td>1</td><td>1</td><td>-</td></tr>
+<tr><td>Door sensors</td><td>4</td><td>3</td><td>4</td><td>-</td></tr>
+<tr><td>Ultrasonic sensors</td><td>3</td><td>1</td><td>1</td><td>-</td></tr>
+<tr><td>Water-level sensors</td><td>2</td><td>-</td><td>-</td><td>3</td></tr>
+<tr><td>Door locks</td><td>4</td><td>3</td><td>4</td><td>-</td></tr>
+<tr><td>Humidifiers</td><td>3</td><td>-</td><td>3</td><td>-</td></tr>
+<tr><td>Drain pumps</td><td>2</td><td>-</td><td>-</td><td>-</td></tr>
+<tr><td>Valves</td><td>-</td><td>-</td><td>-</td><td>3</td></tr>
+<tr><td>UV-C lamps (220 V)</td><td>2</td><td>1</td><td>2</td><td>-</td></tr>
+<tr><td>Heater</td><td>-</td><td>1</td><td>1</td><td>-</td></tr>
+<tr><td>Fan</td><td>-</td><td>1</td><td>-</td><td>-</td></tr></table>
+</div>
+<div class="op" data-op="replace-para" data-startswith="A2, B2 - sensors (Box 1, Box 3)"><p>A2 (Box 1) and B2 (Box 3) - sensors</p></div>
+<div class="op" data-op="bullet-after" data-after="Free pins: 2, 4, 12, 13, 15, 16, 21.">
+<ul><li>B2 (Box 3) reads only the helmet ultrasonic (GPIO 26 and 25) and the four door switches (27, 14, 19, 18; the last one is the Side door). The container ultrasonics (32, 33, 23, 22) and the two water sensors (34, 35) are not read by the B2 firmware: the Refilling Station reads the containers.</li></ul>
+</div>
+<div class="ins" data-after=":Pin for pin the same as A3, plus one more relay:">
+<p>Box 3 notes: the two drain pump channels (GPIO 33 and 32) are never driven by the B3 firmware, whatever S3B or a dashboard asks (the drain is a manual valve). The lock on GPIO 23 is the SIDE LOCK (it was called the ACS side-door lock).</p>
+</div>
+<div class="ins" data-anchor="Heading2:Circuit and wiring">
+<h3>Refilling Station - sensors and valves</h3>
+<p>One plain ESP32 (WROOM) on a screw-terminal expansion board, plus a relay module with 3 channels used. The pins are in the pin sheet RevisedJollyHelmet_Checked.xlsx (block F1) and in ESP32_REFILL.ino.</p>
+<table data-w="1,3.4,3.4">
+<tr><th>GPIO</th><th>Signal</th><th>Wired to</th></tr>
+<tr><td>34</td><td>Water-level sensor, Box 1 container</td><td>SIG (analog, input only)</td></tr>
+<tr><td>35</td><td>Water-level sensor, Box 2 container</td><td>SIG (analog, input only)</td></tr>
+<tr><td>32</td><td>Water-level sensor, Box 3 container</td><td>SIG (analog)</td></tr>
+<tr><td>21</td><td>Valve 1 (Box 1)</td><td>Relay module IN1</td></tr>
+<tr><td>19</td><td>Valve 2 (Box 2)</td><td>Relay module IN2</td></tr>
+<tr><td>18</td><td>Valve 3 (Box 3)</td><td>Relay module IN3</td></tr>
+<tr><td>3V3, GND</td><td>Sensor power</td><td>VCC and GND of the three sensors</td></tr>
+<tr><td>5V, GND</td><td>Relay module power</td><td>VCC and GND of the relay module</td></tr></table>
+<figure data-w="6.3"><img src="images/v10/station_wiring.png" alt="Refilling Station wiring"><figcaption>Refilling Station: sensors to the ADC1 pins, relay inputs to GPIO 21, 19 and 18, valve coils switched by the relay contacts</figcaption></figure>
+<ul>
+<li>The sensors are on ADC1 pins (GPIO 32 to 39) because ADC2 cannot be read while Wi-Fi or ESP-NOW runs. Power the sensors from 3.3 V: the ADC input must never see 5 V.</li>
+<li>The relay modules of this project are active-LOW (LOW at an input = relay on = valve open). The firmware assumes that (VALVE_ACTIVE_LOW 1); if the module you fit is active-HIGH, set it to 0.</li>
+<li>First power-up with the valves unplugged: the three relay LEDs must be OFF. The serial banner says which level the sketch assumes. Then use Test valve one valve at a time.</li>
+<li>The valve coil voltage (12 V DC or 220 V AC) is not decided yet. No flyback diode was asked for (the station stands apart from the boxes and has no coin signal). If the station resets when a valve switches, put a diode across a DC coil or an RC snubber across an AC coil.</li>
+<li>The relay pins are not strapping pins (0, 2, 5, 12, 15) and not flash pins, and stay quiet at power-up. The valves are driven closed before the pins become outputs.</li>
+</ul>
+</div>
+<div class="op" data-op="replace-para" data-startswith="Every box and refill station is a group of ESP32 boards"><p>Every box is a group of ESP32 boards and the Refilling Station is one board. They share only power and the radio channel.</p></div>
+<div class="op" data-op="bullet-after" data-after="Hand-set relays in Maintenance switch themselves off after 2 seconds">
+<ul><li>Box 3 never locks a helmet in: with a helmet shut inside, OUT OF ORDER and power cuts release the enclosure lock and the screen board beeps (see How it is built, Brains and terminals).</li></ul>
+</div>
+<div class="op" data-op="cell-set" data-after="Heading3:Reading the web page" data-n="1" data-row="Needs attention (red box)" data-col="1">A box out of order, the Refilling Station offline, a failed refill, a board that is not heard.</div>
+<div class="op" data-op="cell-set" data-after="Heading3:Reading the web page" data-n="1" data-row="Refill stations" data-col="1">The level of each main container as a dial, the valve that is open, and who is waiting.</div>
+<div class="op" data-op="cell-set" data-after="Heading3:Reading the web page" data-n="1" data-row="Refill stations" data-col="0" data-bold="yes">Refilling Station</div>
+<div class="op" data-op="cell-set" data-after="Heading3:Calibrate" data-n="1" data-row="ACS mixer lines and sensors" data-col="1">Refilling Station page: the raw value of each sensor dry and in the liquid, then the four edges of each box.</div>
+<div class="op" data-op="cell-set" data-after="Heading3:Calibrate" data-n="1" data-row="ACS mixer lines and sensors" data-col="0" data-bold="yes">Refilling Station levels</div>
+<div class="op" data-op="replace-para" data-startswith="Do the ACS pumps one at a time"><p>Do the three valves one at a time (Test valve on the Refilling Station page) and compare each with its label before you trust the automatic run.</p></div>
+
+<!-- ===================== REFERENCE ===================== -->
+<div class="op" data-op="replace-para" data-startswith="Stop the run. Touch CANCEL, then CONFIRM."><p>Stop the run. Touch CANCEL, then CONFIRM. The UV-C, the mist and the heater switch off (Box 3 then dries a cancelled cleaning for 3 minutes with UV light and warm air, and rests for 60 seconds after a cancelled drying; Box 2 cools down with the fan). The coins are not refunded.</p></div>
+<div class="op" data-op="bullet-after" data-after="If the brain of the box stops answering for 15 seconds">
+<ul><li>Box 3 with S3B alive but a sensor or relay board silent: the screen says OUT OF ORDER, and with a helmet shut inside the lock is released after 2 seconds and the screen board beeps (100 ms on, 500 ms off) until the door is seen open (180 seconds at most). The screen also says "Your helmet is still inside. Take it out, then close the door."</li>
+<li>Box 3 after a power cut (screen, sensor and relay boards on a UPS, S3 on mains): the S3 restarts. About 12 seconds after it is back, if nobody has paid yet and a helmet is still shut inside, it hands the helmet back first (OPEN B, the buzzer beeps), then returns to the start. A paid session that was cut by the power is not restored.</li>
+<li>These checks use Helmet counts as inside under (Box 3 page). Set it a little above the distance the sensor reads with a helmet inside (use live).</li></ul>
+</div>
+<div class="op" data-op="rows-append" data-after="Heading3:Safety features built into the firmware" data-n="1">
+<table><tr><td>Box 3 OUT OF ORDER release</td><td>Door shut with a helmet inside while Box 3 is out of order: the enclosure lock is released after 2 seconds and the buzzer repeats until the door is opened (S3B: 180 seconds at most; if S3B is dead, B3 uses up to three 60-second windows and B1 beeps up to 200 seconds).</td></tr>
+<tr><td>Box 3 restart check</td><td>After a restart, 10 to 18 seconds after boot, if nobody has paid and a helmet is shut inside, S3B hands it back first (OPEN B). Once per start.</td></tr>
+<tr><td>Refilling Station safety</td><td>The three valves are closed at power-up, only one valve is ever open, a valve is open at most 180 seconds, and a refill that does not rise is stopped and retried after 60 seconds.</td></tr></table>
+</div>
+<div class="op" data-op="cell-set" data-after="Heading2:Box flowcharts" data-n="1" data-row="Box 3 Cleaner + Dryer" data-col="1">5. From TAPS to INSERT COIN: CHECKING reads the Refilling Station, SELECT MODE or SELECT DRY ONLY. 6. Cleaning (then auto-dry) or drying (then cool down), open B, finish.</div>
+<div class="op" data-op="replace-image" data-after="Heading3:Box 3, chart 5: paying" data-figs="figs_ref.html" data-fig="flow5"></div>
+<div class="op" data-op="replace-image" data-after="Heading3:Box 3, chart 6: the run" data-figs="figs_ref.html" data-fig="flow6"></div>
+<div class="op" data-op="replace-para" data-startswith="Box 3: the customer chooses CLEANING or DRYING."><p>Box 3: CHECKING reads the Refilling Station, then SELECT MODE. With the station silent or the container EMPTY or LOW only DRYING is offered (SELECT DRY ONLY). The customer pays the required coins.</p></div>
+<div class="op" data-op="replace-para" data-startswith="Box 3: cleaning (UV-C and mist, heater in the last minute)"><p>Box 3: cleaning (UV-C and mist) then AUTO DRY, or drying (heater and UV-C) then COOL DOWN, then OPEN B and FINISH. CANCEL during a cleaning goes to AUTO DRY, during a drying to COOL DOWN. More coins can be added while it runs.</p></div>
+<div class="op" data-op="cell-set" data-after="Heading2:Troubleshooting decision trees" data-n="1" data-row="The refill station does not fill" data-col="1">5. A container stays EMPTY or LOW</div>
+<div class="op" data-op="cell-set" data-after="Heading2:Troubleshooting decision trees" data-n="1" data-row="The refill station does not fill" data-col="0" data-bold="yes">The Refilling Station does not fill</div>
+<div class="op" data-op="replace-image" data-after="Heading3:Tree 1: a box shows OUT OF ORDER" data-figs="figs_ref.html" data-fig="tree1"></div>
+<div class="op" data-op="replace-image" data-after="Heading3:Tree 5: the refill station does not fill" data-figs="figs_ref.html" data-fig="tree5"></div>
+<div class="op" data-op="replace-para" data-startswith="OUT OF ORDER means a container is too low"><p>OUT OF ORDER means a board of that box is silent. A helmet that is shut inside is released by itself.</p></div>
+<div class="op" data-op="replace-para" data-startswith="The ACS reads"><p>The Refilling Station reads "the level does not rise" as a failed refill: check the supply and the valve.</p></div>
+<div class="op" data-op="replace-para" data-startswith="Tree 5: the refill station does not fill"><p>Tree 5: the Refilling Station does not fill</p></div>
+
+<!-- settings reference -->
+<div class="op" data-op="cell-set" data-after="Heading3:Prices and time (Box 1, Box 2 and Box 3)" data-n="1" data-row="Rating bands (4)" data-col="2">Box 1: 1-5 = 5, 6-7 = 10, 8-9 = 15, 10 = 20 min. Box 2: 1-3 = 3, 4-6 = 5, 7-8 = 8, 9-10 = 10 min. Box 3 has none.</div>
+<div class="op" data-op="cell-set" data-after="Heading3:Prices and time (Box 1, Box 2 and Box 3)" data-n="1" data-row="Minimum time" data-col="2">Box 1: 5 min. Box 2: 3 min. Box 3: the required coins (one coin rate step)</div>
+<div class="op" data-op="rows-append" data-after="Heading3:Prices and time (Box 1, Box 2 and Box 3)" data-n="1">
+<table><tr><td>Auto-dry (Box 3)</td><td>How long the auto-dry after every cleaning lasts (UV and the heater).</td><td>180 s</td><td>10-900 s</td><td></td></tr>
+<tr><td>Heater off at the end (Box 3)</td><td>How long the heater is off at the end of the auto-dry.</td><td>30 s</td><td>0-900 s</td><td></td></tr>
+<tr><td>Refilling Station offline after (Box 3)</td><td>The station counts as offline when it was not heard for this long: only DRYING is offered.</td><td>15 s</td><td>5-120 s</td><td></td></tr></table>
+</div>
+<div class="op" data-op="cell-set" data-after="Heading3:Cleaning phases (Box 1 and Box 3)" data-n="1" data-row="Phases in the free retry" data-col="2">Box 1: off</div>
+<div class="op" data-op="cell-set" data-after="Heading3:Cleaning phases (Box 1 and Box 3)" data-n="1" data-row="Humidifiers (3)" data-col="2">Middle only</div>
+<div class="op" data-op="cell-set" data-after="Heading3:Cleaning phases (Box 1 and Box 3)" data-n="1" data-row="UV-C lamps (2)" data-col="2">Start and end</div>
+<div class="op" data-op="replace-para" data-startswith="Cleaning phases (Box 1 and Box 3)"><p>Cleaning phases (Box 1; Box 3 has none)</p></div>
+<div class="op" data-op="replace-para" data-startswith="Containers and sensors (Box 1 and Box 3)"><p>Containers and sensors (Box 1; helmet detect also Box 2 and Box 3)</p></div>
+<div class="op" data-op="replace-table" data-after="Heading3:Refill station (ACS 1 and ACS 2)" data-n="1" data-w="2.2,3.6,1.3,1.3,0.8">
+<table><tr><th>Setting</th><th>What it does</th><th>Default</th><th>Allowed</th><th>Yours</th></tr>
+<tr><td>Empty up to (per box)</td><td>At or under this raw value the container is EMPTY.</td><td>0</td><td>0-4095</td><td></td></tr>
+<tr><td>MID starts (per box)</td><td>Where MID starts. Above Empty up to and under this, the level is LOW.</td><td>500</td><td>1-4095</td><td></td></tr>
+<tr><td>HIGH starts (per box)</td><td>Where HIGH starts.</td><td>1000</td><td>1-4095</td><td></td></tr>
+<tr><td>MAX starts (per box)</td><td>Where MAX starts. The refill stops here.</td><td>1200</td><td>1-4095</td><td></td></tr>
+<tr><td>Waits for a rise when EMPTY</td><td>How long the level may stay flat while EMPTY before the refill FAILED.</td><td>30 s</td><td>1-600 s</td><td></td></tr>
+<tr><td>Waits for a rise when LOW</td><td>The same while LOW.</td><td>5 s</td><td>1-600 s</td><td></td></tr>
+<tr><td>Valve open at most</td><td>Longest time one valve may stay open.</td><td>180 s</td><td>10-1800 s</td><td></td></tr>
+<tr><td>Tries again after</td><td>Pause before a failed box tries again (for ever).</td><td>60 s</td><td>5-3600 s</td><td></td></tr>
+<tr><td>Counts as rising</td><td>Smallest step in the raw value that counts as a rise.</td><td>10</td><td>1-500</td><td></td></tr>
+<tr><td>Manual test length</td><td>How long Test valve opens a valve.</td><td>2 s</td><td>1-30 s</td><td></td></tr></table>
+</div>
+<div class="op" data-op="replace-para" data-startswith="The ACS keeps two mixer containers"><p>The Refilling Station keeps the main container of every box topped up from one supply, one valve at a time. The first four numbers and the next five are set per box (the forms on the Refilling Station page); the manual test length is for all boxes. The numbers are raw sensor values (0 when dry, growing as the liquid rises).</p></div>
+<div class="op" data-op="replace-para" data-startswith="Refill station (ACS 1 and ACS 2)"><p>Refilling Station</p></div>
+<div class="op" data-op="cell-set" data-after="Heading3:Fixed values (not settings)" data-n="1" data-row="5 min heater, 60 s pumps" data-col="0" data-bold="yes">5 min heater</div>
+<div class="op" data-op="cell-set" data-after="Heading3:Fixed values (not settings)" data-n="1" data-row="One free retry" data-col="1">A session can have only one (Box 1 and Box 2).</div>
+<div class="op" data-op="rows-append" data-after="Heading3:Fixed values (not settings)" data-n="1">
+<table><tr><td>Box 3 helmet release</td><td>OUT OF ORDER with a helmet shut inside: lock released after 2 s, buzzer 100 ms on / 500 ms off, at most 180 s (S3B) or three 60 s windows (B3). Restart check 10 to 18 s after boot.</td></tr>
+<tr><td>One valve at a time</td><td>The Refilling Station never opens two valves. Valves are closed at power-up and open at most 180 s.</td></tr></table>
+</div>
+
+<!-- circuit schematics -->
+<div class="op" data-op="cell-set" data-after="Heading2:Circuit schematics" data-n="1" data-row="Refill station" data-col="1">Refilling Station: sensors, valves and relay module (drawn for this manual)</div>
+<div class="ins" data-anchor="Heading2:Policies">
+<h3>Refilling Station</h3>
+<p>The wiring of the Refilling Station was drawn for this manual from ESP32_REFILL.ino and the pin sheet; there is no Cirkit Designer export of it.</p>
+<figure data-w="6.3"><img src="images/v10/station_wiring.png" alt="Refilling Station wiring"><figcaption>Refilling Station: sensors, relay module and valves</figcaption></figure>
+</div>
+
+<!-- policies, glossary, version -->
+<div class="op" data-op="cell-set" data-after="Heading3:Coins and refunds" data-n="1" data-row="Fault or power cut during a run" data-col="1">The run stops. Box 3 releases a trapped helmet and beeps. The machine does not return coins, and a session cut by the power is not restored.</div>
+<div class="op" data-op="cell-set" data-after="Heading3:Coins and refunds" data-n="1" data-row="Fault or power cut during a run" data-col="2">A power cut is outside the owner's control: no refund by default. Staff may still decide to help (confirm).</div>
+<div class="op" data-op="bullet-after" data-after="Run every relay and every pump by hand in Maintenance">
+<ul><li>Box 3: set Helmet counts as inside under (use live). Then unplug S3B with a helmet inside and the door shut: after about 15 seconds the lock must release and the screen board must beep. Plug S3B in again: about 12 seconds after it is back it must hand the helmet back (OPEN B).</li></ul>
+</div>
+<div class="op" data-op="replace-para" data-startswith="Measure the real containers, enter the LEVELS distances"><p>Refilling Station: measure the raw value of each sensor dry and in the liquid, set the four edges of every box, connect the supply, then test each valve by hand (Test valve) before the first automatic refill.</p></div>
+<div class="op" data-op="cell-set" data-after="Heading2:Glossary" data-n="1" data-row="ACS" data-col="1">Auto Container System. The two refill boards used before 2026-11-03; the Refilling Station replaced them.</div>
+<div class="op" data-op="glossary">
+<table><tr><td>Auto dry</td><td>The drying that ends every Box 3 cleaning: UV light and the heater for 3 minutes by default, the heater off for the last 30 seconds.</td></tr>
+<tr><td>CHECKING</td><td>The 2-second "Checking Main Container" screen after the first tap: Box 3 reads the Refilling Station.</td></tr>
+<tr><td>Level (EMPTY, LOW, MID, HIGH, MAX)</td><td>How full a main container is, worked out by the Refilling Station from its water-level sensor and the four edges set for that box.</td></tr>
+<tr><td>Main controller</td><td>The plain name of a box's brain (S3A, S3B, S3C).</td></tr>
+<tr><td>Queue</td><td>The containers waiting for the Refilling Station's valve: EMPTY first, then LOW, first come first served.</td></tr>
+<tr><td>Refilling Station</td><td>The one board with three water-level sensors and three valves that keeps the three main containers full. It replaced ACS 1 and ACS 2.</td></tr>
+<tr><td>Required coins</td><td>The number of coins INSERT COIN asks for in Box 3: one step of the coin rate (15 coins in the default).</td></tr>
+<tr><td>SELECT DRY ONLY</td><td>The Box 3 mode screen with CLEANING greyed out: the liquid is low or the Refilling Station is not answering.</td></tr>
+<tr><td>UPS</td><td>A battery backup. In Box 3 it keeps the screen, sensor and relay boards alive during a power cut, so the helmet can be released.</td></tr>
+<tr><td>Valve</td><td>The normally closed solenoid valve that lets water into one main container when the Refilling Station opens it.</td></tr></table>
+</div>
+<div class="op" data-op="cell-set" data-after="Heading2:Version and revisions" data-n="1" data-row="Covers" data-col="1">Box 1, Box 2, Box 3, Refilling Station, LocalServer, Online Server</div>
+<div class="op" data-op="cell-set" data-after="Heading2:Version and revisions" data-n="1" data-row="Protocol file" data-col="1">Shared_Common.h, identical in every sketch folder (checksum fb00a2ec)</div>
+<div class="op" data-op="rev-row">
+<table><tr><td>10</td><td>@@TODAY@@</td><td>The Refilling Station (3 water-level sensors, 3 valves, one valve at a time) replaces ACS 1 and ACS 2: new chapter, wiring, pinout, settings, charts and decision tree 5. Box 3 runs the trimmed 36-step flow (CHECKING, SELECT MODE or SELECT DRY ONLY, required coins, auto-dry, cancel paths, no ratings): customer pictures, charts 5 and 6, prices, settings page. OUT OF ORDER never traps a helmet; UPS design; restart check; one helmet cut-off for S3B, B3 and B1. 14 boards, 12 devices on the Dashboard. The online page chapter no longer mentions the removed Checklist, Fix it and Manual tabs. Box 1 and Box 2 are unchanged (earlier program).</td></tr></table>
+</div>
+<div class="op" data-op="cell-set" data-after="Heading3:Firmware in this manual" data-n="1" data-row="ESP32_ACS1" data-col="3">2026-11-03</div>
+<div class="op" data-op="cell-set" data-after="Heading3:Firmware in this manual" data-n="1" data-row="ESP32_ACS1" data-col="2">Boxes 1 to 3 containers: sensors and valves</div>
+<div class="op" data-op="cell-set" data-after="Heading3:Firmware in this manual" data-n="1" data-row="ESP32_ACS1" data-col="1">Refilling Station</div>
+<div class="op" data-op="cell-set" data-after="Heading3:Firmware in this manual" data-n="1" data-row="ESP32_ACS1" data-col="0" data-bold="yes">ESP32_REFILL</div>
+<div class="op" data-op="cell-set" data-after="Heading3:Firmware in this manual" data-n="1" data-row="ESP32_S3B" data-col="3">2026-11-03</div>
+<div class="op" data-op="cell-set" data-after="Heading3:Firmware in this manual" data-n="1" data-row="ESP32_B1" data-col="3">2026-11-03</div>
+<div class="op" data-op="cell-set" data-after="Heading3:Firmware in this manual" data-n="1" data-row="ESP32_B2" data-col="3">2026-11-03</div>
+<div class="op" data-op="cell-set" data-after="Heading3:Firmware in this manual" data-n="1" data-row="ESP32_B3" data-col="3">2026-11-03</div>
+<div class="op" data-op="cell-set" data-after="Heading3:Firmware in this manual" data-n="1" data-row="ESP32_LOCALSRV" data-col="3">2026-11-03</div>
+<div class="op" data-op="cell-set" data-after="Heading3:Firmware in this manual" data-n="1" data-row="ESP32_ONLINESRV" data-col="3">2026-11-03</div>
+<div class="op" data-op="rows-append" data-after="Heading3:Firmware in this manual" data-n="1">
+<table><tr><td>ESP32_REFILL_FAKE</td><td>Test tool</td><td>Stand-in for the Refilling Station on a spare ESP32 (own Wi-Fi page)</td><td>2026-11-03</td></tr></table>
+</div>
+
+<div class="op" data-op="xe-terms">[["Refilling Station","Refilling Station"],["Valve","valve"],["UPS","\\bUPS\\b"],["Queue (Refilling Station)","queue"],["Auto dry","auto-dry|AUTO DRY"],["SELECT DRY ONLY","SELECT DRY ONLY"],["Required coins","required coin"],["Trapped helmet","trapped helmet|helmet is still inside"]]</div>
+
+</body></html>

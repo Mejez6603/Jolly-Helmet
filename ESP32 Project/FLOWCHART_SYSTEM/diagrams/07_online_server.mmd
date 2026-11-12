@@ -1,0 +1,21 @@
+---
+title: 07 - Online Server inside
+---
+flowchart TD
+  classDef cSide fill:#ffffff,stroke:#111111,stroke-width:2px,stroke-dasharray:5 4,color:#111111
+
+  A(["Power on"]) --> B["load the saved setup:<br/>Wi-Fi, Blynk token, interval, time zone"]
+  B --> C["start its own Wi-Fi JollyHelmet-Online + captive portal<br/>start ESP-NOW (listen only, never sends)"]
+  C --> D["every 1 s: take a snapshot of what was heard<br/>(the 11 box boards, the Refilling Station and the LocalServer)<br/>count sessions per box, per hour, per weekday, per day<br/>work out the alerts: out of order, station offline, refill failed, board not heard"]
+  D --> E{"Wi-Fi and token saved,<br/>and the interval reached?<br/>(30 s to 1 h, default 1 min)"}
+  E -->|no| D
+  E -->|yes| F{"somebody is using<br/>the setup page?"}
+  F -->|yes| G["wait 5 s"]
+  G --> D
+  F -->|no| H["BURST (5 to 10 s, not listening to the machines)<br/>leave channel 1, join the Wi-Fi, get the time (NTP)"]
+  H --> I["HTTPS to Blynk (certificate checked)<br/>1. private device V0: the live JSON<br/>(the 3 boxes, the Refilling Station's level of each container,<br/>board flags, statistics)<br/>2. public device V0: box steps only<br/>3. optional: V1 to V4 and the alert event"]
+  I --> J["back to channel 1"]
+  J --> D
+  K["setup page, looks like a router page:<br/>Network Map, Internet, Blynk, More settings<br/>choose the Wi-Fi, paste the Blynk token, Save"]:::cSide --> K2["Save: the Wi-Fi is tested first<br/>(works without a token),<br/>then Blynk"]:::cSide
+  K2 --> H
+  M["also heard: totals from the LocalServer (every 10 s)"]:::cSide -.-> D

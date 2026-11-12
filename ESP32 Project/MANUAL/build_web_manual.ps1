@@ -18,7 +18,7 @@
 param(
   [string]$Docx,                       # default: the newest JollyHelmet_UserManual_v*.docx in this folder
   [string]$Password,                   # default: asked
-  [string]$WebDir = (Join-Path $PSScriptRoot '..\ONLINE_WEB\manual'),
+  [string]$WebDir = (Join-Path $PSScriptRoot '..\ONLINE_WEB_REMOVED\manual'),   # since 2026-10-23 the web page has no Manual tab: these files are no longer part of ONLINE_WEB
   [int]$Rounds = 150000,
   [switch]$UpdateFields,              # also update the contents and index fields in the copy before exporting
   [switch]$PdfOnly,                   # phase 1: PDF + public customer files + save the team data, no password asked

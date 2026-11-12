@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<title>Jolly Helmet - conceptual framework with icons</title>
+<style>
+  @page { size: 1800px 1976px; margin: 0 }
+  :root { --navy:#0c2340; --navy2:#14325c; --orange1:#ffc060; --orange2:#f08a0c; --cream:#fff0cf; --ink:#0c2340; }
+  * { box-sizing: border-box }
+  html, body { margin: 0; background: #fff; font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif; color: var(--ink); -webkit-print-color-adjust: exact; print-color-adjust: exact }
+  #c { position: relative; width: 1800px; background: #fff; overflow: hidden }
+  #cap { position: absolute; left: 10px; top: 14px; line-height: 1.3; color: #000 }
+  #cap b { display: block; font-size: 34px }
+  #cap i { display: block; font-size: 34px }
+  #frame { position: absolute; left: 6px; width: 1788px; height: 1850px; border: 3px solid #000; background: #fff }
+  #frame svg.w { position: absolute; left: 0; top: 0; pointer-events: none; z-index: 1 }
+  .grp { position: absolute; border: 3.5px solid var(--navy2); border-radius: 22px; background: #fff; overflow: hidden; z-index: 0 }
+  .grp .gh { height: 80px; background: var(--cream); border-bottom: 3.5px solid var(--navy2); display: flex; align-items: center; justify-content: center; font-size: 40px; font-weight: 800; letter-spacing: 2px; color: var(--navy2) }
+  .nd { position: absolute; width: 200px; display: flex; flex-direction: column; align-items: center; z-index: 2 }
+  .nd .ico { width: 112px; height: 112px }
+  .nd .ico svg { width: 112px; height: 112px; display: block; overflow: visible }
+  .nd .lb { margin-top: 8px; font-size: 21px; font-weight: 700; line-height: 25px; text-align: center; color: var(--ink); white-space: nowrap }
+</style></head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <linearGradient id="gOr" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffc060"/><stop offset="1" stop-color="#f08a0c"/></linearGradient>
+  <linearGradient id="gNv" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#27508c"/><stop offset="1" stop-color="#0c2340"/></linearGradient>
+  <linearGradient id="gYl" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd966"/><stop offset="1" stop-color="#f2b705"/></linearGradient>
+  <linearGradient id="gBl" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8ccdf3"/><stop offset="1" stop-color="#2f86c8"/></linearGradient>
+  <linearGradient id="gGy" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e6edf7"/><stop offset="1" stop-color="#a9b7cf"/></linearGradient>
+</defs></svg>
+<div id="c">
+  <div id="cap"><b id="capn">Figure 2</b><i id="capt">Conceptual Framework of the study</i></div>
+  <div id="frame">
+    <svg class="w" id="w" width="1782" height="1844" viewBox="0 0 1782 1844" xmlns="http://www.w3.org/2000/svg">
+      <defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#111"/></marker></defs>
+    </svg>
+  </div>
+</div>
+<script>
+const NOCAP = /nocap/.test(location.search);
+const T = NOCAP ? 8 : 118, FH = 1850;
+const c = document.getElementById('c'), frame = document.getElementById('frame'), svg = document.getElementById('w');
+frame.style.top = T + 'px';
+c.style.height = (T + FH + 8) + 'px';
+if (NOCAP) document.getElementById('cap').style.display = 'none';
+
+/* ---------- the icons (120 x 120, flat colour, navy outline) ---------- */
+const S = 'stroke="#0c2340" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"';
+const chipSvg = (a, b) => {
+  let pins = '';
+  for (let i = 0; i < 5; i++) {
+    const p = 26 + i * 16;
+    pins += `<rect x="6" y="${p}" width="16" height="7" rx="1.5" fill="url(#gGy)" ${S} stroke-width="1.8"/><rect x="98" y="${p}" width="16" height="7" rx="1.5" fill="url(#gGy)" ${S} stroke-width="1.8"/>`
+          + `<rect x="${p}" y="6" width="7" height="16" rx="1.5" fill="url(#gGy)" ${S} stroke-width="1.8"/><rect x="${p}" y="98" width="7" height="16" rx="1.5" fill="url(#gGy)" ${S} stroke-width="1.8"/>`;
+  }
+  return `${pins}<rect x="18" y="18" width="84" height="84" rx="9" fill="url(#gNv)" ${S}/><rect x="27" y="27" width="66" height="66" rx="5" fill="none" stroke="#f59e0b" stroke-width="2.2"/>`
+       + `<circle cx="34" cy="34" r="3.5" fill="#f59e0b"/><text x="60" y="${b ? 58 : 66}" text-anchor="middle" font-family="Arial" font-size="21" font-weight="800" fill="#fff">${a}</text>`
+       + (b ? `<text x="60" y="80" text-anchor="middle" font-family="Arial" font-size="17" font-weight="800" fill="#ffc060">${b}</text>` : '');
+};
+const serverUnits = (n, y0) => { let s = ''; for (let i = 0; i < n; i++) { const y = y0 + i * 32; s += `<rect x="14" y="${y}" width="92" height="27" rx="5" fill="url(#gNv)" ${S}/><circle cx="28" cy="${y + 13.5}" r="4.2" fill="#f59e0b"/><circle cx="41" cy="${y + 13.5}" r="4.2" fill="#43c27a"/><rect x="62" y="${y + 9}" width="36" height="9" rx="3" fill="#6f8bb8"/>`; } return s; };
+const star = (x, y, r, f) => `<path d="M${x} ${y - r}L${x + r * .28} ${y - r * .28}L${x + r} ${y}L${x + r * .28} ${y + r * .28}L${x} ${y + r}L${x - r * .28} ${y + r * .28}L${x - r} ${y}L${x - r * .28} ${y - r * .28}z" fill="${f}" stroke="#0c2340" stroke-width="1.6" stroke-linejoin="round"/>`;
+
+const ICONS = {
+  users: `<path d="M4 102c0-18 11-30 26-30s26 12 26 30z" fill="#14325c" ${S}/><circle cx="30" cy="52" r="13" fill="#f6cfa8" ${S}/><path d="M17 50a13 13 0 0 1 26 0c-6-5-20-5-26 0z" fill="#0c2340"/>
+          <path d="M64 102c0-18 11-30 26-30s26 12 26 30z" fill="#f59e0b" ${S}/><circle cx="90" cy="52" r="13" fill="#f6cfa8" ${S}/><path d="M77 50a13 13 0 0 1 26 0c-6-5-20-5-26 0z" fill="#0c2340"/>
+          <path d="M26 112c0-24 15-38 34-38s34 14 34 38z" fill="url(#gOr)" ${S}/><circle cx="60" cy="42" r="17" fill="#f6cfa8" ${S}/><path d="M43 40a17 17 0 0 1 34 0c-8-7-26-7-34 0z" fill="#0c2340"/>`,
+
+  touch: `<rect x="6" y="14" width="108" height="78" rx="11" fill="#0c2340"/><rect x="14" y="22" width="92" height="62" rx="4" fill="#fff0cf"/>
+          <rect x="20" y="28" width="80" height="11" rx="3" fill="url(#gOr)"/><rect x="20" y="45" width="36" height="32" rx="4" fill="#14325c"/><rect x="62" y="45" width="38" height="14" rx="3" fill="#efc473"/><rect x="62" y="63" width="38" height="14" rx="3" fill="#efc473"/>
+          <circle cx="58" cy="100" r="3.5" fill="#0c2340"/>
+          <circle cx="88" cy="68" r="11" fill="none" stroke="#f08a0c" stroke-width="3"/><circle cx="88" cy="68" r="19" fill="none" stroke="#f08a0c" stroke-width="2" opacity=".55"/>
+          <path d="M82 70V54a4.5 4.5 0 0 1 9 0v20l7-2.5a4.2 4.2 0 0 1 5.4 5L100 94a12 12 0 0 1-11.600 9H82a12 12 0 0 1-9.500-4.500L62 85a4.200 4.200 0 0 1 6.400-5.400L74 85z" fill="#f6cfa8" ${S} stroke-width="2.6"/>
+          <circle cx="22" cy="100" r="13" fill="url(#gYl)" ${S} stroke-width="2.6"/><text x="22" y="106" text-anchor="middle" font-family="Arial" font-size="17" font-weight="800" fill="#0c2340">&#8369;</text>`,
+
+  chip: chipSvg('ESP32', ''),
+  chipS3: chipSvg('ESP32', 'S3'),
+
+  sensor: `<rect x="6" y="26" width="108" height="56" rx="7" fill="url(#gNv)" ${S}/>
+           <circle cx="36" cy="54" r="21" fill="url(#gGy)" ${S}/><circle cx="36" cy="54" r="12" fill="#8a96ad" ${S} stroke-width="2"/><circle cx="36" cy="54" r="5" fill="#0c2340"/>
+           <circle cx="84" cy="54" r="21" fill="url(#gGy)" ${S}/><circle cx="84" cy="54" r="12" fill="#8a96ad" ${S} stroke-width="2"/><circle cx="84" cy="54" r="5" fill="#0c2340"/>
+           ${[0, 1, 2, 3].map(i => `<rect x="${42 + i * 11}" y="82" width="6" height="16" rx="1.5" fill="url(#gYl)" ${S} stroke-width="1.8"/>`).join('')}
+           <path d="M24 16a16 16 0 0 1 24 0M18 8a26 26 0 0 1 36 0" fill="none" stroke="#f08a0c" stroke-width="3.500" stroke-linecap="round"/>`,
+
+  admin: `<path d="M10 116c0-26 22-40 50-40s50 14 50 40z" fill="url(#gNv)" ${S}/><path d="M44 78l16 24 16-24z" fill="#fff" ${S} stroke-width="2.4"/>
+          <path d="M55 88h10l4 14-9 12-9-12z" fill="url(#gOr)" ${S} stroke-width="2.4"/>
+          <circle cx="60" cy="48" r="24" fill="#f6cfa8" ${S}/><path d="M36 46c0-18 11-28 24-28s24 10 24 28c-6-9-14-13-24-13s-18 4-24 13z" fill="#0c2340"/>
+          <path d="M34 50a26 26 0 0 1 52 0" fill="none" stroke="#f59e0b" stroke-width="4.500" stroke-linecap="round" opacity="0"/>`,
+
+  station: `<rect x="30" y="6" width="60" height="68" rx="11" fill="#fff" ${S}/>
+            <path d="M33 38q9-6 18 0t18 0t18 0V63a8 8 0 0 1-8 8H41a8 8 0 0 1-8-8z" fill="url(#gBl)"/>
+            <path d="M33 38q9-6 18 0t18 0t18 0" fill="none" stroke="#0c2340" stroke-width="2.200"/>
+            <path d="M96 20h8M96 34h5M96 48h8M96 62h5" stroke="#0c2340" stroke-width="2.600" stroke-linecap="round"/>
+            <rect x="54" y="74" width="12" height="18" fill="url(#gGy)" ${S} stroke-width="2.4"/>
+            <rect x="8" y="92" width="104" height="14" rx="4" fill="url(#gGy)" ${S} stroke-width="2.600"/>
+            <path d="M40 90l20 14-20 14zM80 90L60 104l20 14z" fill="url(#gOr)" ${S} stroke-width="2.400"/><rect x="54" y="78" width="12" height="5" rx="2" fill="#0c2340"/>
+            <path d="M16 106c-4 6-4 10 0 10s4-4 0-10z" fill="#2f86c8" opacity="0"/>`,
+
+  fog: `<rect x="4" y="44" width="44" height="38" rx="9" fill="url(#gOr)" ${S}/><rect x="12" y="52" width="12" height="22" rx="3" fill="#fff0cf" ${S} stroke-width="2"/>
+        <path d="M48 52h16l10-8v44l-10-8H48z" fill="url(#gGy)" ${S}/>
+        <g fill="#eaf4fe" stroke="#2f86c8" stroke-width="2.600"><circle cx="88" cy="56" r="13"/><circle cx="104" cy="68" r="13"/><circle cx="88" cy="80" r="13"/><circle cx="106" cy="46" r="9"/></g>
+        <g fill="#2f86c8"><circle cx="80" cy="30" r="3"/><circle cx="94" cy="24" r="3.500"/><circle cx="106" cy="30" r="2.500"/><circle cx="82" cy="100" r="3"/><circle cx="98" cy="100" r="3.500"/></g>`,
+
+  uv: `<rect x="2" y="26" width="116" height="30" rx="15" fill="#e4d9ff" ${S}/><rect x="2" y="30" width="14" height="22" rx="4" fill="url(#gGy)" ${S} stroke-width="2.4"/><rect x="104" y="30" width="14" height="22" rx="4" fill="url(#gGy)" ${S} stroke-width="2.4"/>
+       <rect x="20" y="34" width="80" height="14" rx="7" fill="#8b5cf6"/><rect x="26" y="37" width="60" height="4" rx="2" fill="#d9c8ff"/>
+       <path d="M26 66l-8 26M46 66l-3 30M66 66l1 32M86 66l5 30M104 66l8 26" stroke="#8b5cf6" stroke-width="4.500" stroke-linecap="round"/>
+       <text x="60" y="116" text-anchor="middle" font-family="Arial" font-size="18" font-weight="800" fill="#0c2340">UV-C</text>`,
+
+  dry: `<rect x="8" y="8" width="74" height="74" rx="11" fill="#fff0cf" ${S}/>
+        <g transform="translate(45 45)">${[0, 90, 180, 270].map(a => `<path transform="rotate(${a})" d="M0 0C-4-24 14-30 18-16C13-9 5-4 0 0z" fill="url(#gOr)" ${S} stroke-width="2.400"/>`).join('')}<circle r="6.500" fill="#0c2340"/></g>
+        <path d="M94 22q9 9 0 18t0 18t0 18" fill="none" stroke="#e0481b" stroke-width="4.500" stroke-linecap="round"/><path d="M108 30q9 9 0 18t0 18" fill="none" stroke="#f08a0c" stroke-width="4" stroke-linecap="round"/>
+        <rect x="26" y="92" width="38" height="14" rx="5" fill="url(#gNv)" ${S} stroke-width="2.400"/><path d="M34 99h22" stroke="#ffc060" stroke-width="3" stroke-linecap="round"/>`,
+
+  box: `<rect x="20" y="4" width="80" height="112" rx="9" fill="url(#gNv)" ${S}/><rect x="28" y="10" width="64" height="20" rx="4" fill="#fff0cf" ${S} stroke-width="2"/>
+        <image href="logo.png" x="46" y="11" width="28" height="18" preserveAspectRatio="xMidYMid meet"/>
+        <rect x="28" y="33" width="64" height="52" rx="6" fill="#fff0cf" ${S} stroke-width="2.600"/>
+        <path d="M38 76a22 22 0 0 1 44 0z" fill="url(#gOr)" ${S} stroke-width="2.400"/><path d="M58 64h24v12H58z" fill="#14325c"/><path d="M42 80h36" stroke="#0c2340" stroke-width="2.400"/>
+        ${star(40, 44, 6, '#ffd54a')}${star(78, 42, 5, '#ffd54a')}
+        <rect x="30" y="92" width="26" height="16" rx="3" fill="url(#gBl)" ${S} stroke-width="2"/><rect x="66" y="94" width="22" height="5" rx="2" fill="#0c2340"/><rect x="66" y="102" width="22" height="5" rx="2" fill="#f59e0b"/>`,
+
+  helmet: `<path d="M8 76C8 40 32 14 64 14c28 0 48 20 48 48v28c0 9-6 15-15 15H26C15 105 8 94 8 76z" fill="url(#gOr)" ${S} stroke-width="3.600"/>
+           <path d="M50 46h46c10 0 16 7 16 16v10c0 5-4 9-9 9H46c-5 0-8-4-6-9z" fill="url(#gNv)" ${S} stroke-width="2.800"/><path d="M58 54h28" stroke="#fff" stroke-width="3.400" stroke-linecap="round" opacity=".7"/>
+           <path d="M12 92h96" stroke="#0c2340" stroke-width="3"/><path d="M26 44c4-14 14-22 28-26" fill="none" stroke="#fff" stroke-width="4.500" stroke-linecap="round" opacity=".75"/>
+           <path d="M12 96h92v4c0 5-4 8-9 8H24c-7 0-12-4-12-10z" fill="#14325c" ${S} stroke-width="2.200"/>
+           ${star(16, 22, 9, '#ffd54a')}${star(104, 12, 7, '#ffd54a')}${star(68, 6, 5, '#ffd54a')}
+           <circle cx="94" cy="96" r="20" fill="#2eaa5c" stroke="#fff" stroke-width="4"/><path d="M84 96l8 8 14-16" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>`,
+
+  server: `${serverUnits(3, 8)}<path d="M40 106h40" stroke="#0c2340" stroke-width="3" stroke-linecap="round"/>
+           <circle cx="96" cy="94" r="19" fill="#fff" stroke="#d93a3a" stroke-width="3.500"/><path d="M85 88a16 16 0 0 1 22 0M89 94a10 10 0 0 1 14 0" fill="none" stroke="#0c2340" stroke-width="3" stroke-linecap="round"/><circle cx="96" cy="101" r="2.600" fill="#0c2340"/><path d="M84 106L108 82" stroke="#d93a3a" stroke-width="4" stroke-linecap="round"/>`,
+
+  onlinesrv: `${serverUnits(2, 6)}<circle cx="86" cy="82" r="28" fill="url(#gBl)" ${S}/><g fill="none" stroke="#fff" stroke-width="2.600"><path d="M58 82h56M86 54c-14 12-14 44 0 56M86 54c14 12 14 44 0 56M63 68h46M63 96h46"/></g>`,
+
+  cloud: `<path d="M32 96a24 24 0 0 1-2-48 32 32 0 0 1 62-6 28 28 0 0 1 4 54z" fill="#fff" ${S} stroke-width="3.600"/>
+          <path d="M34 78l16-16 12 10 18-22" fill="none" stroke="#f08a0c" stroke-width="5.500" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="34" cy="78" r="5" fill="#14325c"/><circle cx="50" cy="62" r="5" fill="#14325c"/><circle cx="62" cy="72" r="5" fill="#14325c"/><circle cx="80" cy="50" r="5" fill="#14325c"/>
+          <path d="M60 104v10M52 110l8 6 8-6" fill="none" stroke="#0c2340" stroke-width="3.200" stroke-linecap="round" stroke-linejoin="round" opacity="0"/>`,
+
+  db: `<path d="M16 24v72c0 9 20 16 44 16s44-7 44-16V24" fill="url(#gNv)" ${S}/>
+       <ellipse cx="60" cy="24" rx="44" ry="15" fill="#6f8bb8" ${S}/>
+       <path d="M16 50c0 9 20 15 44 15s44-6 44-15" fill="none" stroke="#f59e0b" stroke-width="4.500"/><path d="M16 76c0 9 20 15 44 15s44-6 44-15" fill="none" stroke="#f59e0b" stroke-width="4.500"/>
+       <path d="M30 18c8-4 20-5 32-4" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".6"/>`,
+
+  csv: `<path d="M6 34h38l9 11h61v66H6z" fill="#e0a100" ${S}/>
+        <rect x="24" y="14" width="64" height="62" rx="4" fill="#fff" ${S} stroke-width="2.800" transform="rotate(-5 56 44)"/>
+        <g transform="rotate(-5 56 44)"><path d="M32 28h40M32 38h40M32 48h26" stroke="#9fb0cc" stroke-width="3" stroke-linecap="round"/><rect x="32" y="56" width="34" height="14" rx="3" fill="#14325c"/><text x="49" y="67" text-anchor="middle" font-family="Arial" font-size="11" font-weight="800" fill="#fff">CSV</text></g>
+        <path d="M6 56h108l-8 56H14z" fill="url(#gYl)" ${S}/>`,
+
+  dash: `<rect x="4" y="8" width="112" height="78" rx="9" fill="#0c2340"/><rect x="11" y="15" width="98" height="64" rx="4" fill="#fff"/>
+         <rect x="11" y="15" width="98" height="10" rx="4" fill="url(#gOr)"/>
+         <rect x="17" y="32" width="12" height="38" rx="2" fill="#14325c"/><rect x="33" y="44" width="12" height="26" rx="2" fill="#f08a0c"/><rect x="49" y="38" width="12" height="32" rx="2" fill="#14325c"/>
+         <path d="M68 66l10-12 9 6 14-18" fill="none" stroke="#f08a0c" stroke-width="3.500" stroke-linecap="round" stroke-linejoin="round"/>
+         <circle cx="93" cy="44" r="9" fill="none" stroke="#2f86c8" stroke-width="5" opacity="0"/>
+         <path d="M50 86h20l5 16H45z" fill="url(#gGy)" ${S} stroke-width="2.400"/><rect x="30" y="100" width="60" height="9" rx="4.500" fill="url(#gNv)" ${S} stroke-width="2.400"/>`,
+
+  trans: `<path d="M16 6h50l28 28v80H16z" fill="#fff" ${S}/><path d="M66 6v28h28" fill="#fff0cf" ${S}/>
+          <path d="M28 46h54M28 60h54M28 74h30" stroke="#9fb0cc" stroke-width="3.500" stroke-linecap="round"/>
+          <g ${S} stroke-width="2.600"><ellipse cx="84" cy="98" rx="20" ry="8" fill="url(#gYl)"/><path d="M64 98v10c0 4.500 9 8 20 8s20-3.500 20-8V98" fill="url(#gYl)"/><ellipse cx="84" cy="90" rx="20" ry="8" fill="url(#gYl)"/><path d="M64 90v8" /><path d="M104 90v8"/></g>
+          <circle cx="36" cy="92" r="14" fill="#2eaa5c" stroke="#fff" stroke-width="3.500"/><path d="M29 92l5 5 9-11" fill="none" stroke="#fff" stroke-width="4.500" stroke-linecap="round" stroke-linejoin="round"/>`,
+
+  report: `<path d="M16 6h50l28 28v80H16z" fill="#fff" ${S}/><path d="M66 6v28h28" fill="#fff0cf" ${S}/>
+           <rect x="26" y="74" width="12" height="28" rx="2" fill="#14325c"/><rect x="42" y="58" width="12" height="44" rx="2" fill="#f08a0c"/><rect x="58" y="66" width="12" height="36" rx="2" fill="#14325c"/>
+           <path d="M26 104h50" stroke="#0c2340" stroke-width="2.600" stroke-linecap="round"/>
+           <circle cx="78" cy="56" r="14" fill="#fff" stroke="#0c2340" stroke-width="2.600"/><path d="M78 56V42a14 14 0 0 1 14 14z" fill="#f59e0b" stroke="#0c2340" stroke-width="2.200" stroke-linejoin="round"/>
+           <path d="M28 44h30M28 54h20" stroke="#9fb0cc" stroke-width="3.500" stroke-linecap="round"/>`,
+
+  bell: `<path d="M60 8c-20 0-32 15-32 35v22L16 82h88L92 65V43C92 23 80 8 60 8z" fill="url(#gOr)" ${S} stroke-width="3.400"/>
+         <path d="M46 90a14 14 0 0 0 28 0z" fill="url(#gNv)" ${S} stroke-width="2.600"/><circle cx="60" cy="8" r="5" fill="#0c2340"/>
+         <path d="M40 30c4-8 10-12 18-14" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" opacity=".6"/>
+         <circle cx="94" cy="24" r="15" fill="#d93a3a" stroke="#fff" stroke-width="4"/><text x="94" y="30" text-anchor="middle" font-family="Arial" font-size="19" font-weight="800" fill="#fff">!</text>`,
+
+  /* feedback items: refilling the container, maintenance, faults */
+  refill: `<path d="M60 2c7 9 10 13 10 17a10 10 0 0 1-20 0c0-4 3-8 10-17z" fill="url(#gBl)" ${S} stroke-width="2.400"/>
+           <rect x="42" y="26" width="36" height="14" rx="4" fill="url(#gNv)" ${S} stroke-width="2.600"/>
+           <rect x="24" y="38" width="72" height="76" rx="13" fill="#fff" ${S}/>
+           <path d="M27 72q8.500-6 16.500 0t16.500 0t16.500 0t16.500 0V102a10 10 0 0 1-10 10H37a10 10 0 0 1-10-10z" fill="url(#gBl)"/>
+           <path d="M27 72q8.500-6 16.500 0t16.500 0t16.500 0t16.500 0" fill="none" stroke="#0c2340" stroke-width="2.400"/>
+           <path d="M102 54h9M102 70h6M102 86h9M102 102h6" stroke="#0c2340" stroke-width="2.800" stroke-linecap="round"/>`,
+
+  maintain: `<g transform="rotate(42 60 60)"><rect x="51" y="46" width="18" height="64" rx="8" fill="url(#gGy)" ${S}/>
+             <circle cx="60" cy="32" r="23" fill="url(#gGy)" ${S}/><rect x="52" y="4" width="16" height="30" fill="#fff"/><path d="M52 8V33H68V8" fill="none" stroke="#0c2340" stroke-width="3" stroke-linejoin="round"/>
+             <circle cx="60" cy="98" r="4" fill="#fff" stroke="#0c2340" stroke-width="2.400"/></g>
+             <g transform="rotate(-42 60 60)"><rect x="52" y="66" width="16" height="46" rx="7" fill="url(#gOr)" ${S}/>
+             <rect x="57" y="22" width="6" height="46" fill="url(#gGy)" ${S} stroke-width="2.200"/><path d="M57 22l3-14 3 14z" fill="#8a96ad" ${S} stroke-width="2.200"/></g>`,
+
+  fault: `<path d="M60 8L113 100H7z" fill="#d93a3a" ${S} stroke-width="3.600"/><path d="M60 24L98 92H22z" fill="none" stroke="#ff9a9a" stroke-width="2.400" stroke-linejoin="round" opacity=".7"/>
+          <rect x="54" y="42" width="12" height="30" rx="5.500" fill="#fff"/><circle cx="60" cy="84" r="6.500" fill="#fff"/>`
+};
+
+/* ---------- placing the nodes and the arrows ---------- */
+const LH = 25;
+function node(cx, cy, icon, label) {
+  const d = document.createElement('div'); d.className = 'nd';
+  d.style.left = (cx - 100) + 'px'; d.style.top = (cy - 56) + 'px';
+  d.innerHTML = `<div class="ico"><svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">${ICONS[icon]}</svg></div><div class="lb">${label}</div>`;
+  frame.appendChild(d);
+}
+/* wire: points in frame coordinates; head = 'end' | 'both' | 'none' */
+function wire(pts, head) {
+  const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  p.setAttribute('d', 'M' + pts.map(q => q.join(',')).join(' L'));
+  p.setAttribute('fill', 'none'); p.setAttribute('stroke', '#111'); p.setAttribute('stroke-width', '3'); p.setAttribute('stroke-linejoin', 'round');
+  if (head !== 'none') p.setAttribute('marker-end', 'url(#ah)');
+  if (head === 'both') p.setAttribute('marker-start', 'url(#ah)');
+  svg.appendChild(p);
+}
+/* the three boxes: what belongs to the Input, the Process and the Output (drawn behind the arrows and the icons) */
+function group(x, y, w, h, t) { const g = document.createElement('div'); g.className = 'grp'; g.style.cssText = `left:${x}px;top:${y}px;width:${w}px;height:${h}px`; g.innerHTML = `<div class="gh">${t}</div>`; frame.insertBefore(g, svg); }
+group(16, 16, 404, 1424, 'Input'); group(440, 16, 996, 1424, 'Process'); group(1452, 16, 318, 1424, 'Output');
+group(420, 1520, 960, 300, 'Feedback');            /* the feedback box of the Input-Process-Output model */
+
+/* INPUT */
+node(100, 545, 'users', 'Customers');
+node(295, 545, 'touch', 'Touch Display<br>and Coin Acceptor');
+node(295, 200, 'sensor', 'Box Sensors<br>(helmet and doors)');
+node(150, 1290, 'admin', 'Admin<br>(Owner, Technician)');
+/* PROCESS */
+node(660, 545, 'chipS3', 'Box Main Controller<br>(ESP32-S3)');
+node(530, 800, 'chip', 'Display Board<br>(ESP32)');
+node(1010, 200, 'station', 'Refilling Station');
+node(1010, 375, 'fog', 'Disinfectant<br>Fogging');
+node(1010, 545, 'uv', 'True UV-C<br>254 nm');
+node(1010, 715, 'dry', 'Drying<br>(heater and fan)');
+node(1300, 545, 'box', 'Jolly Helmet Box');
+node(660, 930, 'server', 'Local Server<br>(Offline)');
+node(580, 1150, 'db', 'Local<br>Database');
+node(790, 1150, 'csv', 'Backup File<br>(CSV)');
+node(1010, 930, 'onlinesrv', 'Online Server');
+node(1300, 930, 'cloud', 'Blynk Cloud<br>(online database)');
+node(1300, 1150, 'dash', 'Remote Monitoring<br>Website');
+/* OUTPUT */
+node(1625, 545, 'helmet', 'Cleaned and<br>Dried Helmet');
+node(1625, 760, 'trans', 'Transaction<br>Record');
+node(1625, 955, 'report', 'System<br>Report');
+node(1625, 1150, 'bell', 'Notification');
+/* FEEDBACK */
+node(600, 1678, 'refill', 'Refilling the<br>Container');
+node(900, 1678, 'maintain', 'Maintenance');
+node(1200, 1678, 'fault', 'Faults');
+
+/* arrows: input side */
+wire([[162, 545], [233, 545]], 'end');                                   /* customers -> touch display */
+wire([[357, 545], [598, 545]], 'end');                                   /* touch display -> controller */
+wire([[295, 664], [295, 800], [468, 800]], 'both');                      /* touch display <-> display board (now in the Process box) */
+wire([[530, 738], [530, 592], [598, 592]], 'both');                      /* display board <-> controller */
+wire([[357, 200], [630, 200], [630, 484]], 'end');                       /* box sensors -> controller */
+wire([[954, 200], [690, 200], [690, 484]], 'end');                       /* refilling station -> controller (levels) */
+wire([[1066, 200], [1300, 200], [1300, 484]], 'end');                    /* refilling station -> box (refills the container) */
+/* process: controller -> services -> box */
+wire([[718, 545], [880, 545]], 'none');
+wire([[880, 375], [880, 715]], 'none');
+wire([[880, 375], [950, 375]], 'end'); wire([[880, 545], [950, 545]], 'end'); wire([[880, 715], [950, 715]], 'end');
+wire([[1070, 375], [1170, 375], [1170, 715], [1070, 715]], 'none');
+wire([[1070, 545], [1240, 545]], 'end');                                 /* services -> box */
+wire([[1362, 545], [1565, 545]], 'end');                                 /* box -> cleaned helmet */
+/* process: controller <-> local server, the servers and the cloud */
+wire([[660, 664], [660, 872]], 'both');
+wire([[150, 1228], [150, 960], [598, 960]], 'both');                   /* admin <-> local server (Control Center) */
+wire([[722, 930], [950, 930]], 'end');
+wire([[1072, 930], [1240, 930]], 'end');
+wire([[1300, 1048], [1300, 1090]], 'end');
+wire([[622, 1049], [622, 1074], [580, 1074], [580, 1090]], 'both');
+wire([[698, 1049], [698, 1074], [790, 1074], [790, 1090]], 'both');
+wire([[212, 1320], [1300, 1320], [1300, 1272]], 'end');                /* admin -> website */
+/* output side */
+wire([[1362, 1150], [1565, 1150]], 'end');
+wire([[1490, 1150], [1490, 760]], 'none');
+wire([[1490, 955], [1565, 955]], 'end'); wire([[1490, 760], [1565, 760]], 'end');
+/* feedback: inside the box, and the loop Output -> Feedback -> Input */
+wire([[1611, 1442], [1611, 1678], [1386, 1678]], 'end');                 /* output -> feedback */
+wire([[414, 1678], [218, 1678], [218, 1446]], 'end');                    /* feedback -> input */
+</script>
+</body></html>

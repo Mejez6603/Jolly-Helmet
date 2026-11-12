@@ -1,0 +1,73 @@
+---
+title: 09 - The complete Jolly Helmet system, end to end (hardware, LocalServer, Online Server, database, GitHub, Vercel, website)
+---
+flowchart TB
+  classDef cBox fill:#ffffff,stroke:#111111,stroke-width:2px,color:#111111
+  classDef cSrv fill:#ffffff,stroke:#111111,stroke-width:5px,color:#111111
+  classDef cDb fill:#eeeeee,stroke:#111111,stroke-width:3px,color:#111111
+  classDef cPeople fill:#ffffff,stroke:#666666,stroke-width:1.5px,stroke-dasharray:3 3,color:#111111
+  classDef cTank fill:#ffffff,stroke:#111111,stroke-width:2px,stroke-dasharray:2 3,color:#111111
+  classDef cRadio fill:#111111,stroke:#111111,color:#ffffff
+  classDef cCode fill:#ffffff,stroke:#111111,stroke-width:3px,color:#111111
+
+  CUST(["CUSTOMER<br/>touch screen, coins, helmet"]):::cPeople
+
+  subgraph BOXES["1 · BOX 1, 2, 3"]
+    MC["MAIN CONTROLLER (ESP32-S3)<br/>runs the customer flow:<br/>coins, mode, timer, cleaning, drying<br/>Box 1 = S3A · Box 2 = S3C · Box 3 = S3B<br/>(the three boxes are the same build)"]:::cBox
+    TERM["TFT DISPLAY + COIN SLOT + BUZZER<br/>SENSORS: helmet, doors<br/>RELAY CONTROLLER: UV, mist, heater, fan, locks<br/>Box 1 = A1 A2 A3 · Box 2 = C1 C2 · Box 3 = B1 B2 B3"]:::cBox
+    TANK["MAIN CONTAINER<br/>one cleaning liquid"]:::cTank
+  end
+  SUPPLY["LIQUID SUPPLY"]:::cTank
+  STATION["1 · REFILLING STATION (ESP32-WROOM)<br/>3 water-level sensors, 3 valves,<br/>one valve at a time"]:::cBox
+
+  RADIO{{"2 · ESP-NOW RADIO, channel 1<br/>broadcast, no router, no internet"}}:::cRadio
+
+  ENTRY["ENTRY board (spare ESP32)<br/>form for the previous customers"]:::cBox
+  STAFF(["OWNER / TECHNICIAN<br/>phone or laptop on Wi-Fi JollyHelmet-Local"]):::cPeople
+  LOCAL["3 · LOCAL SERVER (ESP32-S3)<br/>Wi-Fi JollyHelmet-Local, 192.168.4.1<br/>Control Center: Dashboard, Box pages,<br/>Refilling Station page, Settings<br/>works without internet"]:::cSrv
+  LDB[("LOCAL DATABASE (inside the LocalServer)<br/>settings: flash<br/>permanent session log + totals: FFat<br/>backup CSV: download and restore<br/>last 3 crash reports: flash")]:::cDb
+
+  ONLINE["4 · ONLINE SERVER (ESP32-S3)<br/>listens only, never sends to the machines<br/>1-second snapshot, statistics, alerts<br/>burst upload every 1 min (30 s to 1 h)"]:::cSrv
+  ODB[("saved setup (flash): Wi-Fi, Blynk token,<br/>interval, time zone<br/>statistics counters:<br/>per box, hour, weekday, day")]:::cDb
+
+  BLYNK[("5 · BLYNK CLOUD = THE ONLINE DATABASE<br/>private device V0: live JSON (3 boxes, levels,<br/>board flags, statistics, revenue)<br/>public device V0: box steps · V5: nicknames<br/>event: alert")]:::cDb
+
+  subgraph CODE["6 · CODE AND HOSTING"]
+    DEV(["DEVELOPER<br/>edits and pushes"]):::cPeople
+    FILES["ONLINE_WEB FOLDER<br/>index.html, status.html,<br/>css, js, img<br/>(Blynk token left empty)"]:::cBox
+    GITHUB["GITHUB<br/>repository with the<br/>ONLINE_WEB files,<br/>history of every change"]:::cCode
+    VERCEL["VERCEL<br/>deploys the files by itself<br/>on every push (static site)"]:::cCode
+    SITE["WEBSITE (public address)<br/>Monitor · Alerts · Reports<br/>status.html (customer page)<br/>only serves the page files,<br/>never sees the data<br/>(inside: charts 10 and 11)"]:::cSrv
+  end
+
+  OWNER(["7 · OWNER / TEAM<br/>browser on phone or PC, anywhere<br/>token typed once, kept in that browser"]):::cPeople
+  CPHONE(["7 · CUSTOMER PHONE<br/>scans the QR sticker<br/>FREE / IN USE / OUT OF ORDER"]):::cPeople
+  APP["BLYNK APP on a phone<br/>push alerts, even with the page closed"]:::cBox
+
+  CUST <-->|"touch, coins, helmet"| MC
+  MC <-->|"screens, coins,<br/>sensors, relays"| TERM
+  SUPPLY --> STATION
+  STATION ==>|"fills each container<br/>and reads its level"| TANK
+  MC <-->|ESP-NOW| RADIO
+  STATION <-->|"levels out<br/>settings in"| RADIO
+
+  ENTRY -->|"POST history.json"| LOCAL
+  STAFF <-->|"Wi-Fi"| LOCAL
+  RADIO <-->|"status in,<br/>commands out"| LOCAL
+  RADIO -->|"listen only"| ONLINE
+  LOCAL <--> LDB
+  LOCAL -->|"HubStatsPacket every 10 s:<br/>totals + last 10 sessions"| ONLINE
+
+  ONLINE <--> ODB
+  ONLINE ==>|"home Wi-Fi, HTTPS:<br/>write V0, send event alert"| BLYNK
+
+  DEV --> FILES
+  FILES -->|"git push"| GITHUB
+  GITHUB -->|"every push starts a deploy"| VERCEL
+  VERCEL -->|"publishes"| SITE
+
+  SITE -->|"A · page files<br/>(HTML, CSS, JS)"| OWNER
+  SITE -->|"A · status.html"| CPHONE
+  BLYNK <-->|"B · HTTPS GET every 10 s<br/>private token"| OWNER
+  BLYNK <-->|"B · HTTPS GET every 30 s, public token<br/>optional: nickname written to V5"| CPHONE
+  BLYNK -->|"event alert"| APP

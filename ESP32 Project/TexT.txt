@@ -1,0 +1,5 @@
+Manuals (Notebook Style):
+	Customer
+	Technician
+	Admin (OWNER)
+	Troubleshooting

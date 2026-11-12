@@ -16,12 +16,14 @@ async function sendCmd(obj) {
 }
 
 // Names, in the order the nodes number their states / steps (same lists as the settings pages)
-const ST13 = ["IDLE","OPEN A","CHECKING A","REFILLING A","SENSORS (old)","CLEANING","ABORT","OPEN B","FINISH","SAFETY PAUSE","TAPS","WELCOME","RATE A","TIME ALLOT","INSERT COIN","RATE B","CANCEL","METHOD","CHECKING S","REFILLING S","SENSORS A","CLOSE DOOR A","SENSORS B","CLOSE DOOR B","FREE RETRY","MAINTENANCE","OUT OF ORDER","HELMET NOTICE A","HELMET NOTICE B","SELECT MODE","SELECT DRY ONLY","DRYING","COOL DOWN","RATE B1"];
+const ST13 = ["IDLE","OPEN A","CHECKING A","REFILLING A","SENSORS (old)","CLEANING","ABORT","OPEN B","FINISH","SAFETY PAUSE","TAPS","WELCOME","RATE A","TIME ALLOT","INSERT COIN","RATE B","CANCEL","METHOD","CHECKING S","REFILLING S","SENSORS A","CLOSE DOOR A","SENSORS B","CLOSE DOOR B","FREE RETRY","MAINTENANCE","OUT OF ORDER","HELMET NOTICE A","HELMET NOTICE B","SELECT MODE","SELECT DRY ONLY","DRYING","COOL DOWN","RATE B1","AUTO DRY","START DRYING"];   // Box 1 (the old S3A flow, until Box 1 gets the Box 3 flow)
+// Box 3 (S3B, the trimmed 36-step flow of 2026-11-03): the same state numbers, names of the steps it really uses; "(old)" = Box 1 steps Box 3 no longer has
+const ST3 = ["IDLE","OPEN A","CHECKING","REFILLING (old)","SENSORS (old)","CLEANING","ABORT","OPEN B","FINISH","SAFETY PAUSE","TAPS","WELCOME","RATE A (old)","TIME ALLOT (old)","INSERT COIN","RATE B (old)","CANCEL","METHOD (old)","CHECKING S (old)","REFILLING S (old)","SENSORS A","CLOSE DOOR A","SENSORS B","CLOSE DOOR B","FREE RETRY (old)","MAINTENANCE","OUT OF ORDER","HELMET NOTICE A","HELMET NOTICE B","SELECT MODE","SELECT DRY ONLY","DRYING","COOL DOWN","RATE B1 (old)","AUTO DRY","START DRYING"];
 const ST2 = ["IDLE","OPEN A","SENSORS (old)","HEATING","ABORT","OPEN B","FINISH","SAFETY PAUSE","TAPS","WELCOME","RATE A","TIME ALLOT","INSERT COIN","COOL DOWN","RATE B","CANCEL","SENSORS A","CLOSE DOOR A","SENSORS B","CLOSE DOOR B","FREE RETRY","MAINTENANCE","HELMET NOTICE A","HELMET NOTICE B","OUT OF ORDER"];
-const ACSSTEP = ["IDLE","ALC WATER IN","ALC ALCOHOL IN","SCT WATER IN","SCT SCENTED IN","DELIVER ALCOHOL","DELIVER SCENTED","WATER EMPTY","ALCOHOL EMPTY","SCENTED EMPTY","MAINTENANCE"];
-const NODES = ["A1 Terminal (Box 1)","A2 Sensors (Box 1)","A3 Relays (Box 1)","S3A Brain (Box 1)","C1 Terminal (Box 2)","C2 Hub (Box 2)","S3C Brain (Box 2)","B1 Terminal (Box 3)","B2 Sensors (Box 3)","B3 Relays (Box 3)","S3B Brain (Box 3)","ACS 1 (Box 1)","ACS 2 (Box 3)"];
-const WARN = [[1,'no echo from the alcohol mixer ultrasonic'],[2,'no echo from the scented mixer ultrasonic'],[4,'alcohol mixer: WL wet but the ultrasonic reads far from full'],[8,'scented mixer: WL wet but the ultrasonic reads far from full'],[16,'alcohol mixer holds a half-made mix'],[32,'scented mixer holds a half-made mix'],[64,'a pump hit its time limit']];
-const PUMPS = ["alcohol pump","water pump (alc)","water pump (scn)","scented pump","mixer alc pump","mixer scn pump"];
+const RFN = ["EMPTY","LOW","MID","HIGH","MAX"];   // Refilling Station level names (255 = sensor fault)
+const NODES = ["A1 Terminal (Box 1)","A2 Sensors (Box 1)","A3 Relays (Box 1)","S3A Brain (Box 1)","C1 Terminal (Box 2)","C2 Hub (Box 2)","S3C Brain (Box 2)","B1 Terminal (Box 3)","B2 Sensors (Box 3)","B3 Relays (Box 3)","S3B Brain (Box 3)","Refilling Station"];
+
+
 
 // device list (the "Devices" line on the Dashboard)
 const nodeList = document.getElementById('node-list');
@@ -187,7 +189,7 @@ function renderLog(d) {
   // the storage was damaged at this start and re-created empty: say so on the Home page (a board that is left alone should not just come back at 0 unnoticed)
   const al = document.getElementById('log-alert');
   if (al) {
-    if (d.lg_fmt_new) { al.style.display = ''; al.innerHTML = `<b style="color:var(--danger)">The log storage was damaged and had to be re-created EMPTY at the last start</b> (${d.lg_fmt} time(s) since the board was first flashed). The old sessions and history.json are gone from this board: open <b>Settings</b> and restore your last backup CSV, and push the history file again from the ENTRY board if you use it.`; }
+    if (d.lg_fmt_new) { al.style.display = ''; al.innerHTML = `<b style="color:var(--danger)">The log storage was damaged and had to be re-created EMPTY at the last start</b> (${d.lg_fmt} time(s) since the board was first flashed). The old sessions and history.json are gone from this board: open <b>Settings</b> and restore your last backup CSV, and upload your history file again if you use one.`; }
     else al.style.display = 'none';
   }
   // result of the last backup restore (it runs on the board a few seconds after the upload)
@@ -259,7 +261,7 @@ function renderDay(j) {
     `<tr${mach ? '' : ' style="opacity:.75"'}><td>${mach ? (dated ? hms(r[0]) : 'power-on +' + hms(r[0])) : hms(r[0]).slice(0, 5)}</td><td>${r[1]}</td><td>${r[2]}</td><td>${(r[2] * cv).toFixed(2)}</td><td style="${r[3] ? 'color:var(--warning)' : ''}">${r[3] ? 'Cancelled' : 'Finished'}</td><td>${r[4] === 65535 ? '-' : (r[4] / 60).toFixed(1)}</td></tr>`).join('') : '';
   note.innerText = (mach
     ? (dated ? '' : 'These sessions finished before the clock was set; set it in Settings and they get their real date. ')
-    : 'Source: history.json, uploaded in Settings (made on the Entry board). Same lighter shade as in the chart. These rows are not part of the machine log, the totals or the CSV. ') +
+    : 'Source: history.json, uploaded in Settings. Same lighter shade as in the chart. These rows are not part of the machine log, the totals or the CSV. ') +
     (j.trunc ? 'More customers than fit: only the first ones are listed.' : '');
 }
 
@@ -408,7 +410,7 @@ function saveCoinValue() {
 }
 
 // -------------------------------------------------------------
-// Boxes and ACS
+// Boxes and the Refilling Station
 // -------------------------------------------------------------
 function renderBox(prefix, names, state, timer, coins, alerts, label) {
   const name = names[state] || ('state ' + state);
@@ -416,37 +418,33 @@ function renderBox(prefix, names, state, timer, coins, alerts, label) {
   document.getElementById(prefix + '-coins').innerText = `Coins counted: ${coins}`;
   document.getElementById(prefix + '-timer').innerText = mmss(timer);
   if (name === 'OUT OF ORDER') alerts.push(label + ' is OUT OF ORDER');
-  if (name === 'SELECT DRY ONLY') alerts.push(label + ': CLEANING is greyed out (a container is low and the refill gave up) - drying still works');
+  if (name === 'SELECT DRY ONLY') alerts.push(label + ': CLEANING is greyed out (its container is low, or the Refilling Station is not heard) - drying still works');
 }
 
-function renderAcs(i, a, alerts) {
-  const label = 'ACS ' + (i + 1);
-  const [ok, step, flags, empty, warn, pa, ps, pumps, sec] = a;
-  const stepEl = document.getElementById(`acs${i}-step`);
-  stepEl.innerText = ok ? (ACSSTEP[step] || step) : 'NOT HEARD';
-  stepEl.className = ok && step < 7 ? 'badge online' : 'badge';
-  document.getElementById(`acs${i}-pa`).style.width = (ok ? pa : 0) + '%';
-  document.getElementById(`acs${i}-ps`).style.width = (ok ? ps : 0) + '%';
-  let c = '';
-  if (ok) {
-    c += (flags & 1) ? chip('ALCOHOL MIXER LOW', 'bad') : '';
-    c += (flags & 4) ? chip('SCENTED MIXER LOW', 'bad') : '';
-    c += (empty & 1) ? chip('WATER EMPTY', 'bad') : '';
-    c += (empty & 2) ? chip('ALCOHOL EMPTY', 'bad') : '';
-    c += (empty & 4) ? chip('SCENTED EMPTY', 'bad') : '';
-    c += (flags & 128) ? chip('box is asking', 'run') : '';
-    PUMPS.forEach((n, k) => { if ((pumps >> k) & 1) c += chip('running: ' + n, 'run'); });
-    WARN.forEach(w => { if (warn & w[0]) c += `<div class="acs-note">⚠ ${w[1]}</div>`; });
-    if (step >= 7 && step <= 9) c += `<div class="acs-note">retrying in ${sec} s</div>`;
-    if (empty & 1) alerts.push(label + ': WATER supply is empty');
-    if (empty & 2) alerts.push(label + ': ALCOHOL supply is empty');
-    if (empty & 4) alerts.push(label + ': SCENTED supply is empty');
-    if (flags & 1) alerts.push(label + ': alcohol mixer container is low');
-    if (flags & 4) alerts.push(label + ': scented mixer container is low');
+// rf = [online, valveMask, queueMask, failMask, testMask, then per box: raw, state (0 EMPTY .. 4 MAX, 254 not watched, 255 sensor fault), maxEdge]
+function renderRefill(rf, alerts) {
+  const ok = !!rf[0], valve = rf[1] || 0, queue = rf[2] || 0, fail = rf[3] || 0, test = rf[4] || 0;
+  const open = [1, 2, 3].filter(n => (valve >> (n - 1)) & 1);
+  const stEl = document.getElementById('rf-state');
+  stEl.innerText = !ok ? 'NOT HEARD' : (open.length ? ((test ? 'TEST: Box ' : 'REFILLING: Box ') + open.join(', ')) : 'IDLE');
+  stEl.className = ok ? 'badge online' : 'badge';
+  let h = '';
+  for (let i = 0; i < 3; i++) {
+    const raw = rf[5 + i * 3], st = rf[6 + i * 3], mx = rf[7 + i * 3] || 1;
+    const cls = !ok || st >= 254 ? 'sx' : 's' + st;                       // 254 = not watched (the station watches Box 3 only for now), 255 = sensor fault
+    const pct = ok && st < 254 ? Math.max(2, Math.min(100, Math.round(100 * raw / mx))) : 0;
+    let c = '';
+    if (ok) {
+      if ((valve >> i) & 1) c += chip(((test >> i) & 1) ? 'valve OPEN (test)' : 'valve OPEN', 'run');
+      if ((queue >> i) & 1) c += chip('waiting', '');
+      if ((fail >> i) & 1) c += chip('refill FAILED', 'bad');
+    }
+    h += `<div class="rf-row"><span class="rf-name">Box ${i + 1}</span><div class="bar lv ${cls}"><i style="width:${pct}%"></i></div><span class="chip lv ${cls}">${!ok ? 'NOT HEARD' : (st === 254 ? 'NOT WATCHED' : (st === 255 ? 'SENSOR FAULT' : RFN[st]))}</span></div><div>${c}</div>`;
+    if (ok && ((fail >> i) & 1)) alerts.push('Box ' + (i + 1) + ': the last refill FAILED (the Refilling Station tries again)');
   }
-  document.getElementById(`acs${i}-chips`).innerHTML = c || '<span class="label" style="font-size:0.75rem;">No empty supply, no pump running.</span>';
+  document.getElementById('rf-boxes').innerHTML = h;
+  if (!ok) alerts.push('The Refilling Station is not heard - the boxes offer DRYING only');
 }
-
 // -------------------------------------------------------------
 // Status: asked for from the board once a second
 // -------------------------------------------------------------
@@ -514,8 +512,8 @@ function handleStatus(d) {
   const alerts = [];
   renderBox('b1', ST13, d.b1s, d.b1t, d.b1c, alerts, 'Box 1');
   renderBox('b2', ST2,  d.b2s, d.b2t, d.b2c, alerts, 'Box 2');
-  renderBox('b3', ST13, d.b3s, d.b3t, d.b3c, alerts, 'Box 3');
-  (d.acs || []).forEach((a, i) => renderAcs(i, a, alerts));
+  renderBox('b3', ST3,  d.b3s, d.b3t, d.b3c, alerts, 'Box 3');
+  renderRefill(d.rf || [], alerts);
 
   const banner = document.getElementById('refill-banner');
   if (alerts.length > 0) {

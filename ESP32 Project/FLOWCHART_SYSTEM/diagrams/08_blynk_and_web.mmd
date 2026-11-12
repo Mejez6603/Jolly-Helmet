@@ -1,0 +1,35 @@
+---
+title: 08 - Blynk and the web pages
+---
+sequenceDiagram
+  autonumber
+  participant OS as Online Server
+  participant BL as Blynk cloud
+  participant MP as Online web page, Monitor<br/>(owner, technician)
+  participant CP as status.html<br/>(customer phone, QR sticker)
+  participant AP as Blynk app<br/>(a phone)
+
+  loop every 1 min (30 s to 1 h)
+    OS->>BL: write the private device V0 (live JSON: the 3 boxes with step, time, coins, doors, helmet and relays, the Refilling Station's level of each main container with valve, waiting and failed, board flags, statistics, revenue)
+    OS->>BL: write the public device V0 (per box: step, seconds left, main controller heard, session counter)
+  end
+  OS->>BL: a new alert: event 'alert' (out of order, Refilling Station offline, refill failed, board not heard)
+  BL-->>AP: push notification (works with the page closed)
+
+  loop every 10 s, only while the tab is open and visible
+    MP->>BL: HTTPS GET the private V0 (token typed once, kept in that browser)
+    BL-->>MP: the live JSON
+    Note over MP: LIVE / DELAYED / OLD DATA, each box drawn as a little machine, three level dials from the Refilling Station (red EMPTY or LOW, yellow MID, green HIGH and MAX, waiting or refilling), network map, Alerts with sounds, Reports
+  end
+
+  loop every 30 s, only while the page is open and visible
+    CP->>BL: HTTPS GET the public V0 (public token, in the QR code)
+    BL-->>CP: step and seconds left of each box
+    Note over CP: TAPS = FREE, other steps = IN USE with minutes left, OUT OF ORDER, NO INFORMATION
+  end
+
+  opt the customer types a nickname (only after the coins are in)
+    CP->>BL: write V5: name, the box's session counter, time
+    BL-->>CP: V5 is read back and shown on the box card
+  end
+  Note over CP,BL: the nickname disappears when the box's session counter changes (the cycle ended)

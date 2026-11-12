@@ -3,8 +3,8 @@
 <style>body{margin:10px;background:#ddd;font-family:Arial}.f{background:#fff;margin:0 0 14px;width:760px}.f svg{width:100%;height:auto;display:block}</style></head><body>
 <!--FIGS-->
 <div class="f" id="fig-system">
-<svg viewBox="0 0 420 322" xmlns="http://www.w3.org/2000/svg" font-family="Arial,Helvetica,sans-serif">
- <rect x="0" y="0" width="420" height="322" rx="8" fill="#ffffff" stroke="#d6dbe6"/>
+<svg viewBox="0 0 420 346" xmlns="http://www.w3.org/2000/svg" font-family="Arial,Helvetica,sans-serif">
+ <rect x="0" y="0" width="420" height="346" rx="8" fill="#ffffff" stroke="#d6dbe6"/>
  <rect x="8" y="8" width="196" height="38" rx="7" fill="#14325c"/>
  <text x="106" y="24" text-anchor="middle" font-size="11.5" font-weight="700" fill="#ffffff">LocalServer (ESP32-S3)</text>
  <text x="106" y="38" text-anchor="middle" font-size="8.5" fill="#ffd98a">Control Center Wi-Fi: phone or laptop</text>
@@ -27,11 +27,11 @@
  <text x="70" y="196" text-anchor="middle" font-size="8.2" fill="#4b5563">doors, helmet, levels</text>
  <rect x="18" y="210" width="104" height="34" rx="5" fill="#fff" stroke="#14325c"/>
  <text x="70" y="224" text-anchor="middle" font-size="9.3" font-weight="700" fill="#14325c">A3  Relays (12)</text>
- <text x="70" y="236" text-anchor="middle" font-size="8.2" fill="#4b5563">locks, UV, mist, pumps</text>
- <path d="M70 256 V272" stroke="#6b7280" stroke-width="1.4" stroke-dasharray="4 3" fill="none"/>
- <rect x="8" y="272" width="124" height="40" rx="6" fill="#e8edf5" stroke="#14325c"/>
- <text x="70" y="288" text-anchor="middle" font-size="9.5" font-weight="700" fill="#14325c">ACS 1  refill station</text>
- <text x="70" y="301" text-anchor="middle" font-size="8.2" fill="#4b5563">6 pumps, 2 mixers</text>
+ <text x="70" y="236" text-anchor="middle" font-size="8.2" fill="#4b5563">locks, UV, mist</text>
+ <path d="M70 256 V272 M210 256 V272 M350 256 V272" stroke="#6b7280" stroke-width="1.4" stroke-dasharray="4 3" fill="none"/>
+ <rect x="8" y="272" width="404" height="40" rx="6" fill="#e8edf5" stroke="#14325c"/>
+ <text x="210" y="288" text-anchor="middle" font-size="9.5" font-weight="700" fill="#14325c">REFILLING STATION (ESP32)</text>
+ <text x="210" y="301" text-anchor="middle" font-size="8.2" fill="#4b5563">3 water-level sensors, 3 valves, one valve at a time</text>
  <!-- Box 2 -->
  <rect x="148" y="72" width="124" height="184" rx="8" fill="#fff8e1" stroke="#f0d890"/>
  <text x="210" y="86" text-anchor="middle" font-size="9.5" font-weight="700" fill="#14325c">BOX 2 - DRYER</text>
@@ -45,7 +45,6 @@
  <rect x="158" y="170" width="104" height="34" rx="5" fill="#fff" stroke="#14325c"/>
  <text x="210" y="184" text-anchor="middle" font-size="9.3" font-weight="700" fill="#14325c">C2  Sensors + relays</text>
  <text x="210" y="196" text-anchor="middle" font-size="8.2" fill="#4b5563">locks, heater, UV, fan</text>
- <text x="210" y="231" text-anchor="middle" font-size="8.2" font-style="italic" fill="#6b7280">(no refill station)</text>
  <!-- Box 3 -->
  <rect x="288" y="72" width="124" height="184" rx="8" fill="#fff8e1" stroke="#f0d890"/>
  <text x="350" y="86" text-anchor="middle" font-size="9.5" font-weight="700" fill="#14325c">BOX 3 - CLEAN + DRY</text>
@@ -58,19 +57,15 @@
  <text x="350" y="156" text-anchor="middle" font-size="8.2" fill="#4b5563">touch, buzzer, coin slot</text>
  <rect x="298" y="170" width="104" height="34" rx="5" fill="#fff" stroke="#14325c"/>
  <text x="350" y="184" text-anchor="middle" font-size="9.3" font-weight="700" fill="#14325c">B2  Sensors</text>
- <text x="350" y="196" text-anchor="middle" font-size="8.2" fill="#4b5563">doors, helmet, levels</text>
+ <text x="350" y="196" text-anchor="middle" font-size="8.2" fill="#4b5563">doors, helmet</text>
  <rect x="298" y="210" width="104" height="34" rx="5" fill="#fff" stroke="#14325c"/>
  <text x="350" y="224" text-anchor="middle" font-size="9.3" font-weight="700" fill="#14325c">B3  Relays (13)</text>
  <text x="350" y="236" text-anchor="middle" font-size="8.2" fill="#4b5563">as A3, plus the heater</text>
- <path d="M350 256 V272" stroke="#6b7280" stroke-width="1.4" stroke-dasharray="4 3" fill="none"/>
- <rect x="288" y="272" width="124" height="40" rx="6" fill="#e8edf5" stroke="#14325c"/>
- <text x="350" y="288" text-anchor="middle" font-size="9.5" font-weight="700" fill="#14325c">ACS 2  refill station</text>
- <text x="350" y="301" text-anchor="middle" font-size="8.2" fill="#4b5563">6 pumps, 2 mixers</text>
  <!-- legend -->
- <path d="M156 283 H182" stroke="#6b7280" stroke-width="1.4" stroke-dasharray="4 3"/>
- <text x="188" y="286" font-size="8.3" fill="#1d2433">wireless (ESP-NOW)</text>
- <text x="156" y="299" font-size="8.3" fill="#1d2433">S3x = ESP32-S3 brain</text>
- <text x="156" y="311" font-size="8.3" fill="#1d2433">A, B, C, ACS = ESP32</text>
+ <path d="M10 330 H36" stroke="#6b7280" stroke-width="1.4" stroke-dasharray="4 3"/>
+ <text x="42" y="333" font-size="8.3" fill="#1d2433">wireless (ESP-NOW)</text>
+ <text x="150" y="333" font-size="8.3" fill="#1d2433">S3x = ESP32-S3 brain</text>
+ <text x="270" y="333" font-size="8.3" fill="#1d2433">A, B, C, Refilling Station = ESP32</text>
 </svg></div>
 
 <div class="f" id="fig-power">
@@ -125,7 +120,7 @@
  <rect x="336" y="208" width="74" height="46" rx="5" fill="#fff" stroke="#b26a00"/>
  <text x="373" y="224" text-anchor="middle" font-size="9" font-weight="700" fill="#14325c">5 V loads</text>
  <text x="373" y="236" text-anchor="middle" font-size="8" fill="#4b5563">mist makers,</text>
- <text x="373" y="246" text-anchor="middle" font-size="8" fill="#4b5563">pumps (relays)</text>
+ <text x="373" y="246" text-anchor="middle" font-size="8" fill="#4b5563">humidifiers (relays)</text>
  <text x="10" y="272" font-size="8.6" fill="#1d2433">Water-level sensors take 3.3 V from the ESP32 3V3 pin. Door sensors need no power.</text>
  <text x="10" y="285" font-size="8.6" fill="#1d2433">Join all GND together. Never join a 12 V + to a 5 V +.</text>
  <text x="10" y="298" font-size="8.6" fill="#1d2433">Fuse every supply. Keep mains wires away from the low-voltage boards.</text>
@@ -157,7 +152,7 @@
  <path d="M280 84 H340" stroke="#14325c" stroke-width="2" fill="none"/>
  <rect x="340" y="68" width="72" height="50" rx="6" fill="#fff8e1" stroke="#14325c"/>
  <text x="376" y="90" text-anchor="middle" font-size="9.5" font-weight="700" fill="#14325c">Load</text>
- <text x="376" y="102" text-anchor="middle" font-size="8" fill="#4b5563">lock, pump,</text>
+ <text x="376" y="102" text-anchor="middle" font-size="8" fill="#4b5563">lock, valve,</text>
  <text x="376" y="112" text-anchor="middle" font-size="8" fill="#4b5563">mist maker</text>
  <path d="M376 118 V166" stroke="#1d2433" stroke-width="2" fill="none"/>
  <text x="368" y="162" text-anchor="end" font-size="8.6" font-weight="700" fill="#1d2433">GND of that supply</text>

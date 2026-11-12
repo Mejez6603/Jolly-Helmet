@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<title>Jolly Helmet - data flow diagram, level 1</title>
+<style>
+  @page { size: 1980px 1340px; margin: 0 }
+  * { box-sizing: border-box }
+  html, body { margin: 0; background: #fff; font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif; color: #000; -webkit-print-color-adjust: exact; print-color-adjust: exact }
+  #c { position: relative; width: 1980px; height: 1340px; background: #fff; overflow: hidden }
+  svg#w { position: absolute; left: 0; top: 0 }
+
+  .ent { position: absolute; border: 2.5px solid #000; background: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 4px 10px; box-shadow: 4px 4px 0 #000 }
+  .ent b { font-size: 15.5px; letter-spacing: .3px; line-height: 1.2 }
+  .ent span { font-size: 12px; line-height: 1.25; margin-top: 4px }
+
+  .proc { position: absolute; border: 2.5px solid #000; border-radius: 18px; background: #fff; overflow: hidden; display: flex; flex-direction: column }
+  .proc .num { flex: 0 0 28px; border-bottom: 2.5px solid #000; text-align: center; font-size: 14px; font-weight: 700; line-height: 25px }
+  .proc .body { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 6px 14px 8px }
+  .proc b { font-size: 15.5px; letter-spacing: .3px; line-height: 1.2 }
+  .proc span { font-size: 12.5px; line-height: 1.3; margin-top: 6px }
+
+  .store { position: absolute; display: flex; align-items: stretch }
+  .store .id { flex: 0 0 48px; border: 2.5px solid #000; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; background: #fff }
+  .store .nm { flex: 1; border-top: 2.5px solid #000; border-bottom: 2.5px solid #000; display: flex; flex-direction: column; justify-content: center; padding-left: 16px }
+  .store .nm b { font-size: 15.5px; letter-spacing: .3px } .store .nm span { font-size: 12px; margin-top: 2px }
+
+  .lbl { position: absolute; font-size: 12.5px; line-height: 1.25; background: #fff; padding: 0 4px; white-space: nowrap }
+  .ttl { position: absolute; left: 50px; top: 38px; line-height: 1.25 }
+  .ttl b { font-size: 24px; letter-spacing: .5px } .ttl div { font-size: 16px; margin-top: 4px }
+  .note { position: absolute; left: 50px; font-size: 12.5px; line-height: 1.4 }
+  .leg { position: absolute; left: 50px; top: 1244px; display: flex; gap: 34px; align-items: center; font-size: 13px }
+  .leg i { display: inline-block; vertical-align: middle; margin-right: 8px }
+
+</style></head>
+<body>
+<div id="c">
+  <svg id="w" width="1980" height="1340" viewBox="0 0 1980 1340" xmlns="http://www.w3.org/2000/svg">
+    <defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7.5" markerHeight="7.5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#000"/></marker></defs>
+  </svg>
+  <div class="ttl"><b>JOLLY HELMET</b><div>Data flow diagram (Level 1)</div></div>
+</div>
+<script>
+const c = document.getElementById('c'), svg = document.getElementById('w');
+const el = (cls, x, y, w, h, html) => { const d = document.createElement('div'); d.className = cls; d.style.cssText = `left:${x}px;top:${y}px;` + (w ? `width:${w}px;` : '') + (h ? `height:${h}px;` : ''); d.innerHTML = html; c.appendChild(d); return d; };
+const ent  = (x, y, w, h, t, s) => el('ent', x, y, w, h, `<b>${t}</b>${s ? `<span>${s}</span>` : ''}`);
+const proc = (x, y, w, h, n, t, s) => el('proc', x, y, w, h, `<div class="num">${n}</div><div class="body"><b>${t}</b><span>${s}</span></div>`);
+const store = (x, y, w, h, id, t, s) => el('store', x, y, w, h, `<div class="id">${id}</div><div class="nm"><b>${t}</b>${s ? `<span>${s}</span>` : ''}</div>`);
+/* label: anchored by its left (l), centre (c) or right (r) edge at x, vertically centred on y */
+function lbl(x, y, html, a) { const d = el('lbl', x, y, 0, 0, html); d.style.whiteSpace = 'nowrap'; d.style.transform = `translate(${a === 'r' ? '-100%' : a === 'c' ? '-50%' : '0'}, -50%)`; d.style.textAlign = a === 'r' ? 'right' : a === 'c' ? 'center' : 'left'; return d; }
+/* flow: a polyline with an arrowhead; hops = x positions where a horizontal run jumps over a vertical line */
+function flow(pts, hops) {
+  let d = 'M' + pts[0].join(',');
+  for (let i = 1; i < pts.length; i++) {
+    const [x0, y0] = pts[i - 1], [x1, y1] = pts[i];
+    if (hops && y0 === y1 && x1 > x0) {
+      hops.filter(h => h > x0 && h < x1).sort((a, b) => a - b).forEach(h => { d += ` L${h - 9},${y0} a9,9 0 0 1 18,0`; });
+    }
+    d += ` L${x1},${y1}`;
+  }
+  const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  p.setAttribute('d', d); p.setAttribute('fill', 'none'); p.setAttribute('stroke', '#000'); p.setAttribute('stroke-width', '2'); p.setAttribute('stroke-linejoin', 'round');
+  p.setAttribute('marker-end', 'url(#ah)'); svg.appendChild(p);
+}
+
+/* ---------- external entities ---------- */
+ent(540, 40, 340, 92, 'BOX SENSORS AND ACTUATORS', 'helmet and door sensors<br>UV-C lamps, fogging, heater, fan, door locks');
+ent(1230, 40, 340, 92, 'MAIN CONTAINERS AND WATER SUPPLY', '3 water-level sensors, 3 valves');
+ent(50, 250, 240, 100, 'CUSTOMER', 'touch screen, coins, helmet');
+ent(50, 560, 240, 76, 'TEAM', 'ENTRY board (spare ESP32)');
+ent(50, 654, 240, 104, 'OWNER / TECHNICIAN', 'authorized administrator');
+ent(1700, 1096, 230, 108, 'CUSTOMER (PHONE)', 'scans the QR sticker');
+
+/* ---------- processes ---------- */
+proc(540, 230, 340, 150, '1.0', 'CUSTOMER TRANSACTION AND CYCLE CONTROL', 'Box main controller (S3)<br>with the touch display');
+proc(1230, 230, 340, 150, '2.0', 'CONTAINER REFILLING', 'Refilling Station');
+proc(540, 560, 340, 160, '3.0', 'LOCAL RECORDING AND CONTROL', 'Local Server');
+proc(1230, 560, 340, 160, '4.0', 'ONLINE DATA UPLOAD', 'Online Server');
+proc(1230, 1080, 340, 160, '5.0', 'ONLINE MONITORING', 'Website: Monitor, Alerts, Reports<br>and the customer status page');
+
+/* ---------- data stores ---------- */
+store(470, 870, 480, 62, 'D1', 'LOCAL DATABASE', 'settings, session log, totals');
+store(1160, 870, 440, 62, 'D2', 'BLYNK CLOUD DATA', 'live data, box steps, nicknames');
+
+/* ---------- customer and hardware ---------- */
+flow([[290, 270], [540, 270]]);               lbl(415, 254, 'Coins, mode choice, touch', 'c');
+flow([[540, 330], [290, 330]]);               lbl(415, 346, 'Screens and beeps', 'c');
+flow([[620, 132], [620, 230]]);               lbl(610, 181, 'Helmet and door<br>sensor data', 'r');
+flow([[700, 230], [700, 132]]);               lbl(710, 181, 'Relay commands: UV-C,<br>fogging, heater, fan, locks', 'l');
+flow([[1340, 132], [1340, 230]]);             lbl(1330, 181, 'Water-level<br>readings', 'r');
+flow([[1460, 230], [1460, 132]]);             lbl(1470, 181, 'Valve commands<br>(open, close)', 'l');
+
+/* ---------- Refilling Station <-> boxes, Local Server, Online Server (radio) ---------- */
+flow([[1230, 262], [880, 262]]);              lbl(1055, 246, 'Container levels (EMPTY to MAX)', 'c');
+flow([[1230, 300], [965, 300], [965, 596], [880, 596]]);   lbl(1097, 285, 'Levels, valve state, failures', 'c');
+flow([[880, 636], [1070, 636], [1070, 340], [1230, 340]]); lbl(1150, 367, 'Station settings,<br>valve test', 'c');
+flow([[858, 380], [858, 470], [1165, 470], [1165, 600], [1230, 600]]);   lbl(1175, 524, 'Box status<br>(broadcast)', 'l');
+flow([[1400, 380], [1400, 560]]);             lbl(1410, 470, 'Container levels<br>(broadcast, listen only)', 'l');
+
+/* ---------- box controller <-> local server ---------- */
+flow([[620, 380], [620, 560]]);               lbl(610, 470, 'Box status,<br>booked coins', 'r');
+flow([[700, 560], [700, 380]]);               lbl(710, 470, 'Settings, commands,<br>maintenance', 'l');
+
+/* ---------- local server: people, database, online server ---------- */
+flow([[290, 595], [540, 595]]);               lbl(415, 579, 'Previous customers (history.json)', 'c');
+flow([[290, 676], [540, 676]]);               lbl(415, 660, 'Settings, rules, maintenance', 'c');
+flow([[540, 706], [290, 706]]);               lbl(415, 733, 'Control Center pages,<br>session log, totals', 'c');
+flow([[620, 720], [620, 870]]);               lbl(610, 795, 'Store session record,<br>settings', 'r');
+flow([[700, 870], [700, 720]]);               lbl(710, 795, 'Retrieved settings,<br>totals, session log', 'l');
+flow([[880, 690], [1230, 690]]);              lbl(1055, 676, 'Totals, last 10 sessions (every 10 s)', 'c');
+
+/* ---------- online ---------- */
+flow([[1300, 720], [1300, 870]]);             lbl(1290, 795, 'Live data, box steps,<br>alerts (HTTPS, every 1 min)', 'r');
+flow([[1480, 934], [1480, 1080]]);            lbl(1490, 1007, 'Live data (private V0)<br>every 10 s, box steps<br>(public V0) every 30 s', 'l');
+flow([[1390, 1080], [1390, 934]]);            lbl(1380, 1007, 'Customer<br>nickname (V5)', 'r');
+flow([[1570, 1120], [1700, 1120]]);           lbl(1635, 1088, 'Status page<br>(FREE, IN USE,<br>OUT OF ORDER)', 'c');
+flow([[1700, 1190], [1570, 1190]]);           lbl(1635, 1212, 'Nickname<br>(optional)', 'c');
+flow([[1230, 1160], [170, 1160], [170, 758]]); lbl(700, 1144, 'Monitor, alerts (with sounds) and reports', 'c');
+
+/* (the PROCESS DESCRIPTIONS side panel was removed 2026-11-12 at the user's request) */
+
+/* ---------- legend and notes ---------- */
+el('leg', 50, 1244, 0, 0, `
+  <span><i style="width:30px;height:18px;border:2.5px solid #000;box-shadow:3px 3px 0 #000"></i>External entity</span>
+  <span><i style="width:34px;height:20px;border:2.5px solid #000;border-radius:8px"></i>Process</span>
+  <span><i style="width:44px;height:18px;border-top:2.5px solid #000;border-bottom:2.5px solid #000;border-left:2.5px solid #000"></i>Data store</span>
+  <span><i style="width:36px;height:0;border-top:2px solid #000"></i>&#9654;&nbsp;Data flow</span>`).style.top = '1244px';
+el('note', 50, 1286, 0, 0, 'Box 1, Box 2 and Box 3 are built alike (target design), so process 1.0 stands for all three boxes. The boxes, the Refilling Station and the two servers talk over ESP-NOW radio (no router).<br>Alerts also reach the owner as Blynk app notifications.');
+</script>
+</body></html>

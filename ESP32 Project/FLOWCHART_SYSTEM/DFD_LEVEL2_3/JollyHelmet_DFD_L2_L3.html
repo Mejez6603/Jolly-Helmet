@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<title>Jolly Helmet - data flow diagrams, level 2 and 3</title>
+<style>
+  @page { size: 1980px 1340px; margin: 0 }
+  * { box-sizing: border-box }
+  html, body { margin: 0; background: #fff; font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif; color: #000; -webkit-print-color-adjust: exact; print-color-adjust: exact }
+  .pg { position: relative; width: 1980px; height: 1340px; background: #fff; overflow: hidden; page-break-after: always; break-after: page }
+  .pg:last-child { page-break-after: auto; break-after: auto }
+  .pg svg { position: absolute; left: 0; top: 0 }
+
+  .ent { position: absolute; border: 2.5px solid #000; background: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 4px 10px; box-shadow: 4px 4px 0 #000 }
+  .ent b { font-size: 15.5px; letter-spacing: .3px; line-height: 1.2 }
+  .ent span { font-size: 12px; line-height: 1.25; margin-top: 4px }
+
+  .proc { position: absolute; border: 2.5px solid #000; border-radius: 18px; background: #fff; overflow: hidden; display: flex; flex-direction: column }
+  .proc .num { flex: 0 0 28px; border-bottom: 2.5px solid #000; text-align: center; font-size: 14px; font-weight: 700; line-height: 25px }
+  .proc .body { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 6px 14px 8px }
+  .proc b { font-size: 15.5px; letter-spacing: .3px; line-height: 1.2 }
+  .proc span { font-size: 12.5px; line-height: 1.3; margin-top: 6px }
+  .proc.out { border-style: dashed }
+  .proc.out .num { border-bottom-style: dashed }
+  .proc.out b { font-size: 13.5px }
+  .proc.out span { font-size: 12px; margin-top: 4px }
+
+  .store { position: absolute; display: flex; align-items: stretch }
+  .store .id { flex: 0 0 56px; border: 2.5px solid #000; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; background: #fff }
+  .store .nm { flex: 1; border-top: 2.5px solid #000; border-bottom: 2.5px solid #000; display: flex; flex-direction: column; justify-content: center; padding-left: 16px }
+  .store .nm b { font-size: 15.5px; letter-spacing: .3px } .store .nm span { font-size: 12px; margin-top: 2px }
+
+  .lbl { position: absolute; font-size: 12.5px; line-height: 1.25; background: #fff; padding: 0 4px; white-space: nowrap }
+  .ttl { position: absolute; line-height: 1.25; width: 400px }
+  .ttl b { font-size: 24px; letter-spacing: .5px } .ttl div { font-size: 16px; margin-top: 4px } .ttl div.sub { font-size: 13.5px; font-weight: 700; margin-top: 6px; line-height: 1.3 }
+  .note { position: absolute; font-size: 12.5px; line-height: 1.4; width: 1860px }
+  .leg { position: absolute; display: flex; gap: 30px; align-items: center; font-size: 13px }
+  .leg i { display: inline-block; vertical-align: middle; margin-right: 8px }
+  .free { position: absolute; font-size: 12.5px; line-height: 1.35 }
+</style></head>
+<body>
+<div id="host"></div>
+<script src="dfd_engine.js"></script>
+<script src="dfd_specs.js"></script>
+<script>
+  const q = new URLSearchParams(location.search).get('d') || 'all';
+  const ids = q === 'all' ? ORDER : [q];
+  const host = document.getElementById('host');
+  ids.forEach(id => {
+    const s = SPECS[id];
+    if (!s) { host.innerHTML += 'unknown diagram ' + id; return; }
+    const d = makeDFD(host, s.meta);
+    s.build(d);
+    d.finish();
+  });
+  document.title = 'Jolly Helmet DFD ' + q;
+</script>
+</body></html>

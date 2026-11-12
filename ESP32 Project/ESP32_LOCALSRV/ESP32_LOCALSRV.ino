@@ -1,10 +1,10 @@
 // =====================================================================
 //  LOCAL SERVER - the technician's CONTROL CENTER                         (ESP32, core 3.3.7)
-//  Rewritten 2026-10-03 for the deployed system: Box 1 (S3A/A1/A2/A3), Box 2 (S3C/C1/C2), Box 3 (S3B/B1/B2/B3), ACS 1 and ACS 2.
+//  Rewritten 2026-10-03 for the deployed system: Box 1 (S3A/A1/A2/A3), Box 2 (S3C/C1/C2), Box 3 (S3B/B1/B2/B3) and the Refilling Station (2026-11-03: it replaced ACS 1 / ACS 2).
 //
 //  What it is: a Wi-Fi access point ("JollyHelmet-Local" / "12345678") with a captive portal. Open http://192.168.4.1 on a phone:
 //    /       home - who is online, what each box is doing, revenue statistics
-//    /box1   Box 1 settings + calibration + maintenance      /box2   Box 2      /box3   Box 3      /acs   ACS 1 and ACS 2
+//    /box1   Box 1 settings + calibration + maintenance      /box2   Box 2      /box3   Box 3      /refill   the Refilling Station
 //  The boxes run entirely on their own (each S3 node owns its box's state machine and keeps its settings in its own flash); this
 //  node only LISTENS, shows, and sends settings / maintenance commands - so it can be switched off, swapped or reflashed at any
 //  time without the machines stopping or forgetting a setting. The only things it stores itself are the revenue statistics.
@@ -44,7 +44,7 @@ unsigned long lastOneSecTick = 0;
 
 // CommandPacket carries no "who sent this" field, only "who it's addressed to". The node MACs are learned from each node's own
 // broadcasts (which carry a deviceID) so commands to S3A / S3C / A1 / C1 can go out as unicast (more reliable than broadcast).
-// Indexed by DeviceID; ids >= 8 (Box 3's nodes, ACS 2) are simply broadcast to.
+// Indexed by DeviceID; ids >= 8 (Box 3's nodes, the Refilling Station) are simply broadcast to.
 uint8_t knownMac[8][6] = {0};
 bool    macKnown[8]    = {false};
 

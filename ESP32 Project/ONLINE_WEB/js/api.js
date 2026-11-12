@@ -3,7 +3,8 @@
 
    Datastream V0 holds one JSON text written by the Online Server - see DATA_CONTRACT.md:
      { seq, ts, iv, n, b:[3 boxes], a:[2 refill stations], st:{ analytics + health } }
-   (A separate datastream V1 holding just the "st" part is also understood.)                                   */
+   (A separate datastream V1 holding just the "st" part as JSON is also understood. V1 to V4 as plain numbers - revenue, customers, alerts,
+   running, written for Blynk's own dashboards - are NOT used by this page: everything it shows comes out of the V0 text.)                */
 
 /* what the page knows right now */
 const S = {
@@ -45,12 +46,11 @@ async function pollOnce() {
       if (L.seq !== S.lastSeq || S.lastSeq === null) { S.lastSeq = L.seq; S.lastChange = Date.now(); pushHistory(L); }
     }
   }
-  if (!(S.live && S.live.st) && rawS !== S.statsRaw) { const T = parseMaybe(rawS); if (T) { S.stats = T; S.statsRaw = rawS; } }
+  if (!(S.live && S.live.st) && rawS !== S.statsRaw) { const T = parseMaybe(rawS); if (T && typeof T === 'object') { S.stats = T; S.statsRaw = rawS; } }      // V1 is "revenue" (a plain number) in the Blynk template: only a JSON object counts as statistics
 }
 
 /* keeps the last ~90 container levels for the little graphs (only while the page stays open) */
 function pushHistory(L) {
   const add = (k, v) => { if (typeof v !== 'number' || v < 0) return; const a = S.hist[k] || (S.hist[k] = []); a.push(v); if (a.length > 90) a.shift(); if (typeof Hist !== 'undefined') Hist.push(k, v, Date.now()); };
-  (L.b || []).forEach((b, i) => { add('b' + i + 'a', b && b[5]); add('b' + i + 's', b && b[6]); });
-  (L.a || []).forEach((a, i) => { add('a' + i + 'a', a && a[5]); add('a' + i + 's', a && a[6]); });
+  (L.b || []).forEach((b, i) => add('b' + i, b && b[5]));
 }

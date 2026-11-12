@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<title>1 - Customer cleaning cycle, Part 2</title>
+<style>
+  @page { size: 425px 604px; margin: 0 }
+  html, body { margin: 0; background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact }
+  svg { display: block }
+  text { font-family: Verdana, Tahoma, 'DejaVu Sans', Arial, sans-serif; fill: #111; font-size: 10.4px }
+  .b { font-weight: 700 }
+  .i { font-style: italic }
+  .shape { fill: #fff; stroke: #111; stroke-width: 1.5 }
+  .ln { fill: none; stroke: #111; stroke-width: 1.5; stroke-linejoin: miter }
+</style></head>
+<body>
+<svg id="s" width="425" height="604" viewBox="0 0 425 604" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="ah" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#111"/></marker>
+  </defs>
+</svg>
+<script>
+/* Customer cleaning cycle, Part 2 - redrawn from the user's picture (425 x 604 units).
+   Change made 2026-11-12: the NO line of "Drying time up?" now goes straight into the Drying box with its own arrow
+   (before, its arrowhead ended on the "No (Drying)" line and the two lines merged). Everything else is as in the picture. */
+const NS = 'http://www.w3.org/2000/svg', svg = document.getElementById('s');
+function mk(tag, attrs, parent) { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); (parent || svg).appendChild(e); return e; }
+function txt(x, y, lines, cls, anchor) {   /* lines: string or array, centred on y */
+  lines = [].concat(lines); const lh = 13.2, y0 = y - (lines.length - 1) * lh / 2;
+  lines.forEach((t, i) => { const e = mk('text', { x, y: y0 + i * lh, 'text-anchor': anchor || 'middle', 'dominant-baseline': 'central', class: cls || '' }); e.textContent = t; });
+}
+function line(pts, arrow) { mk('path', { d: 'M' + pts.map(p => p.join(',')).join(' L'), class: 'ln', 'marker-end': arrow === false ? '' : 'url(#ah)' }); }
+function box(x1, y1, x2, y2, t) { mk('rect', { x: x1, y: y1, width: x2 - x1, height: y2 - y1, class: 'shape' }); txt((x1 + x2) / 2, (y1 + y2) / 2, t); }
+function diamond(cx, cy, hw, hh, t) { mk('polygon', { points: `${cx},${cy - hh} ${cx + hw},${cy} ${cx},${cy + hh} ${cx - hw},${cy}`, class: 'shape' }); txt(cx, cy, t); }
+function para(x1, y1, x2, y2, t, sk) { mk('polygon', { points: `${x1 + sk},${y1} ${x2},${y1} ${x2 - sk},${y2} ${x1},${y2}`, class: 'shape' }); txt((x1 + x2) / 2, (y1 + y2) / 2, t); }
+function circle(cx, cy, r, t) { mk('circle', { cx, cy, r, class: 'shape', 'stroke-width': 2 }); txt(cx, cy + 0.5, t, 'b'); const l = svg.lastChild; l.style.fontSize = '14px'; }
+
+const CX = 212, L = 118, R = 307;       /* centre line, box left and right edges */
+
+/* title */
+txt(22, 22, '1 - Customer cleaning cycle, Part 2', 'b', 'start'); svg.lastChild.style.fontSize = '12.4px';
+txt(22, 38, 'Cleaning or drying, then finish and report', 'i', 'start'); svg.lastChild.style.fontSize = '9.4px';
+
+/* start connector F */
+circle(CX, 58, 13, 'F');
+txt(231, 60, 'continued from F in Part 1', 'i', 'start'); svg.lastChild.style.fontSize = '9.6px';
+line([[CX, 71], [CX, 88]]);
+
+/* cleaning mode? */
+diamond(CX, 115, 75, 29, ['Cleaning', 'mode?']);
+txt(77, 103, 'No (Drying)', 'b', 'start');
+line([[137, 115], [46, 115], [46, 291], [L, 291]]);              /* No (Drying): down the left side into the Drying box */
+line([[CX, 144], [CX, 157]]);
+txt(220, 148, 'Yes (Cleaning)', 'b', 'start');
+
+/* cleaning */
+box(L, 157, R, 190, ['Cleaning: mist sprays liquid,', 'UV light on (relays)']);
+line([[CX, 190], [CX, 208]]);
+
+/* cleaning time up? */
+diamond(CX, 235, 73, 27, ['Cleaning time', 'up?']);
+txt(117, 228, 'No', 'b', 'start');
+line([[139, 235], [79, 235], [79, 173], [L, 173]]);              /* No: loop back into Cleaning */
+txt(291, 228, 'Yes', 'b', 'start');
+line([[285, 235], [350, 235], [350, 429], [R, 429]]);            /* Yes: down the right side into "All relays off" */
+line([[CX, 262], [CX, 283]]);
+
+/* drying */
+box(L, 283, R, 316, ['Drying: heater and fan on', '(relays)']);
+line([[CX, 316], [CX, 333]]);
+
+/* drying time up? */
+diamond(CX, 360, 72, 27, ['Drying time', 'up?']);
+txt(117, 353, 'No', 'b', 'start');
+line([[140, 360], [79, 360], [79, 309], [L, 309]]);              /* CHANGED: No goes straight into the Drying box with its own arrow (lower entry) */
+txt(218, 401, 'Yes', 'b', 'start');
+line([[CX, 387], [CX, 413]]);
+
+/* finish */
+box(L, 413, R, 446, ['All relays off, unlock doors,', 'buzzer beeps']);
+line([[CX, 446], [CX, 458]]);
+para(113, 458, 312, 493, ['Screen shows:', '“Done, take your helmet”'], 17);
+line([[CX, 493], [CX, 507]]);
+para(113, 507, 312, 542, ['Send session result', 'via ESP-NOW (channel 1)'], 17);
+line([[305, 524.5], [371, 524.5]]);
+circle(385, 524.5, 13, 'A');
+line([[CX, 542], [CX, 558]]);
+mk('rect', { x: 120, y: 558, width: 185, height: 31, rx: 15.5, class: 'shape', 'stroke-width': 2 });
+txt(CX, 573.5, 'END', 'b'); svg.lastChild.style.fontSize = '11px';
+</script>
+</body></html>

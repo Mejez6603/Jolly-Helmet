@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<title>Jolly Helmet - system flowcharts</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js"></script>
+<style>
+  @page { size: A3 landscape; margin: 10mm; }
+  @page tallp { size: A3 portrait; margin: 10mm; }
+  .dg.tall { page: tallp; }
+  .dg.tall svg { max-height: 392mm; }
+  html, body { margin: 0; background: #fff; font-family: 'Segoe UI', Arial, sans-serif; color: #111; }
+  body.bare { padding: 14px; }
+  .dg { page-break-after: always; break-after: page; padding: 4px 0; }
+  .dg:last-child { page-break-after: auto; break-after: auto; }
+  .cap { font-size: 12px; color: #555; margin: 0 0 6px; }
+  .dg svg { display: block; max-width: 100%; max-height: 262mm; width: auto; height: auto; margin: 0 auto; }
+  body.bare .dg svg { max-width: none; max-height: none; }
+  .err { color: #b00020; font: 14px Consolas, monospace; white-space: pre-wrap; border: 2px solid #b00020; padding: 10px; margin: 10px; }
+</style></head>
+<body>
+<div id="out"></div>
+<script>
+const DIAGRAMS = /*DIAGRAMS_JSON*/;
+const Q = new URLSearchParams(location.search), ONLY = Q.get('d'), BARE = Q.has('bare');
+if (BARE) document.body.classList.add('bare');
+mermaid.initialize({ startOnLoad: false, theme: 'neutral', securityLevel: 'loose', fontFamily: 'Segoe UI, Arial, sans-serif',
+  flowchart: { htmlLabels: true, curve: 'basis', useMaxWidth: false, nodeSpacing: 40, rankSpacing: 55 },
+  sequence: { useMaxWidth: false, mirrorActors: false, wrap: true, width: 190 } });
+(async () => {
+  const out = document.getElementById('out'); let n = 0, bad = 0;
+  for (const g of DIAGRAMS) {
+    if (ONLY && g.id !== ONLY) continue;
+    const sec = document.createElement('section'); sec.className = 'dg'; sec.id = 'dg_' + g.id; out.appendChild(sec);
+    if (!BARE) { const c = document.createElement('div'); c.className = 'cap'; c.textContent = 'Jolly Helmet · system flowcharts · ' + g.id + ' · made ' + new Date().toISOString().slice(0, 10); sec.appendChild(c); }
+    try { const { svg } = await mermaid.render('svg_' + (++n), g.code); const h = document.createElement('div'); h.innerHTML = svg; const sv = h.firstElementChild; sec.appendChild(sv); const vb = (sv.getAttribute('viewBox') || '0 0 1 1').split(/\s+/).map(Number); if (vb[3] > vb[2] * 0.9) sec.classList.add('tall'); }
+    catch (e) { bad++; const x = document.createElement('div'); x.className = 'err'; x.textContent = 'MERMAID ERROR in ' + g.id + ':\n' + (e && e.message || e); sec.appendChild(x); }
+  }
+  document.title += ' [done ' + n + ' bad ' + bad + ']';
+})();
+</script></body></html>

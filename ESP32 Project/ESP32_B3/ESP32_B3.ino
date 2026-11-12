@@ -1,6 +1,8 @@
 // =====================================================================
 //  NODE B3 - BOX 3 RELAY CONTROLLER                       (ESP32, core 3.3.7)
 //  Created 2026-10-03 from Box 1's relay controller (ESP32_A3.ino). NOT YET FLASHED - bench-test first with the loads unplugged.
+//  2026-11-03: the two DRAIN PUMPS are gone from the design (a manual valve instead; their switching noise made random coin pulses). Mask bits 8 and 9
+//  are therefore NEVER driven (B3_USABLE_MASK) - their pins stay inactive whatever S3B or a dashboard asks - and "ACS DOOR LOCK" is now the SIDE LOCK.
 //
 //  What it is: the one board that owns EVERY relay-driven output of Box 3 (13 channels: A3's 12 plus the HEATER, a hair dryer aimed
 //  at the helmet, on GPIO26). It has no sensors and no screen. S3B (the brain) sends it the whole 13-bit relay mask with
@@ -12,8 +14,8 @@
 //   2. SOFT SWITCHING: relays turning OFF switch at once; relays turning ON are staggered (RELAY_ON_STAGGER_MS apart) so the loads
 //      never start in the same millisecond (the same inrush that makes the TFT go white when a lock engages). The hair dryer is
 //      the biggest load: it is always the LAST one to be switched on.
-//   3. S3B-LOSS WATCHDOG: no sign of S3B for 15 s -> everything is forced OFF (humidifiers, UV, HEATER, coin power, drain pumps,
-//      panel/back/ACS locks). The one exception: if a helmet is trapped in a closed enclosure, the ENCLOSURE lock is released
+//   3. S3B-LOSS WATCHDOG: no sign of S3B for 15 s -> everything is forced OFF (humidifiers, UV, HEATER, coin power,
+//      panel/back/side locks). The one exception: if a helmet is trapped in a closed enclosure, the ENCLOSURE lock is released
 //      (see below). Because B3 has no sensors, it listens to B2's broadcast report for the door and helmet.
 //   4. STATUS: broadcasts an A3StatusPacket (deviceID DEVICE_B3) once a second (applied mask + watchdog state).
 //
@@ -21,7 +23,8 @@
 //  every ~2 s, so one lost heartbeat is harmless).
 //
 //  Trapped-helmet release (only while orphaned):
-//   - B2 report fresh, door CLOSED for 2 ticks and helmet inside (0 < dist < 15 cm)
+//   - B2 report fresh, door CLOSED for 2 ticks and helmet inside (0 < dist < helmetCm; helmetCm = the LocalServer's "helmet counts as
+//         inside under" for Box 3 - S3B broadcasts it every 2 s, B3 keeps the last value in flash so it still knows it after a power cut; default 40 cm)
 //         -> enclosure lock unlocked; released again once the door is confirmed OPEN (2 ticks).
 //   - B2 report missing (we cannot see the door at all) -> ONE short unlock window of UNLOCK_BLIND_WINDOW_MS (15 s - nobody is
 //         watching the coil), if UNLOCK_WHEN_B2_UNKNOWN is true.
@@ -34,6 +37,7 @@
 #include <WiFi.h>
 #include <esp_wifi.h>
 #include <esp_now.h>
+#include <Preferences.h>
 #include "Shared_Common.h"
 
 // ---------------------------------------------------------------------
@@ -47,30 +51,33 @@ const uint8_t B3_PINS[B3_RELAY_COUNT] = {
     4,   // 0  ENCLOSURE LOCK
     16,  // 1  PANEL LOCK
     17,  // 2  BACKDOOR LOCK
-    18,  // 3  HUMIDIFIER 1 (Alcohol)
+    18,  // 3  HUMIDIFIER 1
     27,  // 4  UV 1
-    19,  // 5  HUMIDIFIER 2 (Scented)
-    25,  // 6  HUMIDIFIER 3 (Both)
+    19,  // 5  HUMIDIFIER 2
+    25,  // 6  HUMIDIFIER 3
     21,  // 7  UV 2
-    33,  // 8  DRAIN PUMP 1 (Alcohol)
-    32,  // 9  DRAIN PUMP 2 (Scented)
-    23,  // 10 ACS DOOR LOCK
+    33,  // 8  (unused - was DRAIN PUMP 1; never driven)
+    32,  // 9  (unused - was DRAIN PUMP 2; never driven)
+    23,  // 10 SIDE LOCK
     22,  // 11 COIN POWER
     26   // 12 HEATER (hair dryer)
 };
 
 const char* const B3_NAMES[B3_RELAY_COUNT] = {
-    "ENCLOSURE LOCK", "PANEL LOCK", "BACKDOOR LOCK", "HUMIDIFIER 1 (ALC)",
-    "UV 1", "HUMIDIFIER 2 (SCN)", "HUMIDIFIER 3 (BOTH)", "UV 2",
-    "DRAIN PUMP 1", "DRAIN PUMP 2", "ACS DOOR LOCK", "COIN POWER", "HEATER"
+    "ENCLOSURE LOCK", "PANEL LOCK", "BACKDOOR LOCK", "HUMIDIFIER 1",
+    "UV 1", "HUMIDIFIER 2", "HUMIDIFIER 3", "UV 2",
+    "(UNUSED 8)", "(UNUSED 9)", "SIDE LOCK", "COIN POWER", "HEATER"
 };
+
+// The relays that really exist: every bit of the 13-bit mask except the two removed drain pumps (bits 8 and 9). Anything else is ignored.
+const uint16_t B3_USABLE_MASK = (uint16_t)(B3_MASK_ALL & (uint16_t)(~(A3_BIT(A3_RELAY_DRAIN_PUMP_1) | A3_BIT(A3_RELAY_DRAIN_PUMP_2))));
 
 // ---------------------------------------------------------------------
 // Tunables
 // ---------------------------------------------------------------------
 const uint32_t ORPHANED_TIMEOUT_MS    = 15000; // no S3B for this long -> watchdog takes over (same 15 s as the other nodes)
 const uint32_t B2_STALE_MS            = 5000;  // B2 report older than this = B2 unknown
-const float    HELMET_PRESENT_CM      = 15.0f; // "helmet inside" cutoff (0 = no echo = not present)
+const float    HELMET_DEFAULT_CM      = 40.0f; // "helmet inside" cutoff until S3B has told us the LocalServer's value (0 = no echo = not present)
 const uint32_t UNLOCK_WINDOW_MS       = 60000; // max time the enclosure solenoid stays energized per window (B2 sees door shut + helmet inside)
 const uint32_t UNLOCK_BLIND_WINDOW_MS = 15000; // same, but when B2 is silent too and B3 cannot see the door at all
 const uint32_t UNLOCK_REST_MS         = 5000;  // pause between windows
@@ -92,8 +99,11 @@ volatile uint32_t b2Seq       = 0;     // counts B2 reports (0 = never heard)
 volatile uint32_t b2LastMs    = 0;     // millis() of the last B2 report
 volatile bool     b2DoorOpen  = false; // B2: enclosure door OPEN (true) / CLOSED (false)
 volatile float    b2Helmet    = 0.0f;  // B2: helmet distance in cm
+volatile float    helmetCmHeard = 0.0f; // the cutoff S3B broadcast last (0 = nothing new); loop() adopts it and saves it
 
 // loop()-only state
+Preferences prefs;
+float    helmetCm         = HELMET_DEFAULT_CM; // "helmet inside" = 0 < B2's distance < this (follows the LocalServer setting)
 uint16_t appliedMask      = 0;         // what the pins are doing right now
 uint32_t lastRelayOnMs    = 0;
 bool     orphaned         = false;
@@ -132,16 +142,31 @@ void onDataRecv(const esp_now_recv_info_t *info, const uint8_t *incomingData, in
             return;
         }
 
+        // S3B's settings list (every 2 s, broadcast, state 3 = Box 3's copy): subIndex 2 = SENSORS = "helmetCm,offlineSec". The first number is the LocalServer's
+        // "helmet counts as inside under" - the watchdog must use the same cutoff as S3B.
+        if (cmd.commandID == CMD_SET_CONFIG) {
+            if (cmd.targetDeviceID == 0 && cmd.state == 3 && cmd.subIndex == 2) {
+                cmd.payloadStr[sizeof(cmd.payloadStr) - 1] = '\0';
+                float v = strtof(cmd.payloadStr, nullptr);
+                if (v >= 1.0f && v <= 200.0f) {
+                    portENTER_CRITICAL(&rxMux);
+                    helmetCmHeard = v;
+                    portEXIT_CRITICAL(&rxMux);
+                }
+            }
+            return;
+        }
+
         if (cmd.targetDeviceID != DEVICE_B3) return; // traffic for another node
 
         if (cmd.commandID == CMD_SET_RELAY_MASK) {
             portENTER_CRITICAL(&rxMux);
-            cmdMask     = (uint16_t)(cmd.param16 & B3_MASK_ALL);
+            cmdMask     = (uint16_t)(cmd.param16 & B3_USABLE_MASK);
             lastSeenS3B = millis();
             portEXIT_CRITICAL(&rxMux);
         } else if (cmd.commandID == CMD_SET_RELAY) {
             // Single-relay command (bench / manual use). Edits S3B's mask in place.
-            if (cmd.subIndex < B3_RELAY_COUNT) {
+            if (cmd.subIndex < B3_RELAY_COUNT && (B3_USABLE_MASK & A3_BIT(cmd.subIndex))) {
                 portENTER_CRITICAL(&rxMux);
                 uint16_t m = cmdMask;
                 if (cmd.state == 1) m = (uint16_t)(m | A3_BIT(cmd.subIndex));
@@ -181,7 +206,7 @@ void driveRelay(uint8_t index, bool on) {
 // Turn-offs happen immediately; turn-ons one at a time, RELAY_ON_STAGGER_MS apart, lowest bit first
 // (locks first, coin power next, the heater - bit 12 - last).
 void applyRelays(uint16_t target) {
-    target = (uint16_t)(target & B3_MASK_ALL);
+    target = (uint16_t)(target & B3_USABLE_MASK);
 
     uint16_t offs = (uint16_t)(appliedMask & (uint16_t)(~target));
     for (uint8_t i = 0; i < B3_RELAY_COUNT; i++) {
@@ -220,7 +245,12 @@ void setup() {
     Serial.println("\n=======================================================");
     Serial.println("   NODE B3: BOX 3 RELAY CONTROLLER (CORE 3.3.7)");
     Serial.println("=======================================================");
-    Serial.println("[B3] RELAYS: all 13 outputs (incl. the HEATER on GPIO26) forced HIGH (OFF / locked) before anything else.");
+    Serial.println("[B3] RELAYS: all 13 outputs (incl. the HEATER on GPIO26; 8 and 9 are never driven) forced HIGH (OFF / locked) before anything else.");
+
+    prefs.begin("b3_nvs", false);
+    helmetCm = prefs.getFloat("helm_cm", HELMET_DEFAULT_CM);
+    if (!(helmetCm >= 1.0f && helmetCm <= 200.0f)) helmetCm = HELMET_DEFAULT_CM;
+    Serial.printf("[B3] Helmet counts as inside under %.1f cm (the LocalServer value S3B last told us; default %.0f).\n", (double)helmetCm, (double)HELMET_DEFAULT_CM);
 
     // 2. Wi-Fi channel 1 + ESP-NOW broadcast peer - identical to the other nodes.
     WiFi.mode(WIFI_STA);
@@ -256,7 +286,7 @@ void loop() {
     uint32_t lastS3B, b2Last, seq;
     uint16_t wantMask;
     bool     doorOpen;
-    float    helmet;
+    float    helmet, heardCm;
     portENTER_CRITICAL(&rxMux);
     lastS3B  = lastSeenS3B;
     wantMask = cmdMask;
@@ -264,7 +294,13 @@ void loop() {
     b2Last   = b2LastMs;
     doorOpen = b2DoorOpen;
     helmet   = b2Helmet;
+    heardCm  = helmetCmHeard;
     portEXIT_CRITICAL(&rxMux);
+    if (heardCm >= 1.0f && fabsf(heardCm - helmetCm) > 0.04f) {     // the LocalServer value changed: adopt it, keep it through a power cut
+        helmetCm = heardCm;
+        prefs.putFloat("helm_cm", helmetCm);
+        Serial.printf("[B3] Helmet cutoff is now %.1f cm (from the LocalServer via S3B).\n", (double)helmetCm);
+    }
     // millis() is read AFTER the snapshot on purpose: every timestamp above is then <= now, so the
     // unsigned subtractions below can never wrap into a huge "age" (the race A1/A2 had to fix).
     uint32_t now = millis();
@@ -298,7 +334,7 @@ void loop() {
         }
     }
     bool b2Known       = (seq != 0) && ((now - b2Last) <= B2_STALE_MS);
-    bool helmetInside  = b2Known && (helmet > 0.0f) && (helmet < HELMET_PRESENT_CM);
+    bool helmetInside  = b2Known && (helmet > 0.0f) && (helmet < helmetCm);
     bool doorShut      = b2Known && !doorOpen && (doorClosedTicks >= CONFIRM_TICKS);
     bool doorSeenOpen  = b2Known && doorOpen && (doorOpenTicks >= CONFIRM_TICKS);
 
@@ -337,7 +373,7 @@ void loop() {
 
     // ---- 5. Decide and apply the relay pattern ----
     uint16_t target;
-    if (!orphaned) target = (uint16_t)(wantMask & B3_MASK_ALL);
+    if (!orphaned) target = (uint16_t)(wantMask & B3_USABLE_MASK);
     else           target = wdLockOn ? (uint16_t)A3_BIT(A3_RELAY_ENCLOSURE_LOCK) : (uint16_t)0;
     applyRelays(target);
 
@@ -354,10 +390,10 @@ void loop() {
     }
     if (now - lastSummaryMs >= SERIAL_SUMMARY_MS) {
         lastSummaryMs = now;
-        Serial.printf("[B3] mask applied=0x%04X wanted=0x%04X | S3B age %lu ms%s | B2 %s door=%s helmet=%.1f cm\n",
+        Serial.printf("[B3] mask applied=0x%04X wanted=0x%04X | S3B age %lu ms%s | B2 %s door=%s helmet=%.1f cm (inside under %.1f)\n",
                       (unsigned)appliedMask, (unsigned)wantMask, (unsigned long)(now - lastS3B),
                       orphaned ? " (ORPHANED)" : "",
-                      b2Known ? "ok" : "silent", doorOpen ? "OPEN" : "CLOSED", (double)helmet);
+                      b2Known ? "ok" : "silent", doorOpen ? "OPEN" : "CLOSED", (double)helmet, (double)helmetCm);
     }
 
     delay(2); // yield; the loop is tiny and timing here is millisecond-level at most

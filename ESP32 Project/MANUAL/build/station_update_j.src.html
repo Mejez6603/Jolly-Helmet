@@ -1,0 +1,109 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Manual v11, part J: reference chapter, policies, glossary, version page and index without the removed features (2026-11-04)</title></head><body>
+<!-- Run on the output of part I. Ends with revision 11. -->
+<div class="op" data-op="xe-terms">[["OUT OF ORDER","OUT OF ORDER"],["Trapped helmet","trapped helmet"],["Cool down","cool.?down"],["Power cut (power-to-unlock)","power-to-unlock"],["Refilling Station","Refilling Station"]]</div>
+
+<!-- ============================================================ 0. removals -->
+<div class="op" data-op="delete-section" data-after="Heading3:Box 1, chart 1: paying"></div>
+<div class="op" data-op="delete-section" data-after="Heading3:Box 1, chart 2: the run"></div>
+<div class="op" data-op="delete-section" data-after="Heading3:Box 2, chart 3: paying"></div>
+<div class="op" data-op="delete-section" data-after="Heading3:Box 2, chart 4: the run"></div>
+<div class="op" data-op="delete-section" data-after="Heading3:Cleaning phases (Box 1; Box 3 has none)"></div>
+<div class="op" data-op="delete-table" data-startswith="Check levels and Ask the ACS to refill are off when a board is flashed"></div>
+<div class="op" data-op="delete-row" data-after="Heading3:Safety features built into the firmware" data-n="1" data-row="Safety slide"></div>
+<div class="op" data-op="delete-row" data-after="Heading3:LocalServer and Online Server" data-n="1" data-row="ENTRY board Wi-Fi"></div>
+<div class="op" data-op="delete-row" data-after="Heading3:Fixed values (not settings)" data-n="1" data-row="One free retry"></div>
+<div class="op" data-op="delete-row" data-after="Heading3:Fixed values (not settings)" data-n="1" data-row="Safety slide"></div>
+<div class="op" data-op="delete-row" data-after="Heading3:Coins and refunds" data-n="1" data-row="Free retry"></div>
+<div class="op" data-op="delete-para" data-startswith="Never block, tape or remove the safety slide of the enclosure door."></div>
+<div class="op" data-op="delete-para" data-startswith="In Box 1 and Box 2 rating the helmet before and after is part of the run"></div>
+<div class="op" data-op="delete-row" data-after="Heading2:Glossary" data-n="1" data-row="ENTRY board"></div>
+<div class="op" data-op="delete-row" data-after="Heading2:Glossary" data-n="1" data-row="Free retry"></div>
+<div class="op" data-op="delete-row" data-after="Heading2:Glossary" data-n="1" data-row="Hysteresis"></div>
+<div class="op" data-op="delete-row" data-after="Heading2:Glossary" data-n="1" data-row="Phase"></div>
+<div class="op" data-op="delete-row" data-after="Heading2:Glossary" data-n="1" data-row="Rating"></div>
+<div class="op" data-op="delete-row" data-after="Heading2:Glossary" data-n="1" data-row="Safety slide"></div>
+<div class="op" data-op="delete-row" data-after="Heading2:Glossary" data-n="1" data-row="Time allot"></div>
+<div class="op" data-op="delete-row" data-after="Heading3:Firmware in this manual" data-n="1" data-row="ESP32_ENTRY"></div>
+
+<!-- ============================================================ 2. small edits: safety and emergencies -->
+<div class="op" data-op="replace-para" data-startswith="Stop the run. Touch CANCEL, then CONFIRM."><p>Stop the run. Touch CANCEL, then CONFIRM. A cancelled cleaning is dried for 3 minutes with UV light and warm air (AUTO DRY), a cancelled drying rests for 60 seconds (COOL DOWN), then the door unlocks. The coins are not refunded.</p></div>
+<div class="op" data-op="replace-para" data-startswith="A helmet is stuck, or the power is off: slide the safety lock down"><p>A helmet is stuck, or the power is off: do not force the door. Read "A helmet is stuck inside" below.</p></div>
+<div class="op" data-op="replace-para" data-startswith="The solenoid locks are power-to-unlock: with the power off"><p>The solenoid locks are power-to-unlock: with the power off, or with a broken solenoid, they stay locked. Box 3 releases a trapped helmet by itself when it is out of order (see below). There is no mechanical release, so keep the UPS and the lock supply in good order. Staff can unlock the door from the Control Center: box page, Maintenance, ENCLOSURE LOCK.</p></div>
+<div class="op" data-op="replace-para" data-startswith="Fastest way: slide the safety lock down."><p>Fastest way: tap CANCEL, then CONFIRM on the screen. After the short auto-dry (cleaning) or cool-down (drying) the door unlocks. If a door was forced open while the machine was running it pauses (SAFETY PAUSE) and the UV-C, the mist and the heater switch off. The helmet may be warm.</p></div>
+<div class="op" data-op="cell-set" data-after="Heading3:Safety features built into the firmware" data-n="1" data-row="Brain-loss watchdog" data-col="1">If a terminal hears nothing from its brain for 15 seconds, it switches the heater, UV-C, mist and coin power off.</div>
+<div class="op" data-op="cell-set" data-after="Heading3:Safety features built into the firmware" data-n="1" data-row="Cool down" data-col="1">After drying, everything rests for 60 seconds by default so the helmet can cool (Box 2 also runs its fan). Also after a cancelled drying; a cancelled cleaning goes through its 3-minute auto-dry first.</div>
+<div class="op" data-op="cell-set" data-after="Heading3:Safety features built into the firmware" data-n="1" data-row="Empty containers" data-col="1">When a box's container is EMPTY or LOW, or the Refilling Station is silent, only DRYING is offered; the station refills the container by itself.</div>
+<div class="op" data-op="replace-text" data-from="Alcohol or scented liquid in the eyes" data-to="Alcohol or cleaning liquid in the eyes"></div>
+
+<!-- ============================================================ 2. small edits: flowcharts and decision trees -->
+<div class="op" data-op="replace-table" data-after="Heading2:Box flowcharts" data-n="1" data-w="1.7,4.3">
+<table><tr><th>Box</th><th>Charts</th></tr>
+<tr><td>Box 1, Box 2 and Box 3 (Cleaner + Dryer)</td><td>1. From TAPS to INSERT COIN: CHECKING reads the Refilling Station, SELECT MODE or SELECT DRY ONLY. 2. Cleaning (then auto-dry) or drying (then cool down), open B, finish.</td></tr>
+</table></div>
+<div class="op" data-op="replace-image" data-after="Heading3:Box 3, chart 5: paying" data-figs="figs_ref.html" data-fig="flow5"></div>
+<div class="op" data-op="replace-text" data-from="Box 3, chart 5: paying" data-to="Chart 1: paying"></div>
+<div class="op" data-op="replace-text" data-from="Box 3, chart 6: the run" data-to="Chart 2: the run"></div>
+<div class="op" data-op="replace-text" data-from="Box 3: CHECKING reads the Refilling Station, then SELECT MODE." data-to="CHECKING reads the Refilling Station, then SELECT MODE."></div>
+<div class="op" data-op="replace-text" data-from="Box 3: cleaning (UV-C and mist) then AUTO DRY" data-to="Cleaning (UV-C and mist) then AUTO DRY"></div>
+<div class="op" data-op="replace-image" data-after="Heading3:Tree 3: coin inserted, nothing counts" data-figs="figs_ref.html" data-fig="tree3"></div>
+<div class="op" data-op="replace-image" data-after="Heading3:Tree 4: the door will not open" data-figs="figs_ref.html" data-fig="tree4"></div>
+<div class="op" data-op="replace-para" data-startswith="The locks are power-to-unlock: with no power a solenoid door stays shut, but the safety slide"><p>The locks are power-to-unlock: with no power a solenoid door stays shut until the power is back. Switch the mains off before reaching in.</p></div>
+
+<!-- ============================================================ 2. small edits: settings reference -->
+<div class="op" data-op="replace-text" data-from="the box page (or /acs)." data-to="the box page or the Refilling Station page."></div>
+<div class="op" data-op="replace-table" data-after="Heading3:Prices and time (Box 1, Box 2 and Box 3)" data-n="1" data-w="1.7,3.2,2.0,1.5,0.9">
+<table><tr><th>Setting</th><th>What it does</th><th>Default</th><th>Allowed</th><th>Yours</th></tr>
+<tr><td><b>Coin rate</b></td><td>N coins buy X minutes (or seconds). The first N coins are the required coins on INSERT COIN.</td><td>15 coins = 5 min (20 s a coin)</td><td>1-500 coins, 0.1-9999 time</td><td></td></tr>
+<tr><td><b>Most coins</b></td><td>Largest number of coins one session can take.</td><td>90</td><td>1-999</td><td></td></tr>
+<tr><td><b>Cool down</b></td><td>How long the cool down lasts after a drying, also after a cancelled drying.</td><td>60 s</td><td>5-900 s</td><td></td></tr>
+<tr><td><b>Auto-dry</b></td><td>How long the auto-dry after every cleaning lasts (UV and the heater).</td><td>180 s</td><td>10-900 s</td><td></td></tr>
+<tr><td><b>Heater off at the end</b></td><td>How long the heater is off at the end of the auto-dry.</td><td>30 s</td><td>0-900 s</td><td></td></tr>
+<tr><td><b>Refilling Station offline after</b></td><td>The station counts as offline when it was not heard for this long: only DRYING is offered.</td><td>15 s</td><td>5-120 s</td><td></td></tr>
+</table></div>
+<div class="op" data-op="replace-text" data-from="Prices and time (Box 1, Box 2 and Box 3)" data-to="Prices and time (every box)"></div>
+<div class="op" data-op="replace-para" data-startswith="The distances are what the ultrasonic sensor on the main container reads"><p>The helmet sensor is the ultrasonic sensor that looks at the helmet. The container levels are not set on the box page: the Refilling Station reads them (see its table below). The default is a placeholder: measure your real helmet.</p></div>
+<div class="op" data-op="replace-table" data-after="Heading3:Containers and sensors (Box 1; helmet detect also Box 2 and Box 3)" data-n="1" data-w="1.7,3.2,2.0,1.5,0.9">
+<table><tr><th>Setting</th><th>What it does</th><th>Default</th><th>Allowed</th><th>Yours</th></tr>
+<tr><td><b>Helmet counts as inside under</b></td><td>The helmet counts as inside when its sensor reads under this. It also decides when a helmet is trapped during OUT OF ORDER.</td><td>15 cm</td><td>1-200 cm</td><td></td></tr>
+</table></div>
+<div class="op" data-op="replace-text" data-from="Containers and sensors (Box 1; helmet detect also Box 2 and Box 3)" data-to="Sensors (every box)"></div>
+<div class="op" data-op="cell-set" data-after="Heading3:Screen refresh (all boxes)" data-n="1" data-row="Refresh when a relay switches on or off" data-col="2">Heater on; lock and heater off</div>
+<div class="op" data-op="cell-set" data-after="Heading3:Screen refresh (all boxes)" data-n="1" data-row="Auto refresh" data-col="1">Every N seconds the box re-sends the current page as a full re-init.</div>
+<div class="op" data-op="cell-set" data-after="Heading3:Fixed values (not settings)" data-n="1" data-row="Coin signal on GPIO 23" data-col="1">On A1 and B1 (C1 uses GPIO 32).</div>
+
+<!-- ============================================================ 2. small edits: policies -->
+<div class="op" data-op="cell-set" data-after="Heading3:Coins and refunds" data-n="1" data-row="Fault or power cut during a run" data-col="1">The run stops. The station releases a trapped helmet and beeps. The machine does not return coins, and a session cut by the power is not restored.</div>
+<div class="op" data-op="cell-set" data-after="Heading3:Coins and refunds" data-n="1" data-row="Too few or too many coins" data-col="1">INSERT THE REQUIRED COIN asks for the required coins (15 by default). More coins can be added while a run is going, up to 90 coins in all.</div>
+<div class="op" data-op="replace-text" data-from="coins, minutes, ratings and the state of each board." data-to="coins, minutes and the state of each board."></div>
+<div class="op" data-op="replace-text" data-from="Alcohol and scented liquid: keep the supplier" data-to="Alcohol and cleaning liquid: keep the supplier"></div>
+
+<!-- ============================================================ 2. small edits: glossary -->
+<div class="op" data-op="cell-set" data-after="Heading2:Glossary" data-n="1" data-row="2-second safety" data-col="1">In Maintenance a relay you switch on by hand switches itself off after 2 seconds, done by the box itself. The coin power is exempt. See Bypass Safety 2 Seconds Relay.</div>
+<div class="op" data-op="cell-set" data-after="Heading2:Glossary" data-n="1" data-row="Auto dry" data-col="1">The drying that ends every cleaning: UV light and the heater for 3 minutes by default, the heater off for the last 30 seconds.</div>
+<div class="op" data-op="cell-set" data-after="Heading2:Glossary" data-n="1" data-row="CHECKING" data-col="1">The 2-second "Checking Main Container" screen after the first tap: the box reads the Refilling Station.</div>
+<div class="op" data-op="cell-set" data-after="Heading2:Glossary" data-n="1" data-row="Cool down" data-col="1">The time after drying when nothing heats and the helmet can cool (60 seconds by default). Box 2 also runs its fan.</div>
+<div class="op" data-op="cell-set" data-after="Heading2:Glossary" data-n="1" data-row="Humidifier" data-col="1">The ultrasonic mist maker (5 V). Three of them make the mist during CLEANING.</div>
+<div class="op" data-op="cell-set" data-after="Heading2:Glossary" data-n="1" data-row="Maintenance mode" data-col="1">A page where a technician switches relays by hand. The machine shows MAINTENANCE. Hand-set relays go off after 2 seconds unless the safety is bypassed.</div>
+<div class="op" data-op="cell-set" data-after="Heading2:Glossary" data-n="1" data-row="Mist" data-col="1">The fine vapour of the cleaning liquid that the humidifiers make during CLEANING.</div>
+<div class="op" data-op="cell-set" data-after="Heading2:Glossary" data-n="1" data-row="Relay" data-col="1">An electrically operated switch. The boards use relays to switch locks, mist makers, lamps and the heater.</div>
+<div class="op" data-op="cell-set" data-after="Heading2:Glossary" data-n="1" data-row="Required coins" data-col="1">The number of coins INSERT COIN asks for: one step of the coin rate (15 coins in the default).</div>
+<div class="op" data-op="cell-set" data-after="Heading2:Glossary" data-n="1" data-row="SELECT DRY ONLY" data-col="1">The mode screen with CLEANING greyed out: the liquid is low or the Refilling Station is not answering.</div>
+
+<!-- ============================================================ 2. small edits: version page, firmware list, hand-over checks -->
+<div class="op" data-op="rev-row"><table><tr><td>11</td><td>2026-11-04</td><td>Everything that no longer exists was taken out: ratings, the time picker, the mist choice and the free retry; the safety slide of the enclosure door; the ENTRY board; the pumps and the drain pump warning. Box 1, Box 2 and Box 3 are written as one Cleaner + Dryer (two charts, one price list, one box page). New pictures of the Control Center, Maintenance, the Online Server setup page (Network Map) and the web page; the drawings, chart 1 and decision tree 4 were redrawn. Box 1 and Box 2 still run their earlier program and their Control Center pages are not rebuilt yet.</td></tr></table></div>
+<div class="op" data-op="append-para" data-startswith="The date is when the sketch file was last saved."><p>Box 1 and Box 2 (S3A, S3C and their terminals) still run their earlier program. They are rebuilt to the Box 3 flow next; the customer, admin and reference parts of this manual already describe that flow.</p></div>
+<div class="op" data-op="replace-text" data-from="Run every relay and every pump by hand in Maintenance" data-to="Run every relay by hand in Maintenance"></div>
+
+<!-- ============================================================ 3. index entries of removed things -->
+<div class="op" data-op="remove-xe" data-name="Rating (odor and dryness)"></div>
+<div class="op" data-op="remove-xe" data-name="Free retry"></div>
+<div class="op" data-op="remove-xe" data-name="Safety slide (manual door release)"></div>
+<div class="op" data-op="remove-xe" data-name="ENTRY board (previous customers)"></div>
+<div class="op" data-op="remove-xe" data-name="Drain pump"></div>
+<div class="op" data-op="remove-xe" data-name="Drain pump warning"></div>
+<div class="op" data-op="remove-xe" data-name="Time allot"></div>
+<div class="op" data-op="remove-xe" data-name="Cleaning phases"></div>
+<div class="op" data-op="remove-xe" data-name="Level checks (containers)"></div>
+<div class="op" data-op="remove-xe" data-name="Fix it guide (online page)"></div>
+</body></html>

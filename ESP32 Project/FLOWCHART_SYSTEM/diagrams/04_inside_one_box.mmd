@@ -1,0 +1,36 @@
+---
+title: 04 - Who talks to whom inside one box (messages over ESP-NOW)
+---
+sequenceDiagram
+  autonumber
+  actor C as Customer
+  participant SC as TFT display<br/>(A1 / B1 / C1)
+  participant BR as Main controller<br/>(S3A / S3B / S3C)
+  participant SE as Sensors<br/>(A2 / B2 / C2)
+  participant RL as Relay controller<br/>(A3 / B3 / C2)
+  participant RS as Refilling Station
+  participant LS as LocalServer
+  participant OS as Online Server
+  Note over SC,OS: everything is sent by ESP-NOW broadcast on channel 1, no router
+
+  BR->>SC: draw this screen (CMD_STEP_RENDER)
+  C->>SC: touch a button, insert coins
+  SC->>BR: which button (CMD_TOUCH_ACTION) and the coin pulses
+  SE->>BR: doors and helmet distance, about every 1 s and when something changes
+  RS-->>BR: every 1 s: the level of the three main containers (EMPTY / LOW / MID / HIGH / MAX), valves, queue, failures
+  Note over BR,RS: the box reads only its own container. CHECKING lasts 2 s, then on the tap: station silent for 15 s, or EMPTY or LOW = DRYING only. The box never asks the station for anything
+  BR->>RL: the whole relay mask (CMD_SET_RELAY_MASK, repeated every ~2 s)
+  RL->>BR: what is really ON, and its watchdog state (about every 1 s)
+  Note over RL: no sign of the main controller for 15 s: the relay controller switches everything off, and releases the enclosure lock if the sensors see a helmet shut inside (it learns the helmet distance from the main controller's settings broadcast and keeps it in its own flash)
+  Note over SC,BR: no sign of the main controller: the TFT display shows OUT OF ORDER by itself (nobody is left to send it a screen), says Your helmet is still inside when the sensors see one shut in, and beeps 100 ms on / 500 ms off
+  Note over BR: the helmet or door sensor board, or the relay board, is silent: the main controller shows OUT OF ORDER and takes no coins. A helmet shut inside is released after 2 s (lock opens, buzzer beeps until the door is opened). After a power cut (screen, sensors and relays on a UPS) the restarted main controller hands a trapped helmet back first
+  BR-->>LS: every 1 s: BoxStatusPacket (step, time left, session counter), booked coins, heartbeat
+  BR-->>OS: the same broadcasts (the Online Server only listens)
+  LS->>BR: settings: rules (coin rate, most coins), sensors (helmet distance, station timeout), auto-dry, drying seconds (CMD_SET_CONFIG)
+  Note over BR: the main controller keeps its settings in its own flash and re-broadcasts them
+  LS->>RS: settings of each container (levels, waiting times, retry) and the manual valve test
+  Note over RS: the station keeps its settings in its own flash and re-broadcasts them
+  LS->>BR: maintenance: relays by hand (CMD_SET_RELAY_MASK, 2-second safety)
+  LS-->>OS: every 10 s: totals, coin value, last 10 sessions (HubStatsPacket)
+  RS-->>OS: the same level broadcast (the Online Server only listens)
+  Note over BR,LS: a finished or cancelled session: the session counter in the box status goes up, the LocalServer records it

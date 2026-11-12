@@ -1,6 +1,6 @@
-// Look and feel of the four settings pages (/box1 /box2 /box3 /acs), served as /hub.css and /hub.js (routes in settings_hub.h).
+// Look and feel of the four settings pages (/box1 /box2 /box3 /refill), served as /hub.css and /hub.js (routes in settings_hub.h).
 // The pages themselves (settings_pages.h) only hold the content and their own logic; this file decides how it looks:
-//   - a sticky navigation bar, one accent colour per page (Box 1 blue, Box 2 orange, Box 3 violet, ACS teal - the same icons as the Control Center)
+//   - a sticky navigation bar, one accent colour per page (Box 1 blue, Box 2 orange, Box 3 violet, Refilling Station teal - the same icons as the Control Center)
 //   - every <h2> section becomes a card that folds open / shut (the fold state is remembered for this browser tab), with a row of jump chips on top
 //   - the "Live" panel is split into one row per line (hubLines), relay / pump buttons become tiles with a lit dot when ON, tables stack on a phone
 // The script never changes an id or an event handler of the page: it only moves the existing elements into the cards.
@@ -12,7 +12,7 @@ const char HUB_CSS[] PROGMEM = R"hubtheme(
  --accent:#38bdf8;--tint:rgba(56,189,248,.13);--tint2:rgba(56,189,248,.26);--onacc:#04121c;--ok:#4ade80;--warn:#fbbf24;--err:#f87171}
 body.t-b2{--accent:#fb923c;--tint:rgba(251,146,60,.13);--tint2:rgba(251,146,60,.26)}
 body.t-b3{--accent:#a78bfa;--tint:rgba(167,139,250,.14);--tint2:rgba(167,139,250,.28)}
-body.t-acs{--accent:#2dd4bf;--tint:rgba(45,212,191,.13);--tint2:rgba(45,212,191,.26)}
+body.t-refill{--accent:#2dd4bf;--tint:rgba(45,212,191,.13);--tint2:rgba(45,212,191,.26)}
 *{box-sizing:border-box}
 html{background:var(--bg);-webkit-text-size-adjust:100%}
 body{margin:0;padding:0 14px calc(56px + env(safe-area-inset-bottom,0px));color:var(--text);
@@ -37,7 +37,7 @@ h1::before{font-size:1.55rem;line-height:1}
 body.t-b1 h1::before{content:"\1F4E6"}
 body.t-b2 h1::before{content:"\1F525"}
 body.t-b3 h1::before{content:"\1F9F4"}
-body.t-acs h1::before{content:"\1F9EA"}
+body.t-refill h1::before{content:"\1F4A7"}
 h1 #net{font-size:.7rem;font-weight:700;color:var(--err);background:rgba(239,68,68,.15);border-radius:99px;padding:2px 10px}
 h1 #net:empty{display:none}
 
@@ -131,7 +131,7 @@ label.by input:disabled{cursor:not-allowed}
 .mbox .myes{background:#b91c1c;border-color:#ef4444;color:#fff}
 .mbox .myes:hover:not(:disabled){background:#dc2626;border-color:#f87171}
 
-/* ACS containers, bars, chips, tables */
+/* Refilling Station containers, level bars, chips, tables */
 #conts{grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:10px}
 .cont{background:var(--well);border:1px solid var(--line);border-radius:12px;padding:12px 14px;line-height:1.7;font-size:.9rem}
 .bar{height:12px;background:#0a101d;border:1px solid var(--line2);border-radius:99px;overflow:hidden;margin:8px 0}
@@ -140,6 +140,10 @@ label.by input:disabled{cursor:not-allowed}
 .chip.bad{background:rgba(239,68,68,.18);color:#fca5a5}
 .chip.good{background:rgba(34,197,94,.18);color:#86efac}
 .chip.run{background:var(--tint2);color:#fff}
+.chip.lv.s0,.chip.lv.s1{background:rgba(239,68,68,.2);color:#fca5a5}.chip.lv.s2{background:rgba(250,204,21,.2);color:#fde68a}
+.chip.lv.s3{background:rgba(163,230,53,.2);color:#d9f99d}.chip.lv.s4{background:rgba(34,197,94,.2);color:#86efac}.chip.lv.sx{background:#1c2740;color:#94a3b8}
+.bar.lv.s0 i,.bar.lv.s1 i{background:#ef4444}.bar.lv.s2 i{background:#facc15}.bar.lv.s3 i{background:linear-gradient(90deg,#facc15,#84cc16)}
+.bar.lv.s4 i{background:#22c55e}.bar.lv.sx i{background:#64748b}
 table{width:100%;border-collapse:collapse}
 td{padding:8px 4px;border-bottom:1px solid #18223a;font-size:.9rem;vertical-align:middle}
 tr:last-child>td{border-bottom:0}

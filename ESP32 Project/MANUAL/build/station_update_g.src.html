@@ -1,0 +1,34 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Manual v10, part G: the sensor check of the Refilling Station (2026-11-04)</title></head><body>
+<!-- Run on JollyHelmet_UserManual_v10.docx. Source: ESP32_REFILL.ino (updateHealth, HEALTH_* constants, the "sensors" console command), ONLINE_WEB (alerts.js, gauges.js). -->
+<div class="ins" data-anchor="Heading2:Troubleshooting and care">
+<h3>Is a sensor still working?</h3>
+<p>The station checks every water-level sensor all the time. It cannot see inside the container, so it only catches the faults that show in the reading.</p>
+<table data-w="2.6,4.2,2.0">
+<tr><th>What the station sees</th><th>What it does</th><th>Caught?</th></tr>
+<tr><td>The reading sits on the 3.3 V rail (4090 or more), for 5 seconds</td><td>SENSOR FAULT: the box offers drying only, is not refilled, and a warning shows on the Dashboard, the Refilling Station page and the online page. It clears by itself 10 seconds after the reading is normal.</td><td>Yes</td></tr>
+<tr><td>The reading jumps about by more than 1500 inside one second while the valve is closed, for 5 seconds (a loose, broken or floating SIG wire)</td><td>The same SENSOR FAULT.</td><td>Yes</td></tr>
+<tr><td>A dry sensor that reads 0 and a dead sensor that reads 0</td><td>They look the same. A container that never rises while its valve is open is called a FAILED refill; the station tries again.</td><td>Not by the value alone</td></tr>
+</table>
+<p>Check a sensor by hand:</p>
+<ol>
+<li>Open the Refilling Station page and watch the raw value of that box. Dry, it reads about 0 and stays steady. Put the probe in water: the number rises and the level changes. Take it out: it falls again.</li>
+<li>Wiggle the SIG wire. The reading must not jump about.</li>
+<li>On the serial console (115200) type <b>sensors</b>: it prints, for every sensor, the average, the smallest and biggest reading of the last second, the spread, and whether it looks fine. <b>raw</b> streams the readings.</li>
+<li>Use Test valve on a container that is not full: with the supply on, the raw value should climb after a few seconds.</li>
+</ol>
+<div class="tip">When the hardware team has chosen the sensor, pull its SIG wire and type sensors. If a disconnected wire reads something different from a dry sensor, the limits can be tuned to catch that too.</div>
+</div>
+<div class="op" data-op="replace-para" data-startswith="A sensor that is unplugged or reads 0 looks like an EMPTY container"><p>A sensor that reads 0 by mistake (unplugged, wrong wire, probe out of the liquid) looks like an EMPTY container, so the station keeps trying (valve open up to 30 seconds, then a pause of 60 seconds). The sensor check (next part) catches a wire on the 3.3 V rail and a floating wire, but not a dead sensor that reads 0. If a container is really full, close the supply and fix the sensor wire first. A drip tray under the containers is a good idea.</p></div>
+<div class="op" data-op="cell-set" data-after="Heading2:Hardware troubleshooting" data-n="1" data-row="A container overflows, or the station keeps opening a valve" data-col="2">Close the water supply. On the Refilling Station page read the raw value of that sensor (a dry one reads 0), or type sensors on the serial console. Fix the SIG wire and the probe, then set the edges again. The station tries again every 60 seconds by itself.</div>
+<div class="op" data-op="rows-append" data-after="Heading3:Troubleshooting" data-n="1">
+<table><tr><td>A container shows SENSOR FAULT</td><td>The Refilling Station found its water-level sensor unusable (reading on the 3.3 V rail, or jumping about). Check the SIG wire and the probe. That box offers drying only and is not refilled until the reading has been normal for 10 seconds.</td></tr></table>
+</div>
+<div class="op" data-op="rows-append" data-after="Heading3:Fixed values (not settings)" data-n="1">
+<table><tr><td>Sensor health</td><td>A water-level sensor at 4090 raw or more (3.3 V rail), or jumping by more than 1500 raw within a second while its valve is closed, for 5 s = SENSOR FAULT; it clears after 10 s of normal readings. Not a setting.</td></tr></table>
+</div>
+<div class="op" data-op="glossary">
+<table><tr><td>SENSOR FAULT</td><td>What the Refilling Station reports for a container whose water-level sensor reads on the 3.3 V rail or jumps about wildly. The box offers drying only until the reading is normal for 10 seconds.</td></tr></table>
+</div>
+<div class="op" data-op="replace-text" data-from="Box 1 and Box 2 are unchanged (earlier program)." data-to="Box 1 and Box 2 are unchanged (earlier program). Sensor check of the Refilling Station (SENSOR FAULT) added."></div>
+</body></html>

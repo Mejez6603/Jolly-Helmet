@@ -14,7 +14,7 @@ FILES (open index.html; the rest is split so each part is easy to read)
   js/render.js      draws the cards, alerts, charts
   js/demo.js        made-up data for the demo
   js/app.js         refresh loop, status badge, settings window, light/dark
-  js/tabs.js, js/alerts.js, js/sound.js, js/gauges.js, js/reports.js, js/checklist.js, js/wizard.js (+ wizard_data.js), js/qr.js, js/share.js, js/manual.js, js/status.js   the tabs and the customer page (see below)
+  js/tabs.js, js/alerts.js, js/sound.js, js/gauges.js, js/reports.js, js/qr.js, js/share.js, js/status.js   the tabs and the customer page (see below)
   status.html, css/status.css   the customer page
   DATA_CONTRACT.md  exactly what the Online Server writes to Blynk
 
@@ -31,37 +31,34 @@ KEEP IN MIND
   * A Blynk token can also WRITE. The page never does, and the firmware ignores writes, but do not put the token inside js/config.js on a
     public web site. Leave CONFIG.token empty (the default) so each viewer types it.
   * The page reads Blynk every 10 seconds only while its tab is open and visible (Settings can change that).
-  * "LIVE / DELAYED / OLD DATA" and "updated x ago" come from the numbers inside the data, not from Blynk's own online/offline label
+  * "Status: Active / Status: Inactive" (top right) and "updated x ago" come from the numbers inside the data, not from Blynk's own online/offline label. The machine cards and every part of the network map also say only Active or Inactive.
     (the board uses Blynk's HTTPS API, so Blynk Console may show the device as offline; that is normal).
   * The analytics (customers, revenue, last cycles) need the LocalServer to be on, flashed with the version that broadcasts its totals.
 
-THE MANUAL TAB  (index.html#manual)
-  The page has two tabs at the top: Monitor and Manual. The Manual tab shows the user manual with a chapter list and a search box.
-  * Customer guide: public. Anybody who opens the page can read it (manual/customer_guide.pdf).
-  * Admin, Technician and Reference chapters: the whole manual is stored in manual/team_manual.js, ENCRYPTED with the team password
-    (AES-256 + HMAC, key from PBKDF2). The page decrypts it in the browser after the password is typed. Without the password the file is
-    unreadable, so it is safe on a public web site. The admin and technician chapters print the Wi-Fi passwords, that is why.
-  * The Manual tab does not need the Blynk token. The team password is NOT the Blynk token. Do not give either to customers.
-  * Files in the manual folder:   customer_guide.pdf   customer_index.js   team_manual.js    (all made by the script below, do not edit them)
-  * Update it whenever the Word file changes:  in Word press Ctrl+A then F9 (updates contents and index), save, then right-click
-    MANUAL\build_web_manual.ps1 > Run with PowerShell. It asks for the team password (use the same one, or a new one), writes a fresh
-    PDF next to the Word file and rewrites the manual folder here. Then upload the manual folder again.
-  * js/manual.js is the code of the tab. On phones the PDF opens in the phone's own viewer (buttons instead of an inline viewer).
+REMOVED ON 2026-10-23: the Checklist, Fix it and Manual tabs, and the "Fix it" links on the alerts (and with them the "maintenance due" alert).
+  Their code is kept in ..\ONLINE_WEB_REMOVED (not part of this folder, not uploaded). Old links such as index.html#fix just open the Monitor.
+  The Word manual and its PDF are made in ..\MANUAL as before; they are no longer put on the web page.
 
-THE TABS  (new 2026-10-10)
-  Monitor    live machines + LEVEL GAUGES (dials for the 4 main containers and the 4 ACS mixers; amber = getting low, red = refill now, with a "falling,
+THE TABS  (Monitor, Alerts, Reports; Checklist, Fix it and Manual were taken out on 2026-10-23)
+  Monitor    live machines (each box is DRAWN as a little machine: the touch screen with the step and time left, the coin slot and coin count, the helmet window with
+             the UV tubes, mist nozzles 1 to 3, heater and fan lighting up when their relay is ON, the doors Enclosure / Panel / Back / Side open or closed with a padlock
+             for each lock relay, and the main container beside it with its level; grey dashes = not known because that board is offline) + LEVEL GAUGES
+             (3 dials, centred: the main container of Box 1, of Box 2 and of Box 3, read by the Refilling Station: red = EMPTY or LOW (the box offers drying only), yellow = MID, yellow to green = HIGH, green = MAX;
+             a valve symbol above each container lights blue while the station is refilling it. Firmware without the station shows the old percent dials with a "falling,
              about 5 h to the refill line" estimate from the readings this browser has seen). Set the early warning line in the Alerts tab (default 30 %).
-  Alerts     what needs attention now, an alert LOG (kept in the browser, CSV download) and SOUNDS: every kind of alert has its own sound that you can change,
-             test (the play button) or switch off. Critical alerts (box OUT OF ORDER, ACS tank empty, no board heard) repeat every minute until somebody
+             Alerts also warn when the Refilling Station is offline (every box then offers drying only) and when a refill failed.
+             The "Needs attention" banner lists every alert as its own coloured row, highest priority first, with a count per level: CRITICAL = red, WARNING = orange, NOTICE = blue, INFO = grey
+             (the Alerts tab uses the same colours in "Active now", the log and the sound table).
+             Further down: the NETWORK MAP (a drawing like the Online Server's own setup page): Internet/Blynk - Wi-Fi at the site - Online Server, then Box 1, Box 2, Box 3, the Refilling Station
+             and the LocalServer, each with a coloured dot and the word Active (green: every board heard) or Inactive (red: something silent, old or not known; a box names the boards that are missing) and the Online Server's own figures.
+             Boards have plain names on this page (TFT Display, Sensors, Relay Controller, Main Controller); the codes A1, B1, C1, A2, B2, A3, B3, C2, S3A, S3B, S3C
+             are only used in the firmware, the Control Center and the setup page.  Alerts     what needs attention now, an alert LOG (kept in the browser, CSV download) and SOUNDS: every kind of alert has its own sound that you can change,
+             test (the play button) or switch off. Critical alerts (box OUT OF ORDER, no board heard) repeat every minute until somebody
              presses Acknowledge. Also: a number in the tab title and the tab icon, and optional browser notifications.
-             Sounds: siren (out of order), alarm (tank empty / nothing heard), urgent (door opened during a run), three beeps (container low),
-             two tones (mixer low, board offline, cleaning off), falling tones (data old / no link), soft blip (early warning, maintenance due), chime (cleared), ding (customer finished, off by default).
+             Sounds: siren (out of order), alarm (nothing heard), urgent (door opened during a run), three beeps (container low),
+             two tones (board offline, cleaning off), falling tones (data not yet updated / no link), soft blip (early warning), chime (cleared), ding (customer finished, off by default).
   Reports    revenue and customers per day with a 7-day average, this week against last week, busiest hours, busiest weekdays, what each box earns, a day-by-day
              table, CSV downloads and "Print / save as PDF" (a clean report page).
-  Checklist  the maintenance schedule of the manual (daily, weekly, monthly, 3-monthly, yearly) as ticks per machine, with what is due. Kept in this browser; "Save a backup"
-             / "Restore" moves it to another device. Overdue checks show as a notice alert and a number on the tab.
-  Fix it     the 7 troubleshooting decision trees of the manual as yes / no questions. If an alert is on, the matching guide is suggested (and the alert has a "Fix it" link).
-  Manual     the user manual (customer chapters public, the rest behind the team password; see "THE MANUAL TAB" below).
   QR button  the QR code, link and a printable sign for the customer page.
 
 SOUNDS AND NOTIFICATIONS: WHAT TO KNOW
@@ -92,5 +89,5 @@ FIRMWARE OF 2026-10-10 (reflash ESP32_ONLINESRV): it now also counts every finis
   reset button in its setup page, "More settings") and writes the public status device. Without it the Reports tab shows "Needs the Online Server firmware of 2026-10-10"
   for those three charts; everything else works with the old firmware.
 
-TRY THE SOUNDS WITHOUT HARDWARE:  index.html?demo=cycle#alerts  - alerts come and go every 2 minutes (a box goes out of order, a container runs low, a tank empties,
+TRY THE SOUNDS WITHOUT HARDWARE:  index.html?demo=cycle#alerts  - alerts come and go every 2 minutes (a box goes out of order, a container runs low,
   a board drops off, a door is opened); press the play buttons in the Alerts tab to hear each sound.

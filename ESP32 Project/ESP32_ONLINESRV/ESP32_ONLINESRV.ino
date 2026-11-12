@@ -14,6 +14,8 @@
 //  works in bursts: it LISTENS on channel 1 almost all the time, then every `iv` seconds it takes a snapshot, joins the user's Wi-Fi for a few
 //  seconds, uploads over HTTPS (Blynk's HTTPS API, TLS checked against the ISRG Root X1 certificate) and goes back to channel 1. The
 //  setup page therefore drops for a moment during a burst; bursts are held back while somebody is using the setup page.
+//  The setup page (portal_page.h) is a router-style admin page since 2026-10-23: tab "Setup", left menu (hamburger on phones), Network Map. It tests the
+//  Wi-Fi on its own (before a Blynk token exists) and only then Blynk.
 //
 //  Board settings (same as the LocalServer): ESP32S3 Dev Module, USB CDC On Boot Enabled, 240 MHz, QIO 80 MHz, 16 MB flash,
 //  partition "16M Flash (3MB APP/9.9MB FATFS)", PSRAM OPI. Libraries: ArduinoJson 7, Async TCP, ESP Async WebServer.
@@ -426,7 +428,9 @@ static void runBurst(bool isTest) {
         syncTime();
         monthCheck();
         bool clockOk = timeValid() || c.insecure;
-        if (!clockOk) {
+        if (!c.token[0]) {                                                    // no Blynk token saved yet: joining the Wi-Fi was the test, there is nothing to upload
+            lock(); st.blynkTried = false; st.blynkOk = false; st.blynkErr[0] = '\0'; st.blynkNote[0] = '\0'; unlock();
+        } else if (!clockOk) {
             lock(); st.blynkTried = true; st.blynkOk = false; st.blynkAtMs = millis(); strlcpy(st.blynkErr, "the clock could not be set (no NTP answer), so the certificate cannot be checked", sizeof(st.blynkErr)); st.blynkNote[0] = '\0'; unlock();
         } else {
             // 3. upload V0
@@ -556,6 +560,7 @@ static void apiStatus(AsyncWebServerRequest* r) {
     d["mq"]   = st.mq;
     unlock();
     JsonObject ra = d["radio"].to<JsonObject>();
+    { char nb[13]; for (int i = 0; i < 12; i++) nb[i] = s.on[i] ? '1' : '0'; nb[12] = '\0'; ra["n"] = nb; }        // A1 A2 A3 S3A C1 C2 S3C B1 B2 B3 S3B ACS1 ACS2
     ra["heard"] = snapHeardCount(s); ra["rs"] = s.rsHave ? (int)s.rs.rev : 0; ra["stats"] = s.s.seen ? 1 : 0; ra["statsAge"] = s.s.seen ? (int)((now - s.s.ms) / 1000UL) : -1;
     if (timeValid()) {
         time_t t = time(nullptr) + (long)(cfg.tz * 3600.0f); struct tm tmv; gmtime_r(&t, &tmv);
@@ -646,7 +651,12 @@ void setup() {
     if (esp_now_init() != ESP_OK) Serial.println("[ONLINE] ESP-NOW init FAILED");
     else esp_now_register_recv_cb(onDataRecv);            // listen only: no peers, nothing is ever sent
 
-    server.on("/", HTTP_GET, [](AsyncWebServerRequest* r) { lastPortalHitMs = millis(); r->send(200, "text/html", PORTAL_HTML); });
+    server.on("/", HTTP_GET, [](AsyncWebServerRequest* r) {
+        lastPortalHitMs = millis();
+        AsyncWebServerResponse* res = r->beginResponse(200, "text/html", (const uint8_t*)PORTAL_HTML, sizeof(PORTAL_HTML) - 1);   // from flash, no copy
+        res->addHeader("Cache-Control", "no-store");
+        r->send(res);
+    });
     server.on("/api/status", HTTP_GET, apiStatus);                        // polled every 2 s by the page: does not count as "in use"
     server.on("/api/scan", HTTP_GET, apiScan);
     server.on("/api/save", HTTP_GET, apiSave);

@@ -24,9 +24,9 @@ monitor page shows a quota bar; leave it at 0 to hide the bar.
 ## 3. The V0 value (one JSON text)
 
 ```json
-{"seq":5,"ts":1791540182,"iv":60,"n":"1111111111111",
- "b":[[12,0,0,0,0,73,62,0,0],[3,25,6,0,8,-1,-1,0,24],[31,40,8,0,6,65,42,1,4240]],
- "a":[[1,0,0,0,0,85,67,0,0],[1,1,0,0,0,68,70,0,0]],
+{"seq":5,"ts":1791540182,"iv":60,"n":"111111111111",
+ "b":[[12,0,0,0,0,73,-1,0,0],[3,25,6,0,8,58,-1,0,24],[31,40,8,0,6,65,-1,0,4240]],
+ "rf":[[0,-2,0,0,500,1000,1200,0],[0,-2,0,0,500,1000,1200,0],[1028,3,0,0,500,1000,1200,0]],
  "st":{"cv":1.00,"ss":41,"cn":331,"rv":331.00,"ad":412,
        "sys":{"up":18025,"rst":"power-on","boots":3,"rssi":-58,"heap":162000,"mq":1180,"mqmax":0},
        "h":[[686,15],[625,30]], "dy":[[22,3],[31,4],[18,2]]}}
@@ -36,10 +36,11 @@ monitor page shows a quota bar; leave it at 0 to hide the bar.
 |---|---|
 | `seq` | Counter, +1 on every write (starts at a random number after a restart). The page treats a changed `seq` as "new data". |
 | `ts` | Unix time in seconds (set by NTP at the first successful upload). 0 until then. |
-| `iv` | Upload interval in seconds. The page uses it to decide LIVE / DELAYED / OLD DATA. |
-| `n` | 13 characters, `1` = heard in the last 8 seconds, `0` = not heard. Order: A1, A2, A3, S3A, C1, C2, S3C, B1, B2, B3, S3B, ACS 1, ACS 2 (same as the Control Center Home page). |
+| `iv` | Upload interval in seconds. The page uses it to decide "Status: Active" (data newer than about 6 x `iv` + 30 s) or "Status: Inactive" (older, no link, or no data yet). |
+
 | `b` | Three boxes: Box 1, Box 2, Box 3. Each is a list of 9 numbers (below). |
-| `a` | Two refill stations, ACS 1 then ACS 2. Each is a list of 9 numbers (below). |
+| `a` | **REMOVED.** The two ACS boards no longer exist and the Online Server (firmware of 2026-11-03) does not send `a` any more. The Refilling Station's reading is `rf` (below). |
+| `rf` | **The Refilling Station's reading of the three main containers** (new 2026-11-03), one list per box in the order Box 1, Box 2, Box 3: `[raw, state, valve, failed, midEdge, highEdge, maxEdge, queued]`. See below. Missing on older firmware (the page then falls back to the old percent reading in `b[i][5]`). |
 | `st` | Analytics and Online Server health (below). |
 
 ### Box list `b[i]`
@@ -48,17 +49,36 @@ monitor page shows a quota bar; leave it at 0 to hide the bar.
 | 0 | Step number: `MachineState` for Box 1 and Box 3, `Box2State` for Box 2 (the numbers the S3 broadcasts; `js/names.js` has the names). 0 if the brain is not heard. |
 | 1 | Seconds left in the current step. |
 | 2 | Coins counted (the terminal's pulse counter, as the Control Center Home page shows). 0 if the terminal is not heard. |
-| 3 | Doors open, bit mask: 1 enclosure, 2 panel, 4 back, 8 ACS side. Box 2 has no ACS side door. 0 if the sensor board is not heard. |
+| 3 | Doors open, bit mask: 1 enclosure, 2 panel, 4 back, 8 side. Box 2 has no side door yet. 0 if the sensor board is not heard. |
 | 4 | Helmet ultrasonic distance in cm, 0 = no echo, **-1 = sensor board not heard**. The page says "inside" when 0 < cm < 15. |
-| 5 | Alcohol container level 0-100 %, **-1 = unknown or not applicable** (Box 2 has no containers). |
-| 6 | Scented container level, same rule. |
-| 7 | Water sensors, bit mask: 1 = alcohol sensor wet, 2 = scented sensor wet. |
-| 8 | Relays that are ON now, bit mask in firmware relay order. Box 1 (A3): 0 enclosure lock, 1 panel lock, 2 back lock, 3 humidifier 1, 4 UV 1, 5 humidifier 2, 6 humidifier 3, 7 UV 2, 8 drain pump 1, 9 drain pump 2, 10 ACS door lock, 11 coin power. Box 3 (B3): the same plus 12 heater. Box 2 (C2): 0 enclosure lock, 1 panel lock, 2 back lock, 3 heater, 4 UV, 5 fan. |
+| 5 | **Main container** level 0-100 %, **-1 = unknown**. With the Refilling Station this slot is -1 and the page reads `rf` instead (the box's own container sensors are gone). Every box has one main container (one liquid, filled by the Refilling Station). Since 2026-10-23 the web page is built for this; the firmware (.ino files) is updated later. Firmware older than that sends the ALCOHOL container level here and no `t`, so the page shows that value as the main container and the tank as NOT KNOWN; Box 2 firmware of today sends -1. |
+| 6 | Reserved, send -1 (was the scented container level before 2026-10-23). |
+| 7 | Reserved, send 0 (was the water-sensor bit mask before 2026-10-23; the page no longer shows it). |
+| 8 | Relays that are ON now, bit mask in firmware relay order. Box 1 (A3): 0 enclosure lock, 1 panel lock, 2 back lock, 3 humidifier 1, 4 UV 1, 5 humidifier 2, 6 humidifier 3, 7 UV 2, 8 and 9 unused (the two drain pumps are gone from the design, today's firmware still has them), 10 side door lock, 11 coin power. Box 3 (B3): the same plus 12 heater. Box 2 (C2): 0 enclosure lock, 1 panel lock, 2 back lock, 3 heater, 4 UV, 5 fan. |
 
 Container percent: the S3 holds the LOW line (`alcLowCm`, `sctLowCm`) and the FULL line (`alcHighCm`, `sctHighCm`) of each box and re-broadcasts them
 (CMD_SET_CONFIG, LEVELS). The Online Server computes `percent = clamp(100 * (lowCm - cm) / (lowCm - highCm), 0, 100)`: 0 % = at the refill line, 100 % = full.
 
-### ACS list `a[i]` (what `ACSStatusPacket` carries, the same list the Control Center Home page uses)
+### Names on the web page (since 2026-10-24)
+The page shows plain names, the firmware keeps its codes: A1, B1, C1 = TFT Display; A2, B2 = Sensors; A3, B3 = Relay Controller; C2 = Sensors / Relay Controller;
+S3A, S3B, S3C = Main Controller. (The Refilling Station, D1, is in the `n` flags and in `rf`.) The lock relays are called Enclosure, Panel, Back and Side lock, and the doors Enclosure, Panel, Back and Side.
+
+### Refilling Station list `rf[i]` (Box 1, Box 2, Box 3)
+`[raw, state, valve, failed, midEdge, highEdge, maxEdge, queued]`
+
+| Index | Meaning |
+|---|---|
+| 0 | Raw water-level sensor value of that box's main container (0 to about 1200; the Refilling Station averages a few readings). |
+| 1 | State, worked out by the station from the box's own edges: **0 EMPTY** (raw 0), **1 LOW** (1 up to below the MID edge), **2 MID** (MID edge up to below the HIGH edge), **3 HIGH** (HIGH edge up to below the MAX edge), **4 MAX** (the MAX edge and above), **-1 unknown** (sensor fault), **-2 not watched** (added 2026-11-04: the station watches and refills Box 3 only for now, so Box 1 and Box 2 are `[0,-2,0,0,500,1000,1200,0]`; the page shows NOT WATCHED and raises no alert). EMPTY and LOW = the box offers DRYING only. |
+| 2 | Valve: 1 = this box's solenoid valve is open (refilling now), 0 = closed. |
+| 3 | Failed: 1 = the last refill failed (no rise in the level for 30 s when EMPTY or 5 s when LOW, or 3 minutes in total); stays 1 until a refill works. The station retries every 60 s. |
+| 4, 5, 6 | The box's MID, HIGH and MAX edge (defaults 500, 1000, 1200; calibrated per box on the LocalServer). The dial uses them so its colours always agree with the state. |
+| 7 | Queued: 1 = this box is WAITING for its turn (the three boxes share one water supply, so only ONE valve is open at a time: EMPTY boxes go first, then LOW boxes, first come first served). Added 2026-11-03; older data has only 7 numbers (the page treats a missing 8th as 0). |
+
+A container that is only EMPTY or LOW is not an alert (the station refills it within a minute, the box offers drying meanwhile): only a failed refill (`failed` = 1) and a silent station are.
+
+When the station is not heard (`n[11]` = 0) the Online Server sends `[0,-1,0,0,500,1000,1200,0]` for every box; the page shows every dial as Inactive and raises the alert "The Refilling Station is offline: all boxes offer DRYING only".
+### ACS list `a[i]` (OBSOLETE: not sent since 2026-11-03; kept only to read old data)
 `[ok, step, flags, empty, warn, alcoholMixerPercent, scentedMixerPercent, pumpMask, stepSeconds]`. `ok` 1 = heard. `step` 0 IDLE ... 10 MAINTENANCE.
 
 ### `st`
@@ -124,3 +144,4 @@ A customer can type a name or nickname (12 characters at most) on the card of a 
   to everybody who opens the page, so the page tells the customer to use a nickname.
 * **Cost:** a few Blynk messages per customer who adds a name (one to save, one to verify, one to clear), nothing for the others.
 * `js/config.js`: `names: false` hides the feature; `namesPin` chooses the datastream.
+| `n` | Characters, `1` = heard in the last 8 seconds, `0` = not heard. Order: A1, A2, A3, S3A, C1, C2, S3C, B1, B2, B3, S3B (the 11 box boards), then **D1 = the Refilling Station** (12 characters). Firmware older than 2026-11-03 sends 13 characters (ACS 1, ACS 2 at the end): the page then does not know the station (it ignores place 12 and 13 unless `rf` is present). |

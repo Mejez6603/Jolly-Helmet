@@ -128,6 +128,17 @@ async function blocksXml(container) {
     else if (cls.contains('warn')) x += callout('warn', runsOf(el));
     else if (tag === 'TABLE') x += dataTable(el);
     else if (tag === 'FIGURE') x += await figure(el);
+    else if (cls.contains('shots')) {                                  // (v10) a row of pictures, each with its caption: <div class="shots" data-w="2.1" data-cols="3"><figure>..</figure>..</div>
+      const figs = [...el.querySelectorAll('figure')], cols = +el.getAttribute('data-cols') || figs.length, pw = Math.floor(TW / cols);
+      for (const f of figs) f.setAttribute('data-w', el.getAttribute('data-w') || '2.1');
+      let rows = '';
+      for (let i = 0; i < figs.length; i += cols) {
+        let cells = '';
+        for (let k = 0; k < cols; k++) cells += TC(pw, figs[i + k] ? await figure(figs[i + k]) : P(''), { va: 'top' });
+        rows += TR(cells);
+      }
+      x += gap(40) + TBL(Array.from({ length: cols }, () => pw), rows) + gap(100);
+    }
     else LOG('WARN unhandled <' + tag + '>');
   }
   return x;
@@ -143,7 +154,7 @@ function findPara(style, text, startAfter) {
   return null;
 }
 function findParaStarts(text) { return kids().find(n => n.localName === 'p' && pText(n).trim().startsWith(text)) || null; }
-function findAny(text) { return [...body.getElementsByTagNameNS(W, 'p')].find(p => pText(p).trim().startsWith(text)) || null; }   // also inside tables
+function findAny(text) { return [...body.getElementsByTagNameNS(W, 'p')].find(p => !/^(TOC|Index|Contents)/.test(pStyle(p)) && pText(p).trim().startsWith(text)) || null; }   // also inside tables; never the contents or the index
 async function svgToPng(svgText) {                      // an <svg> drawing -> PNG bytes at 2x on a white ground
   const vb = /viewBox="0 0 (\d+) (\d+)"/.exec(svgText), W2 = +vb[1] * 2, H2 = +vb[2] * 2;
   let s = svgText.replace(/<svg([^>]*?)>/, (m, a) => '<svg' + a.replace(/\s(width|height)="[^"]*"/g, '') + ` width="${W2}" height="${H2}">`);
@@ -163,6 +174,53 @@ const rowText = tr => pText(tr).trim();
 const shade = (tr, fill) => [...tr.getElementsByTagNameNS(W, 'shd')].forEach(s => s.setAttributeNS(W, 'w:fill', fill));
 function reband(tbl) { [...tbl.children].filter(c => c.localName === 'tr').slice(1).forEach((tr, i) => shade(tr, i % 2 ? 'FFF8E1' : 'FFFFFF')); }
 function cellsOfTable(el) { return [...el.querySelectorAll('tr')].map(tr => [...tr.children].map(td => plain(runsOf(td)))); }
+
+/* ------------------------------------------------------------ (v10) helpers for bigger rewrites */
+const XMLNS = 'http://www.w3.org/XML/1998/namespace';
+const levelOf = n => { const m = /^Heading([1-4])$/.exec(n.localName === 'p' ? pStyle(n) : ''); return m ? +m[1] : 0; };
+const hasSect = n => n.getElementsByTagNameNS(W, 'sectPr').length > 0;
+// the heading and everything under it, up to (not including) the next heading of the same or a higher level; blocks that carry a section break are never removed
+function sectionBlocks(h, keepHeading) {
+  const lvl = levelOf(h), list = kids(); let i = list.indexOf(h); const out = keepHeading ? [] : [h];
+  for (let j = i + 1; j < list.length; j++) { const n = list[j]; if (n.localName === 'sectPr') break; const l = levelOf(n); if (l && l <= lvl) break; out.push(n); }
+  return out.filter(n => { if (hasSect(n)) { LOG('  (kept a section break)'); return false; } return true; });
+}
+function nthTableAfter(h, n) { let node = h.nextElementSibling, k = 0; while (node) { if (node.localName === 'tbl' && ++k === (n || 1)) return node; node = node.nextElementSibling; } return null; }
+// (v11) the n-th picture (a:blip) after a heading, wherever it sits (a paragraph, or a table cell); returns what is needed to swap its bytes and size
+const topBlock = n => { while (n && n.parentNode !== body) n = n.parentNode; return n; };
+const isEmptyPara = n => n && n.localName === 'p' && pText(n).trim() === '' && !n.getElementsByTagNameNS('http://schemas.openxmlformats.org/drawingml/2006/main', 'blip').length;
+function pictureAfter(h, n) {
+  const A = 'http://schemas.openxmlformats.org/drawingml/2006/main'; const list = []; let node = h.nextElementSibling;
+  while (node) { list.push(...node.getElementsByTagNameNS(A, 'blip')); node = node.nextElementSibling; }
+  const blip = list[(+n || 1) - 1]; if (!blip) return null;
+  let d = blip; while (d && d.localName !== 'drawing') d = d.parentNode;
+  return { blip, drawing: d, block: topBlock(blip) };
+}
+function removeAfter(block, alsoCaption) {           // removes a top-level block, the empty spacer paragraph after it, and (for a picture) its caption
+  const nxt = block.nextElementSibling; block.parentNode.removeChild(block);
+  if (nxt && alsoCaption && nxt.localName === 'p' && pStyle(nxt) === 'Caption' && pText(nxt).trim() !== '') { const n2 = nxt.nextElementSibling; nxt.parentNode.removeChild(nxt); if (isEmptyPara(n2)) n2.parentNode.removeChild(n2); }
+  else if (isEmptyPara(nxt)) nxt.parentNode.removeChild(nxt);
+}
+function removeXe(name) {
+  let k = 0;
+  for (const it of [...body.getElementsByTagNameNS(W, 'instrText')]) {
+    if (it.textContent.trim() !== 'XE "' + name + '"') continue;
+    const r = it.parentNode, a = r.previousElementSibling, b = r.nextElementSibling;
+    if (a && b && a.getElementsByTagNameNS(W, 'fldChar').length && b.getElementsByTagNameNS(W, 'fldChar').length) { a.parentNode.removeChild(a); b.parentNode.removeChild(b); r.parentNode.removeChild(r); k++; }
+  }
+  return k;
+}
+function replaceText(from, to) {
+  let exact = 0, spanning = 0;
+  for (const p of body.getElementsByTagNameNS(W, 'p')) {
+    const ts = [...p.getElementsByTagNameNS(W, 't')], full = ts.map(t => t.textContent).join('');
+    if (!full.includes(from)) continue;
+    let done = false;
+    for (const t of ts) if (t.textContent.includes(from)) { t.textContent = t.textContent.split(from).join(to); t.setAttributeNS(XMLNS, 'xml:space', 'preserve'); exact++; done = true; }
+    if (!done) { ts[0].textContent = full.split(from).join(to); ts[0].setAttributeNS(XMLNS, 'xml:space', 'preserve'); for (let i = 1; i < ts.length; i++) ts[i].textContent = ''; spanning++; }
+  }
+  return { exact, spanning };
+}
 
 /* ------------------------------------------------------------ main */
 (async () => {
@@ -185,15 +243,44 @@ function cellsOfTable(el) { return [...el.querySelectorAll('tr')].map(tr => [...
     const sd = new DOMParser().parseFromString(src, 'text/html');
     const xt = sd.querySelector('div.op[data-op="xe-terms"]'); if (xt) NEW_TERMS = JSON.parse(xt.textContent).map(([n, r]) => [n, new RegExp(r, 'i')]);
 
+    // 0. (v10) removals come first, so that new blocks inserted next to them are never swept away
+    for (const op of sd.querySelectorAll('div.op')) {
+      const kind = op.dataset.op;
+      if (kind === 'clear-section' || kind === 'delete-section') {
+        const [style, text] = op.dataset.after.split(/:(.+)/), h = findPara(style, text); if (!h) throw new Error('section heading not found: ' + op.dataset.after);
+        const nodes = sectionBlocks(h, kind === 'clear-section'); nodes.forEach(n => n.parentNode.removeChild(n));
+        LOG(`${kind} "${text}": ${nodes.length} blocks removed`);
+      } else if (kind === 'delete-para') {                          // a whole paragraph (not in a table cell that would be left empty)
+        const p = findAny(op.dataset.startswith); if (!p) throw new Error('paragraph not found: ' + op.dataset.startswith);
+        p.parentNode.removeChild(p); LOG('deleted "' + op.dataset.startswith + '"');
+      } else if (kind === 'delete-row') {                           // a table row, found by the text of its first cell, in the n-th table after a heading
+        const [style, text] = op.dataset.after.split(/:(.+)/), h = findPara(style, text); if (!h) throw new Error('table heading not found: ' + op.dataset.after);
+        const tbl = nthTableAfter(h, +op.dataset.n || 1), row = [...tbl.children].filter(c => c.localName === 'tr').find(tr => rowText(tr.getElementsByTagNameNS(W, 'tc')[0]) === op.dataset.row);
+        if (!row) throw new Error('table row not found: ' + op.dataset.row); tbl.removeChild(row); reband(tbl); LOG('row deleted: ' + op.dataset.row);
+      } else if (kind === 'delete-table') {                         // (v11) the whole block (a table, usually a tip box) that holds a paragraph, found by its start; or the n-th table after a heading
+        let tb;
+        if (op.dataset.startswith) { const p = findAny(op.dataset.startswith); if (!p) throw new Error('paragraph not found: ' + op.dataset.startswith); tb = topBlock(p); }
+        else { const [style, text] = op.dataset.after.split(/:(.+)/), h = findPara(style, text); if (!h) throw new Error('table heading not found: ' + op.dataset.after); tb = nthTableAfter(h, +op.dataset.n || 1); }
+        if (!tb) throw new Error('table not found: ' + (op.dataset.startswith || op.dataset.after)); removeAfter(tb, false); LOG('table deleted: ' + (op.dataset.startswith || op.dataset.after));
+      } else if (kind === 'delete-pic') {                           // (v11) the n-th picture after a heading, its caption and the spacer after it
+        const [style, text] = op.dataset.after.split(/:(.+)/), h = findPara(style, text); if (!h) throw new Error('picture heading not found: ' + op.dataset.after);
+        const pic = pictureAfter(h, op.dataset.n); if (!pic) throw new Error('no picture after ' + text); removeAfter(pic.block, true); LOG('picture deleted after "' + text + '"');
+      }
+    }
     // 1. inserted blocks
     for (const ins of sd.querySelectorAll('div.ins')) {
-      const [style, text] = ins.dataset.anchor.split(/:(.+)/);
-      let anchor = findPara(style, text);
-      if (style === 'Heading2' && text === 'Maintenance') anchor = findPara(style, text, findPara('Heading2', 'Online monitoring'));   // the technician chapter, not "Maintenance mode"
-      if (!anchor) throw new Error('anchor not found: ' + ins.dataset.anchor);
+      let anchor, after = false, label;
+      if (ins.dataset.after) { const [style, text] = ins.dataset.after.split(/:(.+)/); anchor = findPara(style, text); after = true; label = text; }   // (v10) insert after a paragraph
+      else {
+        const [style, text] = ins.dataset.anchor.split(/:(.+)/); label = text;
+        anchor = findPara(style, text);
+        if (style === 'Heading2' && text === 'Maintenance') anchor = findPara(style, text, findPara('Heading2', 'Online monitoring'));   // the technician chapter, not "Maintenance mode"
+      }
+      if (!anchor) throw new Error('anchor not found: ' + (ins.dataset.anchor || ins.dataset.after));
       const nodes = frag(await blocksXml(ins));
-      nodes.forEach(n => body.insertBefore(n, anchor));
-      LOG(`inserted ${nodes.length} blocks before "${text}"`);
+      if (after) { let ref = anchor.nextSibling; nodes.forEach(n => anchor.parentNode.insertBefore(n, ref)); }
+      else nodes.forEach(n => body.insertBefore(n, anchor));
+      LOG(`inserted ${nodes.length} blocks ${after ? 'after' : 'before'} "${label}"`);
     }
     // 2. small edits
     for (const op of sd.querySelectorAll('div.op')) {
@@ -246,7 +333,7 @@ function cellsOfTable(el) { return [...el.querySelectorAll('tr')].map(tr => [...
         LOG('appended to "' + op.dataset.startswith + '"');
       } else if (kind === 'rows-append') {                        // rows are added to the end of the first table after a heading
         const [style, text] = op.dataset.after.split(/:(.+)/), h = findPara(style, text); if (!h) throw new Error('table heading not found: ' + op.dataset.after);
-        const tbl = tableAfter(h), trs = [...tbl.children].filter(c => c.localName === 'tr'), bold = op.dataset.bold !== 'no';
+        const tbl = nthTableAfter(h, +op.dataset.n || 1), trs = [...tbl.children].filter(c => c.localName === 'tr'), bold = op.dataset.bold !== 'no';
         for (const cells of cellsOfTable(op)) {
           const row = trs[trs.length - 1].cloneNode(true), tcs = row.getElementsByTagNameNS(W, 'tc');
           cells.forEach((c, i) => setCellText(tcs[i], c, bold && i === 0));
@@ -256,9 +343,8 @@ function cellsOfTable(el) { return [...el.querySelectorAll('tr')].map(tr => [...
       } else if (kind === 'replace-image') {                      // the picture after a heading is replaced by a new rendering of a drawing (same width, new height)
         const [style, text] = op.dataset.after.split(/:(.+)/), h = findPara(style, text); if (!h) throw new Error('picture heading not found: ' + op.dataset.after);
         const A = 'http://schemas.openxmlformats.org/drawingml/2006/main', R = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
-        let n = h.nextElementSibling; while (n && !n.getElementsByTagNameNS(A, 'blip').length) n = n.nextElementSibling;
-        if (!n) throw new Error('no picture after ' + text);
-        const rid = n.getElementsByTagNameNS(A, 'blip')[0].getAttributeNS(R, 'embed');
+        const pic = pictureAfter(h, op.dataset.n); if (!pic) throw new Error('no picture after ' + text); const n = pic.drawing;
+        const rid = pic.blip.getAttributeNS(R, 'embed');
         const rd = new DOMParser().parseFromString(relsXml, 'application/xml'), rel = [...rd.getElementsByTagName('Relationship')].find(r => r.getAttribute('Id') === rid);
         const mediaPath = 'word/' + rel.getAttribute('Target');
         const figs = await (await fetch('/m/build/' + op.dataset.figs + '?x=' + Date.now())).text();
@@ -273,9 +359,8 @@ function cellsOfTable(el) { return [...el.querySelectorAll('tr')].map(tr => [...
       } else if (kind === 'replace-png') {                        // (v9) the first picture after a heading gets the bytes of a PNG file (same width, height from the new picture's shape)
         const [style, text] = op.dataset.after.split(/:(.+)/), h = findPara(style, text); if (!h) throw new Error('picture heading not found: ' + op.dataset.after);
         const A = 'http://schemas.openxmlformats.org/drawingml/2006/main', R = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
-        let n = h.nextElementSibling; while (n && !n.getElementsByTagNameNS(A, 'blip').length) n = n.nextElementSibling;
-        if (!n) throw new Error('no picture after ' + text);
-        const rid = n.getElementsByTagNameNS(A, 'blip')[0].getAttributeNS(R, 'embed');
+        const pic = pictureAfter(h, op.dataset.n); if (!pic) throw new Error('no picture after ' + text); const n = pic.drawing;
+        const rid = pic.blip.getAttributeNS(R, 'embed');
         const rd = new DOMParser().parseFromString(relsXml, 'application/xml'), rel = [...rd.getElementsByTagName('Relationship')].find(r => r.getAttribute('Id') === rid);
         const mediaPath = 'word/' + rel.getAttribute('Target');
         const rr = await fetch('/m/' + op.dataset.src + '?x=' + Date.now()); if (!rr.ok) throw new Error('missing picture ' + op.dataset.src);
@@ -288,10 +373,21 @@ function cellsOfTable(el) { return [...el.querySelectorAll('tr')].map(tr => [...
         LOG(`png after "${text}" replaced (${mediaPath} <- ${op.dataset.src}, ${psz.w}x${psz.h}, ${(cx / EMU).toFixed(2)} x ${(cy / EMU).toFixed(2)} in)`);
       } else if (kind === 'cell-set') {                           // (v9) one cell of the first table after a heading: the row is found by the text of its first cell
         const [style, text] = op.dataset.after.split(/:(.+)/), h = findPara(style, text); if (!h) throw new Error('table heading not found: ' + op.dataset.after);
-        const tbl = tableAfter(h), trs = [...tbl.children].filter(c => c.localName === 'tr');
+        const tbl = nthTableAfter(h, +op.dataset.n || 1), trs = [...tbl.children].filter(c => c.localName === 'tr');
         const row = trs.find(tr => rowText(tr.getElementsByTagNameNS(W, 'tc')[0]) === op.dataset.row); if (!row) throw new Error('table row not found: ' + op.dataset.row);
         setCellText(row.getElementsByTagNameNS(W, 'tc')[+op.dataset.col], op.textContent.trim(), op.dataset.bold === 'yes');
         LOG('cell set: ' + op.dataset.row + ' [' + op.dataset.col + '] = ' + op.textContent.trim());
+      } else if (kind === 'replace-table') {                      // (v10) the n-th table after a heading is replaced by the table inside the op (same look as the other data tables)
+        const [style, text] = op.dataset.after.split(/:(.+)/), h = findPara(style, text); if (!h) throw new Error('table heading not found: ' + op.dataset.after);
+        const old = nthTableAfter(h, +op.dataset.n || 1); if (!old) throw new Error('no table after ' + text);
+        const srcTbl = op.querySelector('table'); if (op.dataset.w && !srcTbl.getAttribute('data-w')) srcTbl.setAttribute('data-w', op.dataset.w);
+        const nodes = frag(dataTable(srcTbl)), tbl = nodes.find(n => n.localName === 'tbl');
+        old.parentNode.replaceChild(tbl, old); LOG('table after "' + text + '" replaced');
+      } else if (kind === 'replace-text') {                       // (v10) every occurrence of a phrase, anywhere in the manual (a phrase split over formatted runs loses the formatting of that paragraph's later runs)
+        const r = replaceText(op.dataset.from, op.dataset.to); LOG(`replace-text "${op.dataset.from}" -> "${op.dataset.to}": ${r.exact} exact, ${r.spanning} spanning runs`);
+        if (r.exact + r.spanning === 0) LOG('WARN nothing found for "' + op.dataset.from + '"');
+      } else if (kind === 'remove-xe') {                          // (v11) a hidden index entry is taken out wherever it sits (the text stays)
+        const k = removeXe(op.dataset.name); LOG('index entry "' + op.dataset.name + '" removed: ' + k + ' places');
       }
     }
 

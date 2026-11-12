@@ -28,7 +28,7 @@ const TX = {
     namePh: 'Name or nickname', nameHint: 'A name or nickname. Other customers can see it. It disappears when your helmet is done.',
     saving: 'Saving...', nameErr: 'Could not save the name. Please try again.', nameTaken: 'Somebody has already added a name for this machine.', namesOff: 'Names are not switched on yet. Please ask the staff.',
     doneT: '{n}, your helmet in {b} is done!', doneH: 'Take it out when the screen says so.', ok: 'OK',
-    howT: 'How it works', how: ['Pick a machine that says FREE.', 'Tap its screen, answer the questions and put the coins in.', 'Put your helmet in, close the door and wait for the timer.', 'Optional: tap "Add your name" on your machine. Your name shows on its card while your helmet is being looked after, and goes away by itself when it is done.', 'Take your helmet out when the screen says so.'],
+    howT: 'How it works', how: ['Pick a machine that says FREE.', 'Tap its screen, follow the steps and put the coins in.', 'Put your helmet in, close the door and wait for the timer.', 'Optional: tap "Add your name" on your machine. Your name shows on its card while your helmet is being looked after, and goes away by itself when it is done.', 'Take your helmet out when the screen says so.'],
     helpT: 'Something wrong?', foot: 'This page shows the state of the machines and the names customers choose to add.', min: 'min', s: 's'
   },
   tl: {
@@ -43,7 +43,7 @@ const TX = {
     namePh: 'Pangalan o palayaw', nameHint: 'Pangalan o palayaw. Makikita ito ng ibang customer. Mawawala ito kapag tapos na ang helmet mo.',
     saving: 'Sine-save...', nameErr: 'Hindi ma-save ang pangalan. Pakisubukan ulit.', nameTaken: 'May naglagay na ng pangalan para sa makinang ito.', namesOff: 'Hindi pa naka-on ang mga pangalan. Magtanong sa staff.',
     doneT: '{n}, tapos na ang helmet mo sa {b}!', doneH: 'Kunin ito kapag sinabi ng screen.', ok: 'OK',
-    howT: 'Paano gamitin', how: ['Pumili ng makinang LIBRE.', 'I-tap ang screen, sagutin ang mga tanong at ilagay ang mga barya.', 'Ilagay ang helmet, isara ang pinto at hintayin ang timer.', 'Opsyonal: i-tap ang "Ilagay ang pangalan mo" sa makinang ginagamit mo. Lalabas ang pangalan mo sa card habang inaasikaso ang helmet mo at kusa itong mawawala kapag tapos na.', 'Kunin ang helmet kapag sinabi ng screen.'],
+    howT: 'Paano gamitin', how: ['Pumili ng makinang LIBRE.', 'I-tap ang screen, sundin ang mga hakbang at ilagay ang mga barya.', 'Ilagay ang helmet, isara ang pinto at hintayin ang timer.', 'Opsyonal: i-tap ang "Ilagay ang pangalan mo" sa makinang ginagamit mo. Lalabas ang pangalan mo sa card habang inaasikaso ang helmet mo at kusa itong mawawala kapag tapos na.', 'Kunin ang helmet kapag sinabi ng screen.'],
     helpT: 'May problema?', foot: 'Ipinapakita ng page na ito ang kalagayan ng mga makina at ang mga pangalang inilalagay ng mga customer.', min: 'min', s: 's'
   }
 };
@@ -60,7 +60,7 @@ const NAME_STALE_SEC = 45 * 60;                        // without a session coun
 const MINE_KEEP_SEC = 3 * 3600;                        // this phone forgets "my name" after this long
 const DONE_SHOW_MS = 20 * 60 * 1000;                   // the "your helmet is done" banner stays this long unless dismissed
 /* steps in which a customer's helmet is being looked after (a name may be added and shown): after OPEN A until the cycle ends */
-const NAME_STEPS = new Set(['OPEN A', 'SENSORS A', 'CLOSE DOOR A', 'HELMET NOTICE A', 'CLEANING', 'HEATING', 'DRYING', 'SAFETY PAUSE', 'ABORT']);
+const NAME_STEPS = new Set(['OPEN A', 'SENSORS A', 'CLOSE DOOR A', 'HELMET NOTICE A', 'CLEANING', 'HEATING', 'DRYING', 'AUTO DRY', 'SAFETY PAUSE', 'ABORT']);
 
 function cleanName(s) {                                // untrusted text -> a short plain name
   return Array.from(String(s == null ? '' : s).replace(/[\u0000-\u001f\u007f<>]/g, '').replace(/\s+/g, ' ').trim()).slice(0, NAME_MAX).join('').trim();

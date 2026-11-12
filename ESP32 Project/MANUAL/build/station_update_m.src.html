@@ -1,0 +1,19 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Manual v11, part M: INSERT COIN waits for the coin acceptor to finish counting (2026-11-04)</title></head><body>
+<!-- Source: ESP32_S3B.ino coinSettleCheck() (COIN_SETTLE_MS 1500, COIN_SETTLE_MAX_MS 6000); s3b_flow_test.html (47 tests pass). -->
+<div class="op" data-op="xe-terms">[["Required coins","required coins?"],["Allan coin acceptor (coin slot)","coin acceptor|coin slot"]]</div>
+<div class="op" data-op="replace-para" data-startswith="INSERT THE REQUIRED COIN: insert coins until the count reaches the number asked"><p>INSERT THE REQUIRED COIN: insert coins until the count reaches the number asked (15 coins = 5 minutes). CANCEL takes you back to the start. After the last coin the station waits about 2 seconds so a big coin is counted in full: every coin counts, so with a 20-peso coin for 15 asked, the extra 5 coins add 100 seconds.</p></div>
+<div class="op" data-op="rows-append" data-after="Heading3:Questions" data-n="1">
+<table><tr><td>I put in a bigger coin than the machine asked for.</td><td>The station keeps counting for about 2 seconds after the last coin, then every coin counts: the extra coins add time (20 seconds each, up to 90 coins in all).</td></tr></table>
+</div>
+<div class="op" data-op="bullet-after" data-after="The Allan COIN output pulls to ground once per coin pulse."><ul><li>One coin is many pulses (a 20-peso coin is 20 pulses over 1 to 2 seconds) and B1 reports its pulse count to S3B once a second. When the required coins are reached, S3B (Box 3) therefore keeps counting until no new pulse has been seen for 1.5 seconds (at most 6 seconds) and only then moves on: every coin counted becomes time and revenue, up to the most coins (default 90).</li></ul></div>
+<div class="op" data-op="rows-append" data-after="Heading3:Fixed values (not settings)" data-n="1">
+<table><tr><td>Coin counting wait</td><td>After the required coins are reached, INSERT COIN waits until no new pulse has been seen for 1.5 s (at most 6 s), so a big coin is counted in full and all of it buys time. Not a setting.</td></tr></table>
+</div>
+<div class="op" data-op="replace-text" data-from="for now; Box 1 and Box 2 show NOT WATCHED." data-to="for now; Box 1 and Box 2 show NOT WATCHED. INSERT COIN now waits for the coin acceptor to finish counting, so a bigger coin than asked adds time."></div>
+<div class="op" data-op="cell-set" data-after="Heading3:Firmware in this manual" data-n="1" data-row="ESP32_S3B" data-col="3">2026-11-04</div>
+<div class="op" data-op="cell-set" data-after="Heading3:Firmware in this manual" data-n="1" data-row="ESP32_REFILL" data-col="3">2026-11-04</div>
+<div class="op" data-op="cell-set" data-after="Heading3:Firmware in this manual" data-n="1" data-row="ESP32_LOCALSRV" data-col="3">2026-11-04</div>
+<div class="op" data-op="cell-set" data-after="Heading3:Firmware in this manual" data-n="1" data-row="ESP32_ONLINESRV" data-col="3">2026-11-04</div>
+<div class="op" data-op="cell-set" data-after="Heading3:Firmware in this manual" data-n="1" data-row="ESP32_REFILL_FAKE" data-col="3">2026-11-04</div>
+</body></html>

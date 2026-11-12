@@ -1,0 +1,38 @@
+---
+title: 02 - Customer flow of a box, part 1 - start, checking the container, mode, coins (same for Box 1, 2 and 3)
+---
+flowchart TD
+  classDef cStart fill:#111111,stroke:#111111,color:#ffffff
+  classDef cSide fill:#ffffff,stroke:#111111,stroke-width:2px,stroke-dasharray:5 4,color:#111111
+  classDef cFault fill:#ffffff,stroke:#111111,stroke-width:4px,color:#111111
+  classDef cLink fill:#ffffff,stroke:#111111,stroke-width:2px,color:#111111
+
+  TAPS(["START SCREEN<br/>TAP anywhere to START"]):::cStart
+  CC["CHECKING MAIN CONTAINER<br/>Please wait, 2 seconds"]
+  W["WELCOME<br/>Tap to START"]
+  D{"on the tap: is the Refilling Station heard<br/>(in the last 15 s) and is this box's<br/>main container MID, HIGH or MAX?"}
+  M{"SELECT MODE<br/>CLEANING or DRYING"}
+  MD{"SELECT MODE, dry only<br/>CLEANING is greyed out"}
+  COIN["INSERT COIN<br/>15 coins = 5 min, more coins add time<br/>coin slot ON"]
+  CAN["CANCEL?<br/>coins will not be refunded"]:::cSide
+  NEXT(["to part 2<br/>OPEN THE DOOR"]):::cLink
+  MEMO["EMPTY OR LOW CONTAINER, OR THE STATION IS SILENT:<br/>the box offers DRYING only.<br/>The Refilling Station fills the container by itself<br/>(one valve at a time, EMPTY first).<br/>Nobody has to do anything: the next customer<br/>gets CLEANING again as soon as it reads MID or more."]:::cSide
+
+  subgraph OTHER["OTHER SCREENS"]
+    OOO["OUT OF ORDER<br/>S3 silent: the screen shows it by itself<br/>helmet or door sensor board, or relay board, silent:<br/>the main controller shows it<br/>(entered by the firmware, before any coin is taken)<br/>a helmet shut inside is released: the lock opens and the buzzer beeps"]:::cFault
+    MNT["MAINTENANCE<br/>switched on from the LocalServer page"]:::cSide
+  end
+
+  TAPS -->|tap| CC
+  CC -->|after 2 s| W
+  W -->|tap| D
+  D -->|yes| M
+  D -->|"no: EMPTY, LOW,<br/>or the station is not heard"| MD
+  M -->|CLEANING button| COIN
+  M -->|DRYING button| COIN
+  MD -->|DRYING button| COIN
+  MD -.- MEMO
+  COIN -->|CANCEL| CAN
+  CAN -->|YES| TAPS
+  CAN -->|NO| COIN
+  COIN -->|enough coins| NEXT

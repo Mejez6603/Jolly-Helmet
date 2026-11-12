@@ -1,0 +1,33 @@
+---
+title: 06 - LocalServer (Control Center) inside
+---
+flowchart TB
+  classDef cSide fill:#ffffff,stroke:#111111,stroke-width:2px,stroke-dasharray:5 4,color:#111111
+  classDef cFault fill:#ffffff,stroke:#111111,stroke-width:4px,color:#111111
+
+  P(["Power on"]) --> B1["load the saved settings (flash)<br/>mount the log storage (FFat)"]
+  B1 --> B2{"log storage damaged?"}
+  B2 -->|yes| B3["re-created EMPTY<br/>red note on the Dashboard:<br/>restore the backup CSV"]:::cFault
+  B2 -->|no| B4
+  B3 --> B4["start Wi-Fi JollyHelmet-Local (192.168.4.1)<br/>captive portal, web server,<br/>ESP-NOW on channel 1"]
+  B4 --> HUB(("RUNNING"))
+
+  subgraph RX["FROM THE RADIO"]
+    R1["box status of every box (every 1 s)"] --> R2{"new finished or<br/>cancelled session?"}
+    R2 -->|yes| R3["record it: date, time, box,<br/>Finished or Cancelled, coins, minutes<br/>permanent session log + totals"]
+    R2 -->|no| R4["update the live step<br/>and the time left"]
+    R5["booked coins of the boxes → revenue<br/>sensor and relay status → Dashboard<br/>Refilling Station levels, valves, queue,<br/>failures → Dashboard"]
+  end
+  subgraph TX["TO THE RADIO"]
+    S1["every 1 s: heartbeat<br/><br/>every 10 s: totals + last 10 sessions → Online Server<br/><br/>on request: settings and maintenance → the box main controllers,<br/>settings and valve test → the Refilling Station"]
+  end
+  subgraph WB["WEB PAGES (phone or laptop)"]
+    W1["Dashboard asks /api/status every second<br/>(3 boxes, the Refilling Station card)<br/><br/>Box 1, 2 and 3 pages: rules, sensors, auto-dry, drying, relays, refresh<br/>Refilling Station page: level edges and waiting times of each box,<br/>queue, manual valve test<br/><br/>Settings: set the clock (phone), download the log CSV,<br/>restore from backup CSV, history.json, coin value, Reset Stats<br/><br/>day viewer: Machine and JSON tabs"]
+  end
+  HUB --> R1
+  HUB --> R5
+  HUB --> S1
+  HUB --> W1
+  ENTRY["ENTRY board<br/>POST history.json"]:::cSide --> W1
+  CR["a restart nobody planned:<br/>breadcrumbs → the last 3 crash reports<br/>kept in flash: Settings, This board"]:::cSide
+  HUB -.-> CR
