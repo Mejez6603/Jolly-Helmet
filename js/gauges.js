@@ -91,7 +91,7 @@ function stateGaugeCard(title, sub, r, stale) {
   svg += `<text x="${cx}" y="${cy + 23}" text-anchor="middle" class="dv">${known ? RF_STATE[st] : '-'}</text>`;
   svg += `<text x="${cx - rad}" y="${cy + 11}" text-anchor="middle" class="dl">0</text><text x="${cx + rad}" y="${cy + 11}" text-anchor="middle" class="dl">${Math.round(mx)}</text></svg>`;
   const cls = !known ? 'unknown' : st <= 1 ? 'low' : st === 2 ? 'early' : st === 3 ? 'high' : 'ok';
-  const notWatched = Array.isArray(r) && r[1] === -2;                             /* -2 = the station does not watch this box for now (it watches Box 3 only) */
+  const notWatched = Array.isArray(r) && r[1] === -2;                             /* -2 = the station does not watch this box (an entry of WATCH_BOX in its firmware is false; since 2026-11-12 all three are watched) */
   const fault = Array.isArray(r) && !known && !notWatched;                        /* the station is heard but reports no level for this box = its water-level sensor is faulty */
   /* the chip says only Active (the station reads this container and the data is fresh) or Inactive (not watched, sensor fault, nothing heard, or old data);
      the level itself is the big word in the dial, and what it means for the box (drying only, refill failed...) is in the line under the chip */
@@ -110,7 +110,7 @@ function renderLevels(L) {
     cards.push(gaugeCard(def.name + ' main container', 'filled by the Refilling Station', ok ? nz(b[5], -1) : -1, 'b' + i, stale));
   });
   const note = rf
-    ? 'Red = EMPTY or LOW: the box offers drying only. Yellow = MID. Yellow to green = HIGH. Green = MAX (full). The Refilling Station opens a box\'s valve by itself when its container is EMPTY or LOW, one valve at a time (EMPTY first, then LOW). Active = the station reads this container; Inactive = it does not (not watched, sensor fault, nothing heard, or data not yet updated). For now the station watches and refills Box 3 only, so the other boxes say Inactive.'
+    ? 'Red = EMPTY or LOW: the box offers drying only. Yellow = MID. Yellow to green = HIGH. Green = MAX (full). The Refilling Station opens a box\'s valve by itself when its container is EMPTY or LOW, one valve at a time (EMPTY first, then LOW). Active = the station reads this container; Inactive = it does not (not watched, sensor fault, nothing heard, or data not yet updated). The station watches and refills all three boxes.'
     : `Red below 15 %, amber below the early warning line (${warnPct() ? warnPct() + ' %' : 'off'}; change it in the Alerts tab). For a main container 0 % is the refill line: the box stops cleaning there.`;
   el.innerHTML = `<div class="grid gauges">${cards.join('')}</div><div class="sub">${note}</div>`;
 }
