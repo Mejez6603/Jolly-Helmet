@@ -1,9 +1,44 @@
-# PROJECT HANDOFF - state of the Jolly Helmet system, 2026-11-03
+# PROJECT HANDOFF - state of the Jolly Helmet system, 2026-11-03 (updated 2026-11-12: Box 1 and Box 2 rebuilt like Box 3 - see the first section)
 
 Read `README.md` first for what the system is. This file says **what is done, what is not, how to bring it up on the bench, and what is still open.**
 
 ---
 
+## 2026-11-12 - BOX 1 AND BOX 2 REBUILT LIKE BOX 3 (read this first: it replaces every "Box 1 / Box 2 later" note below)
+
+**Nothing of this has been flashed or uploaded.** Everything compiles; the old firmware is untouched in `ARCHIVE_2026-11-12_BEFORE_BOX1_2_LIKE_BOX3\` (the whole project as it was, including the Box 1 / Box 2 builds that were flashed and field-tested) - that is the rollback.
+
+**The idea: ONE design, three boxes.** Box 1, Box 2 and Box 3 are now the same machine with different names. Each node type is ONE program, copied into three folders; only a small `box_config.h` in each folder differs, so a bug is fixed once and the file copied.
+
+| Node | Folders | What differs (`box_config.h`) |
+|---|---|---|
+| Main controller (ESP32-S3) | `ESP32_S3A` (Box 1), `ESP32_S3C` (Box 2), `ESP32_S3B` (Box 3) | the box's device IDs, the settings state tag (0 / 2 / 3), its Refilling Station slot (0 / 1 / 2), the flash namespace (kept as before, so a reflashed unit keeps its booked-coin total and its rate rules). `BoxScreens.h` = the 36-step screens, identical. |
+| Terminal (TFT + coin + buzzer) | `ESP32_A1`, `ESP32_C1`, `ESP32_B1` | per unit: screen rotation, touch calibration, coin GPIO, its S3 / sensor IDs. **A1: rotation 1, touch {327,3421,285,3510,1}, coin GPIO 23. C1: rotation 3, touch {408,3325,535,3051,7}, coin GPIO 32. B1: rotation 3, touch still A1's numbers (calibrate), coin GPIO 32.** |
+| Sensor board | `ESP32_A2`, `ESP32_C2`, `ESP32_B2` | only its device ID. Helmet ultrasonic Echo 25 / Trig 26; door reeds Enclosure 27, Panel 14, Back 19, Side 18. **C2 no longer carries relays** (it used to be sensors + relays). |
+| Relay board | `ESP32_A3`, `ESP32_C3` (**NEW**), `ESP32_B3` | its device IDs, state tag, flash namespace. 13 channels (12 + the heater on GPIO 26), the same pin map as B3, S3-loss watchdog, trapped-helmet release. |
+
+- New device ID `DEVICE_C3 = 15` (Shared_Common.h, all copies identical). Box 2's step numbers are now the normal `MachineState` list (the old `Box2State` list is superseded and nothing uses it).
+- **The three S3 programs are byte-identical** (`cmp`); same for the three terminals, the three sensor boards and the three relay boards.
+- **Refilling Station:** `WATCH_BOX = { true, true, true }` (was Box 3 only). Its sensors / valves for Box 1 and Box 2 must be wired, otherwise those boxes show EMPTY / SENSOR FAULT and offer DRYING only. `ESP32_REFILL_FAKE` reports all three as watched.
+- **LocalServer:** the three box pages are ONE page (`PAGE_BOX`, it reads its box from the address /box1 /box2 /box3) and one set of handlers (`hubBoxHandler`); box index = box number - 1. Same settings for every box (rules, sensors, auto-dry, drying, refresh masks, auto refresh, beep). **13 devices** on the Dashboard (C3 added). Box 2's revenue is now booked from S3C's booked coins like Box 1 / Box 3 (the first packet only sets the starting point, nothing is counted twice). The old Box 1 / Box 2 pages and the legacy C2 `TelemetryPacket` handling are gone.
+- **Online Server:** one box structure; the `n` string has **13 characters** - the 12 places of before did not move, Box 2's relay board C3 was added at the END (place 13); a new alert id 18 = "Box 2 Relay Controller is not heard". The "levels" settings list and the old Box 2 state numbers are gone.
+- **Online web page (needs a small update, not a rewrite):** `js/names.js` (one list of steps for all boxes, 13 boards, Box 2's relay board = place 13, every box has 13 relays and 4 doors), `js/demo.js`, two texts in `js/gauges.js`, and `DATA_CONTRACT.md`. The JSON shape did not change. Upload the whole folder; if the page is NOT updated but the Online Server is, Box 2's step names and relay names come out wrong.
+
+**Flash order for the new design (loads unplugged first):** Refilling Station -> LocalServer -> relay boards (A3, C3, B3) -> sensor boards (A2, C2, B2) -> terminals (A1, C1, B1) -> main controllers (S3A, S3C, S3B) -> Online Server -> upload ONLINE_WEB. After flashing S3A / S3C open `/box1` and `/box2` once and check every number. **What a reflashed S3A / S3C keeps and what it loses (compared key by key against the archived firmware, 2026-11-12):** it keeps the rate rules (`rate_c`, `rate_v`, `rate_u`, `max_c`), the auto-dry / refresh / beep settings that Box 1 already had, and Box 1's booked-coin total and last coin-pulse count (same flash namespace and keys). It LOSES the helmet cutoff: Box 1 saved it as `helm_a2_cm` and Box 2 as `helm_c2_cm`, the shared program reads `helm_cm` (Box 3's key), so both go back to the default 15 cm until you type the value in the "Sensors" box of the page and press Send. Box 2 never had a booked-coin counter, so its total starts at 0 (the LocalServer takes the first packet as the starting point, so nothing is counted twice or lost). The old settings of the removed features (ratings, free retry, time bands, scented/alcohol levels...) are simply never read again. A1 / C1 / A3 / C3 start with empty flash (their helmet cutoff arrives from the S3, which re-broadcasts all its settings every 2 seconds).
+
+**Needs the hardware team before the new firmware can run on Box 2 (and partly Box 1):**
+1. **C3 does not exist yet.** Box 2's relays were on C2 (6 relays: locks GPIO 4 / 16 / 17, heater 18, UV 5, fan 23). They must move to a 13-channel relay board like B3's (pin list at the top of `ESP32_C3.ino`; the heater goes to GPIO 26, UV 1 / UV 2 / humidifiers / coin power as on B3) and C2 is then a plain sensor board like B2. Check the C3 pin map against the real wiring before powering any load.
+2. **Box 1's A3 has no heater relay** (GPIO 26 drives nothing yet) and the new flow dries with the heater (AUTO DRY): without it Box 1 only has UV during the dry. Box 2 has a heater but on the old board.
+3. **Refilling Station:** water-level sensors and valves for Box 1 and Box 2 (GPIO 34 / 35 sensors, 21 / 19 valves as decided 2026-11-03) - or set that box to `false` in `WATCH_BOX` until they are wired.
+4. A2 / C2 no longer read the two container ultrasonics or the water sensors (the station does); those pins are free.
+5. B1 touch calibration is still A1's numbers; A1 and C1 keep their own.
+6. The SIDE door reed (GPIO 18) must be wired (or the input stays HIGH = "open" in the monitor; the flow itself only looks at the enclosure door and the helmet).
+
+**What the field-tested Box 1 / Box 2 had that the new firmware does not (decided, same as Box 3):** ratings, the time picker, the mist choice, the free retry, the ACS refill steps. Same coin rule as Box 3: INSERT COIN asks for ONE rate step (default 15 coins = 5 min), more coins can be added while it runs up to the maximum, a coin that arrives late is counted (COIN SETTLE 1.5 s, at most 6 s).
+
+**Tests (all re-run on 2026-11-12, after the rebuild):** every sketch compiles with 0 warnings: S3A / S3C / S3B 28 %, LocalServer 40 %, Online Server 37 % of the real 3 MB app partition (board options from README: `esp32:esp32:esp32s3:CDCOnBoot=cdc,PSRAM=opi,FlashSize=16M,PartitionScheme=app3M_fat9M_16MB`); the plain ESP32 boards on the default partition: sensors A2 / B2 / C2 68 %, relays A3 / B3 / C3 69 %, TFT terminals A1 / B1 / C1 73 %. `ESP32_S3B\tools\s3b_flow_test.html` (a JavaScript port of the shared S3 logic, which is the same in all three boxes) = 47 of 47 pass; `ESP32_REFILL\tools\refill_simulator.html` = 24 of 24 pass. The S3 logic itself was not changed by the rebuild, only its names and settings moved into `box_config.h`. The tests run the PORT, not the .ino, and nothing was run on hardware. **Second pass, same evening ("verify everything"):** all 22 sketches that use the shared header were built from clean (0 errors, 0 warnings; this includes the bench / test sketches A1_WIDGET_TEST, A3_BENCH_TEST, S3A_COMMTEST, S3A_CONFIG_BENCH, S3C_CONFIG_BENCH, RESTATE, REFILL_FAKE - they compile, but they were written for the old per-box protocols and were NOT checked functionally; the two CONFIG_BENCH sketches in particular stand in for the old LocalServer pages). The ONLINE_WEB pages (Monitor with `?demo`, `?demo=alerts`, `status.html?demo`) were loaded over a local web server: no console errors, a Box 2 relay-board-offline case shows "relay board inactive" on Box 2 only. The LocalServer pages were run against a small mock server built from the real page text in the `.h` files: /box1 /box2 /box3 fill in the right board names (S3A A1 A2 A3 / S3C C1 C2 C3 / S3B B1 B2 B3), the seven Send buttons reach "has these values", maintenance + the 13 relay buttons (heater = bit 12) work, /refill and the Dashboard (13 devices, one offline) are right. The C++ handlers themselves (`settings_hub.h`) were read line by line against that mock's answers but not executed. Each box's flash keys, pin tables and `box_config.h` values were compared with the archived firmware (see the table above and the keys note in the flash order).
+
+---
 ## 1. Where things stand
 
 **Nothing from 2026-11-03 has been flashed or uploaded.** Everything below was compiled (all firmware projects build) and, where there is no hardware, tested in the browser with simulators that are line-by-line ports of the firmware logic. Treat every board as "compiled, not yet run on hardware" unless you flashed it yourself.
@@ -15,7 +50,7 @@ Read `README.md` first for what the system is. This file says **what is done, wh
 | Box 3 `B1` (TFT) / `B2` (sensors) / `B3` (relays) | `B1`: touch debug off; `B2`: helmet + doors only; `B3`: drain relay bits never driven, Side lock. All compile. | read-through only |
 | LocalServer | Refilling Station page, Box 3 page rewritten, Dashboard card, 12 devices; compiles (41%) | pages tested on a mock server in the browser (forms, send/echo, queue chips, test button, phone width) |
 | Online Server + `ONLINE_WEB` | station support, queue flag; compiles (37%) | `?demo=cycle` of the web page |
-| Box 1 (S3A, A1, A2, A3), Box 2 (S3C, C1, C2) | **unchanged**, still the older flows | compile only |
+| Box 1 (S3A, A1, A2, A3), Box 2 (S3C, C1, C2) | **REBUILT 2026-11-12 like Box 3** (see the section above; Box 2 now has C3 for its relays) | compile only |
 | ACS 1 / ACS 2 | **removed** (archived) | - |
 
 Older reports (2026-10-03): the user flashed the Box 1/2/3 + ACS + LocalServer builds of that day at the school; builds after that (booked coins / Finished-Cancelled / OPEN beep of 10-13, the Online Server, the ENTRY board) were never confirmed flashed.
@@ -68,7 +103,7 @@ Loads (UV, humidifiers, heater, valves) **unplugged** for the first power-up of 
 
 **D. Online Server + web**: flash `ESP32_ONLINESRV`, upload the whole `ONLINE_WEB` folder to the web host (the page needs the new `rf` data and the 12-board flags; older firmware shows the percent dials). First check that the Blynk channel-1 return after an upload burst works.
 
-**Boxes 1 and 2 are NOT part of this bring-up.** They keep their own firmware (S3A / S3C) until they are rebuilt like Box 3. Their LocalServer pages still use the old settings.
+**Boxes 1 and 2 (changed 2026-11-12):** they are rebuilt like Box 3 - bring them up exactly like Box 3 below (relay board, sensor board, terminal, main controller; on Box 2 the relays now come from the new C3). See the 2026-11-12 section at the top.
 
 ### Rollback
 - The ACS firmware, its plan and its LocalServer page are in `ARCHIVE_2026-11-03_BEFORE_REFILLING_STATION\`. The pre-change LocalServer files and the old S3B sketch (and its screens) are in the same folder.
@@ -79,9 +114,9 @@ Loads (UV, humidifiers, heater, valves) **unplugged** for the first power-up of 
 
 ## 4. Open items
 
-**Needs the hardware team:** station pins are DECIDED (see 3.A.1); confirm the relay modules' active level (firmware assumes active-LOW) and the valve coil voltage; sensor type and its raw range; Box 2's three-board split (TFT display, sensors, relay controller) so it can follow the Box 3 build. B1 touch: same as Box 1's numbers for now; flash a calibration only if it proves inaccurate on the test day. Flyback diodes: not needed (station is isolated, no coin signal).
+**Needs the hardware team:** station pins are DECIDED (see 3.A.1); confirm the relay modules' active level (firmware assumes active-LOW) and the valve coil voltage; sensor type and its raw range; Box 2's three-board split is now in the firmware (C1 terminal, C2 sensors, C3 relays) but the C3 board has to be built (see the 2026-11-12 section). B1 touch: same as Box 1's numbers for now; flash a calibration only if it proves inaccurate on the test day. Flyback diodes: not needed (station is isolated, no coin signal).
 
-**Decisions made but not built:** Box 1 and Box 2 get the Box 3 flow later (one common main-controller program with a box number is the plan). The station's GPIO pins are decided (section 3.A.1).
+**Decisions made but not built:** (done 2026-11-12: Box 1 and Box 2 got the Box 3 flow, one common program per node type with a `box_config.h`.) The station's GPIO pins are decided (section 3.A.1).
 
 **Manual: v10 DONE 2026-11-04** (`MANUAL\JollyHelmet_UserManual_v10.docx` + `.pdf`, 111 pages; v9 + Refilling Station chapter, Box 3 36-step customer pages, UPS / OUT OF ORDER, wiring, charts, settings reference, glossary, Rev 10; Box 1 and Box 2 text unchanged; details in `MANUAL\README.txt`). If the flow or a chart changes after the bench tests, v11 must follow the same change list; the Word file is the master. The original change list (kept for reference) was: the next version must: replace the ACS chapters with a Refilling Station chapter (levels, queue, test button, failure and what to do); rewrite the Box 3 flow and screens to the 36 steps (CHECKING, dry-only, required coin, AUTO DRY, cancel paths); new LocalServer page screenshots (Box 3 page, Refilling Station page, Dashboard card); the plain board names; the web page's dials / alerts / network map; the 12 devices; remove drain pumps, ratings, time picker. Charts for it: `FLOWCHART_SYSTEM\png`.
 

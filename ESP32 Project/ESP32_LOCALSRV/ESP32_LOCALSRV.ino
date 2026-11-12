@@ -89,10 +89,11 @@ uint32_t lastKnownPulses[3] = {0, 0, 0};
 const char* const PULSE_KEYS[3]  = {"last_a1_pulses", "last_c1_pulses", "last_b1_pulses"};
 const char* const PULSE_NAMES[3] = {"A1", "C1", "B1"};
 
-// Booked coins (2026-10-13): Box 1's S3A and Box 3's S3B send the running total of the coins THEY accepted for paid sessions (CoinBookPacket,
+// Booked coins (2026-10-13): each box's S3 (S3A, S3C, S3B) sends the running total of the coins THEY accepted for paid sessions (CoinBookPacket,
 // every second). The revenue books the difference to the last total seen (kept in NVS, so a reboot here never double-counts). A box that has
-// sent it once stays on this way of counting (bookedOn, kept in NVS). Box 2 sends none: its revenue still comes from C1's pulse counter.
-// Index like the pulses: 0 = Box 1 (S3A), 1 = Box 2 (unused), 2 = Box 3 (S3B).
+// sent it once stays on this way of counting (bookedOn, kept in NVS). Since 2026-11-12 all three boxes run the same S3 program and send it; a Box 2 on
+// OLD firmware sent none, so its revenue then still comes from C1's pulse counter until the new S3C is heard (the same switch-over Box 1 / Box 3 made).
+// Index like the pulses: 0 = Box 1 (S3A), 1 = Box 2 (S3C), 2 = Box 3 (S3B).
 uint32_t lastBooked[3] = {0, 0, 0};
 bool     bookedOn[3]   = {false, false, false};
 const char* const BOOK_KEYS[3]    = {"bk_s3a", "bk_s3c", "bk_s3b"};
@@ -595,11 +596,12 @@ void processPacket(const uint8_t* mac, const uint8_t* incomingData, int len) {
 
     if (len == (int)sizeof(RestatePacket)) { restateOnPacket(incomingData); return; }   // the Update button of the spare ESP32_RESTATE board
 
-    if (len == (int)sizeof(CoinBookPacket)) {                                           // Box 1's / Box 3's running total of booked coins
+    if (len == (int)sizeof(CoinBookPacket)) {                                           // each box's running total of booked coins
         CoinBookPacket cb;
         memcpy(&cb, incomingData, sizeof(cb));
         if (cb.magic == COINBOOK_MAGIC) {
             if (cb.deviceID == DEVICE_S3A)      { learnMac(DEVICE_S3A, mac); trackBooked(0, cb.bookedCoins); }
+            else if (cb.deviceID == DEVICE_S3C) { learnMac(DEVICE_S3C, mac); trackBooked(1, cb.bookedCoins); }
             else if (cb.deviceID == DEVICE_S3B) { trackBooked(2, cb.bookedCoins); }
         }
         return;

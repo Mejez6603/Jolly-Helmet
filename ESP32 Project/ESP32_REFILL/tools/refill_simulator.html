@@ -47,7 +47,7 @@ table{border-collapse:collapse;width:100%}td{padding:3px 4px;font-size:.85rem}td
 // THE STATION - a straight port of ESP32_REFILL.ino (same names, same order of the checks). Keep the two in step.
 // =====================================================================================================================================
 const EMPTY = 0, LOW = 1, MID = 2, HIGH = 3, MAX = 4, OFF = 254, UNKNOWN = 255;       // OFF = REFILL_OFF: the station does not watch this box
-const WATCH_DEFAULT = [true, true, true];                      // the sketch has { false, false, true } (Box 3 only, 2026-11-04); the page and most tests use all three, the "Box 3 only" tests set watch = [false, false, true]
+const WATCH_DEFAULT = [true, true, true];                      // the sketch has { true, true, true } since 2026-11-12 (it was Box 3 only from 2026-11-04); the "Box 3 only" tests set watch = [false, false, true] to prove a box set to false is ignored
 const PH_IDLE = 0, PH_QUEUED = 1, PH_REFILL = 2, PH_RETRY = 3;
 const SAMPLE_MS = 50, AVG_N = 20, TICK_MS = 200, BOOT_QUIET_MS = 3000, VALVE_GAP_MS = 1000, CALM_TICKS = 15;
 const HEALTH_RAIL_RAW = 4090, HEALTH_RAIL_MAXEDGE = 4000, HEALTH_NOISE_RAW = 1500, HEALTH_BAD_TICKS = 25, HEALTH_GOOD_TICKS = 50;     // sensor health (same numbers as the sketch)

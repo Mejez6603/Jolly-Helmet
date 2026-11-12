@@ -70,7 +70,7 @@ void sendStatus() {
     p.magic    = REFILL_MAGIC;
     p.seq      = ++statusSeq;
     for (uint8_t i = 0; i < 3; i++) {
-        bool watched  = (i == 2);                      // like the real station (2026-11-04): only Box 3 is watched, Box 1 and 2 are reported as not watched
+        bool watched  = true;                          // like the real station (2026-11-12): all three boxes are watched (until then only Box 3)
         p.raw[i]      = watched && level[i] <= REFILL_MAX ? LEVEL_RAW[level[i]] : 0;
         p.state[i]    = watched ? level[i] : (uint8_t)REFILL_OFF;
         p.midEdge[i]  = MID_EDGE;

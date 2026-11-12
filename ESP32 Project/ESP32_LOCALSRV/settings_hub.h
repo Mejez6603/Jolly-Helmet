@@ -1,23 +1,22 @@
 #pragma once
 // =====================================================================
-//  SETTINGS HUB (2026-10-03) - how the LocalServer configures EVERY node.
+//  SETTINGS HUB (2026-10-03, REWORKED 2026-11-12) - how the LocalServer configures EVERY node.
 //
-//  The LocalServer listens (read-only) to the same broadcasts the three settings benches listened to: each box's S3 status, the sensor
-//  board's readings (A2 / B2 / C2), the relay board's mask (A3 / B3), the coin terminal's counter (A1 / B1 / C1), the Refilling Station's
-//  RefillStatusPacket, and the settings lists the S3 nodes and the station re-broadcast (CMD_SET_CONFIG, target 0; state tag 0 = Box 1's
-//  S3A, 2 = Box 2's S3C, 3 = Box 3's S3B, 4 = the Refilling Station). It serves one page per box plus one for the Refilling Station
-//  (/box1 /box2 /box3 /refill - see settings_pages.h) and turns the page's buttons into the same CMD_SET_CONFIG / CMD_SET_MAINTENANCE /
-//  CMD_SET_RELAY_MASK messages the benches sent. The nodes keep every setting in their own flash, so nothing is lost if this board is
-//  swapped or reflashed. (The ACS 1 / ACS 2 boards and their /acs page were removed 2026-11-03: one Refilling Station replaced them.)
+//  The LocalServer listens (read-only) to the broadcasts of every node: each box's S3 status, the sensor board's readings (A2 / C2 / B2), the relay
+//  board's mask (A3 / C3 / B3), the coin terminal's counter (A1 / C1 / B1), the Refilling Station's RefillStatusPacket, and the settings lists the S3 nodes and
+//  the station re-broadcast (CMD_SET_CONFIG, target 0; state tag 0 = Box 1's S3A, 2 = Box 2's S3C, 3 = Box 3's S3B, 4 = the Refilling Station). It serves one
+//  page per box plus one for the Refilling Station (/box1 /box2 /box3 /refill - see settings_pages.h) and turns the page's buttons into the same
+//  CMD_SET_CONFIG / CMD_SET_MAINTENANCE / CMD_SET_RELAY_MASK messages the benches sent. The nodes keep every setting in their own flash, so nothing is
+//  lost if this board is swapped or reflashed.
+//
+//  SINCE 2026-11-12 ALL THREE BOXES ARE THE SAME (one S3 program, one terminal program, one sensor board, one 13-channel relay board), so there is ONE box
+//  structure (HubBox), ONE box page (PAGE_BOX, which reads its box number from the address) and one set of handlers; box index = box number - 1 (0 = Box 1,
+//  1 = Box 2, 2 = Box 3), which is also the box's slot on the Refilling Station.
 //
 //  Page API (all GET, JSON answers):
-//    /api/b1/*              state | send?kind=levels|rules|phases&csv=           | maint?on=0/1 | mask?v= | refresh
-//    /api/b3/*              state | send?kind=rules|sensors|dry|drying&csv=      | maint?on=0/1 | mask?v= | refresh     (Box 3, new flow 2026-11-03)
-//    /api/b2/*              state | send?kind=rules|heat&csv=                    | maint?on=0/1 | mask?v= | refresh
-//    (Box 3 kinds -> S3B subIndex: rules 1 = rateCoins,rateValue,rateUnitMin,maxCoins | sensors 2 = helmetCm,offlineSec | dry 3 = autoDrySec,heaterOffTailSec | drying 4 = coolDownSec)
-//    (send?kind=autorefresh = seconds between automatic hard refreshes of the touch screen, 0 = never, max 60)
-//    (send?kind=beep = the OPEN A / OPEN B beep, 2 numbers: beep length ms, wait between beeps ms - 0 = a single beep; all three boxes)
-//    (send?kind=refresh = which relays trigger a screen refresh, 2 numbers: on-mask,off-mask)
+//    /api/b1/*  /api/b2/*  /api/b3/*     state | send?kind=rules|sensors|dry|drying|refresh|autorefresh|beep&csv= | maint?on=0/1 | mask?v= | refresh
+//    (kinds -> the S3's subIndex: rules 1 = rateCoins,rateValue,rateUnitMin,maxCoins | sensors 2 = helmetCm,offlineSec | dry 3 = autoDrySec,heaterOffTailSec | drying 4 = coolDownSec
+//     | refresh 5 = on-mask,off-mask | autorefresh 6 = seconds, 0 = never, max 60 | beep 7 = beep length ms, wait ms (0 = a single beep))
 //    (refresh = "force refresh the touch screen": CMD_TFT_HARD_REFRESH to the box's S3 node, which re-sends its terminal's page)
 //    /api/refill/*          state | send?kind=box1|box2|box3|test&csv=  | test?i=0..2&on=1|0      (the Refilling Station: settings per box, manual valve test)
 //
@@ -29,32 +28,34 @@
 static portMUX_TYPE hubMux = portMUX_INITIALIZER_UNLOCKED;
 #define HUB_FRESH_MS 5000
 
-struct HubTerm {                 // a coin terminal (A1 / B1 / C1): its pulse counter and the raw-edge diagnostic
+// The boards of each box, by box index (0 = Box 1, 1 = Box 2, 2 = Box 3)
+static const uint8_t HUB_S3[3]   = { DEVICE_S3A, DEVICE_S3C, DEVICE_S3B };
+static const uint8_t HUB_TERM[3] = { DEVICE_A1,  DEVICE_C1,  DEVICE_B1 };
+static const uint8_t HUB_SENS[3] = { DEVICE_A2,  DEVICE_C2,  DEVICE_B2 };
+static const uint8_t HUB_REL[3]  = { DEVICE_A3,  DEVICE_C3,  DEVICE_B3 };
+static const uint8_t HUB_TAG[3]  = { 0, 2, 3 };                               // state tag of each S3's settings broadcasts
+static const char* const HUB_BOXNAME[3] = { "Box 1", "Box 2", "Box 3" };
+static int hubIdxOf(const uint8_t* list, uint8_t id) { for (int i = 0; i < 3; i++) if (list[i] == id) return i; return -1; }
+
+struct HubTerm {                 // a coin terminal (A1 / C1 / B1): its pulse counter and the raw-edge diagnostic
     bool seen; uint32_t ms; uint32_t pulses; uint32_t changeMs; bool ever; uint32_t rawEdges; float minGap;
 };
-struct HubBox13 {                // Box 1 (S3A, A1, A2, A3) or Box 3 (S3B, B1, B2, B3)
+struct HubBox {                  // one box: S3 + terminal + sensor board + relay board, and the settings the S3 re-broadcasts
     bool s3Seen; uint32_t s3Ms; uint8_t s3State; uint32_t s3Timer;
     A2SensorPacket a2; bool a2Seen; uint32_t a2Ms;
     bool a3Seen; uint32_t a3Ms; uint16_t a3Mask; bool a3Orph;
     HubTerm t;
-    char rules[200]; char levels[200]; char phases[200]; char drying[40]; char refresh[40]; char autorf[16]; char beep[16];
-};
-struct HubBox2 {                 // Box 2 (S3C, C1, C2)
-    bool s3Seen; uint32_t s3Ms; uint8_t s3State; uint32_t s3Timer;
-    TelemetryPacket c2; bool c2Seen; uint32_t c2Ms;
-    HubTerm t;
-    char rules[200]; char heat[200]; char refresh[40]; char autorf[16]; char beep[16];
+    char rules[200]; char levels[200]; char phases[200]; char drying[40]; char refresh[40]; char autorf[16]; char beep[16];   // levels = SENSORS (sub 2), phases = AUTO-DRY (sub 3): old names kept
 };
 struct HubRefill {               // the Refilling Station: its status broadcast and the settings it re-broadcasts (state tag 4)
     RefillStatusPacket p; bool seen; uint32_t ms;
     char box[3][64]; char test[16];       // subIndex 1..3 = Box 1..3 (9 numbers each), subIndex 4 = the manual test seconds
 };
 
-HubBox13 hubB[2];                // [0] = Box 1, [1] = Box 3
-HubBox2  hubC;
+HubBox hubB[3];                  // [0] = Box 1, [1] = Box 2, [2] = Box 3
 HubRefill hubR;                  // the one Refilling Station
 volatile uint16_t hubJoins = 0, hubLeaves = 0, hubLeaveWhy = 0;
-static uint8_t hubBypass[3];         // the Maintenance tick box 'Bypass Safety 2 Seconds Relay' as last sent: [0] Box 1, [1] Box 3, [2] Box 2 (the S3 forgets it when maintenance starts or ends)
+static uint8_t hubBypass[3];         // the Maintenance tick box 'Bypass Safety 2 Seconds Relay' as last sent (the S3 forgets it when maintenance starts or ends)
 static char hubBuf[1800];        // one answer at a time (the web server answers from a single task)
 
 static void hubCopy(char* dst, size_t n, const char* src) {
@@ -90,7 +91,7 @@ static void hubTermUpdate(HubTerm& t, const TelemetryPacket& p) {
     t.seen = true;
     t.ms = now;
     t.pulses = p.pulseCount;
-    t.rawEdges = p.activeTimer;              // A1 / B1 / C1 diagnostic: raw coin-wire edges before the filter
+    t.rawEdges = p.activeTimer;              // A1 / C1 / B1 diagnostic: raw coin-wire edges before the filter
     t.minGap = p.usAlcoholDistance;          // ... and the shortest gap between two edges, in ms
 }
 
@@ -107,8 +108,9 @@ void hubOnPacket(const uint8_t* d, int len) {
         if (c.commandID != CMD_SET_CONFIG || c.targetDeviceID != 0) return;          // only the nodes' own settings broadcasts
         c.payloadStr[sizeof(c.payloadStr) - 1] = '\0';
         portENTER_CRITICAL(&hubMux);
-        if (c.state == 0 || c.state == 3) {                                          // Box 1's S3A / Box 3's S3B
-            HubBox13& b = hubB[c.state == 3 ? 1 : 0];
+        int bi = hubIdxOf(HUB_TAG, c.state);                                         // tag 0 / 2 / 3 = Box 1's S3A / Box 2's S3C / Box 3's S3B
+        if (bi >= 0) {
+            HubBox& b = hubB[bi];
             if (c.subIndex == 1) hubCopy(b.rules, sizeof(b.rules), c.payloadStr);
             else if (c.subIndex == 2) hubCopy(b.levels, sizeof(b.levels), c.payloadStr);
             else if (c.subIndex == 3) hubCopy(b.phases, sizeof(b.phases), c.payloadStr);
@@ -116,12 +118,6 @@ void hubOnPacket(const uint8_t* d, int len) {
             else if (c.subIndex == 5) hubCopy(b.refresh, sizeof(b.refresh), c.payloadStr);
             else if (c.subIndex == 6) hubCopy(b.autorf, sizeof(b.autorf), c.payloadStr);
             else if (c.subIndex == 7) hubCopy(b.beep, sizeof(b.beep), c.payloadStr);
-        } else if (c.state == 2) {                                                   // Box 2's S3C
-            if (c.subIndex == 1) hubCopy(hubC.rules, sizeof(hubC.rules), c.payloadStr);
-            else if (c.subIndex == 2) hubCopy(hubC.heat, sizeof(hubC.heat), c.payloadStr);
-            else if (c.subIndex == 5) hubCopy(hubC.refresh, sizeof(hubC.refresh), c.payloadStr);
-            else if (c.subIndex == 6) hubCopy(hubC.autorf, sizeof(hubC.autorf), c.payloadStr);
-            else if (c.subIndex == 7) hubCopy(hubC.beep, sizeof(hubC.beep), c.payloadStr);
         } else if (c.state == 4) {                                                   // the Refilling Station
             if (c.subIndex >= 1 && c.subIndex <= 3) hubCopy(hubR.box[c.subIndex - 1], sizeof(hubR.box[0]), c.payloadStr);
             else if (c.subIndex == 4) hubCopy(hubR.test, sizeof(hubR.test), c.payloadStr);
@@ -130,35 +126,34 @@ void hubOnPacket(const uint8_t* d, int len) {
     } else if (len == (int)sizeof(BoxStatusPacket)) {
         BoxStatusPacket b;
         memcpy(&b, d, sizeof(b));
+        int bi = hubIdxOf(HUB_S3, b.deviceID);
+        if (bi < 0) return;
         portENTER_CRITICAL(&hubMux);
-        if (b.deviceID == DEVICE_S3A)      { hubB[0].s3Seen = true; hubB[0].s3Ms = now; hubB[0].s3State = b.machineState; hubB[0].s3Timer = b.activeTimer; }
-        else if (b.deviceID == DEVICE_S3B) { hubB[1].s3Seen = true; hubB[1].s3Ms = now; hubB[1].s3State = b.machineState; hubB[1].s3Timer = b.activeTimer; }
-        else if (b.deviceID == DEVICE_S3C) { hubC.s3Seen = true;    hubC.s3Ms = now;    hubC.s3State = b.machineState;    hubC.s3Timer = b.activeTimer; }
+        hubB[bi].s3Seen = true; hubB[bi].s3Ms = now; hubB[bi].s3State = b.machineState; hubB[bi].s3Timer = b.activeTimer;
         portEXIT_CRITICAL(&hubMux);
     } else if (len == (int)sizeof(A2SensorPacket)) {
         A2SensorPacket p;
         memcpy(&p, d, sizeof(p));
-        if (p.deviceID != DEVICE_A2 && p.deviceID != DEVICE_B2) return;
-        HubBox13& b = hubB[p.deviceID == DEVICE_B2 ? 1 : 0];
+        int bi = hubIdxOf(HUB_SENS, p.deviceID);
+        if (bi < 0) return;
         portENTER_CRITICAL(&hubMux);
-        b.a2 = p; b.a2Seen = true; b.a2Ms = now;
+        hubB[bi].a2 = p; hubB[bi].a2Seen = true; hubB[bi].a2Ms = now;
         portEXIT_CRITICAL(&hubMux);
     } else if (len == (int)sizeof(A3StatusPacket)) {
         A3StatusPacket p;
         memcpy(&p, d, sizeof(p));
-        if (p.deviceID != DEVICE_A3 && p.deviceID != DEVICE_B3) return;
-        HubBox13& b = hubB[p.deviceID == DEVICE_B3 ? 1 : 0];
+        int bi = hubIdxOf(HUB_REL, p.deviceID);
+        if (bi < 0) return;
         portENTER_CRITICAL(&hubMux);
-        b.a3Seen = true; b.a3Ms = now; b.a3Mask = p.relayMask; b.a3Orph = p.orphaned;
+        hubB[bi].a3Seen = true; hubB[bi].a3Ms = now; hubB[bi].a3Mask = p.relayMask; hubB[bi].a3Orph = p.orphaned;
         portEXIT_CRITICAL(&hubMux);
     } else if (len == (int)sizeof(TelemetryPacket)) {
         TelemetryPacket t;
         memcpy(&t, d, sizeof(t));
+        int bi = hubIdxOf(HUB_TERM, t.deviceID);
+        if (bi < 0) return;
         portENTER_CRITICAL(&hubMux);
-        if (t.deviceID == DEVICE_A1)      hubTermUpdate(hubB[0].t, t);
-        else if (t.deviceID == DEVICE_B1) hubTermUpdate(hubB[1].t, t);
-        else if (t.deviceID == DEVICE_C1) hubTermUpdate(hubC.t, t);
-        else if (t.deviceID == DEVICE_C2) { hubC.c2 = t; hubC.c2Seen = true; hubC.c2Ms = now; }
+        hubTermUpdate(hubB[bi].t, t);
         portEXIT_CRITICAL(&hubMux);
     } else if (len == (int)sizeof(RefillStatusPacket)) {
         RefillStatusPacket p;
@@ -173,14 +168,14 @@ void hubOnPacket(const uint8_t* d, int len) {
 // ---------------------------------------------------------------------
 // Answers
 // ---------------------------------------------------------------------
-static void hubBox13Json(uint8_t idx, char* out, size_t n) {
-    HubBox13 b;
+static void hubBoxJson(uint8_t idx, char* out, size_t n) {
+    HubBox b;
     RefillStatusPacket rp;
     bool rSeen; uint32_t rMs;
     uint32_t now;
     portENTER_CRITICAL(&hubMux);
     now = millis();
-    memcpy(&b, &hubB[idx], sizeof(HubBox13));
+    memcpy(&b, &hubB[idx], sizeof(HubBox));
     memcpy(&rp, &hubR.p, sizeof(rp)); rSeen = hubR.seen; rMs = hubR.ms;
     portEXIT_CRITICAL(&hubMux);
 
@@ -189,49 +184,22 @@ static void hubBox13Json(uint8_t idx, char* out, size_t n) {
     bool a3Ok = hubFresh(b.a3Seen, b.a3Ms, now);
     bool t1Ok = hubFresh(b.t.seen, b.t.ms, now);
     long coinAge = b.t.ever ? (long)(now - b.t.changeMs) : -1L;
-    uint8_t rb = (idx == 0) ? 0 : 2;                       // this box's place on the Refilling Station: Box 1 = 0, Box 3 = 2
+    uint8_t rb = idx;                                      // this box's place on the Refilling Station: Box 1 = 0, Box 2 = 1, Box 3 = 2
     bool rOk = hubFresh(rSeen, rMs, now);
     snprintf(out, n,
-             "{\"s3aok\":%d,\"s3aage\":%lu,\"state\":%u,\"timer\":%lu,"
-             "\"a2ok\":%d,\"a2age\":%lu,\"helm\":%.1f,\"als\":%.1f,\"sls\":%.1f,\"door\":%d,\"raw0\":%u,\"raw1\":%u,"
+             "{\"s3ok\":%d,\"s3age\":%lu,\"state\":%u,\"timer\":%lu,"
+             "\"a2ok\":%d,\"a2age\":%lu,\"helm\":%.1f,\"door\":%d,\"pan\":%d,\"bak\":%d,\"side\":%d,"
              "\"a3ok\":%d,\"a3mask\":%u,\"a3orph\":%d,\"a1ok\":%d,\"coins\":%lu,\"coinage\":%ld,\"raw\":%lu,\"gap\":%.1f,"
              "\"rf\":[%d,%u,%u,%d,%d,%d],"
              "\"up\":%lu,\"rst\":\"%s\",\"clients\":%d,\"joins\":%u,\"leaves\":%u,\"why\":%u,"
              "\"by\":%u,\"rules\":\"%s\",\"levels\":\"%s\",\"phases\":\"%s\",\"drying\":\"%s\",\"refresh\":\"%s\",\"autorf\":\"%s\",\"beep\":\"%s\"}",
              s3Ok ? 1 : 0, (unsigned long)(b.s3Seen ? now - b.s3Ms : 0), (unsigned)b.s3State, (unsigned long)b.s3Timer,
-             a2Ok ? 1 : 0, (unsigned long)(b.a2Seen ? now - b.a2Ms : 0), (double)b.a2.usHelmetCm, (double)b.a2.usMcAlsCm, (double)b.a2.usMcSlsCm,
-             b.a2.doorEnclosure ? 1 : 0, (unsigned)b.a2.wsAlsRaw, (unsigned)b.a2.wsSlsRaw,
+             a2Ok ? 1 : 0, (unsigned long)(b.a2Seen ? now - b.a2Ms : 0), (double)b.a2.usHelmetCm,
+             b.a2.doorEnclosure ? 1 : 0, b.a2.doorPanel ? 1 : 0, b.a2.doorBackdoor ? 1 : 0, b.a2.doorAcsSide ? 1 : 0,
              a3Ok ? 1 : 0, (unsigned)b.a3Mask, b.a3Orph ? 1 : 0, t1Ok ? 1 : 0, (unsigned long)b.t.pulses, coinAge, (unsigned long)b.t.rawEdges, (double)b.t.minGap,
              rOk ? 1 : 0, (unsigned)rp.raw[rb], (unsigned)rp.state[rb], (rp.valveMask >> rb) & 1, (rp.queueMask >> rb) & 1, (rp.failMask >> rb) & 1,
              (unsigned long)(now / 1000UL), hubResetReason(), (int)WiFi.softAPgetStationNum(), (unsigned)hubJoins, (unsigned)hubLeaves, (unsigned)hubLeaveWhy,
              (unsigned)hubBypass[idx], b.rules, b.levels, b.phases, b.drying, b.refresh, b.autorf, b.beep);
-}
-
-static void hubBox2Json(char* out, size_t n) {
-    HubBox2 b;
-    uint32_t now;
-    portENTER_CRITICAL(&hubMux);
-    now = millis();
-    memcpy(&b, &hubC, sizeof(HubBox2));
-    portEXIT_CRITICAL(&hubMux);
-
-    bool s3Ok = hubFresh(b.s3Seen, b.s3Ms, now);
-    bool c2Ok = hubFresh(b.c2Seen, b.c2Ms, now);
-    bool c1Ok = hubFresh(b.t.seen, b.t.ms, now);
-    long coinAge = b.t.ever ? (long)(now - b.t.changeMs) : -1L;
-    uint16_t relayMask = 0;
-    for (int i = 0; i < 6; i++) if (b.c2.relayStates[i]) relayMask |= (uint16_t)(1u << i);
-    snprintf(out, n,
-             "{\"s3cok\":%d,\"s3cage\":%lu,\"state\":%u,\"timer\":%lu,"
-             "\"c2ok\":%d,\"c2age\":%lu,\"helm\":%.1f,\"door\":%d,\"pan\":%d,\"bak\":%d,\"mask\":%u,"
-             "\"c1ok\":%d,\"coins\":%lu,\"coinage\":%ld,\"raw\":%lu,\"gap\":%.1f,"
-             "\"up\":%lu,\"rst\":\"%s\",\"clients\":%d,\"joins\":%u,\"leaves\":%u,\"why\":%u,"
-             "\"by\":%u,\"rules\":\"%s\",\"heat\":\"%s\",\"refresh\":\"%s\",\"autorf\":\"%s\",\"beep\":\"%s\"}",
-             s3Ok ? 1 : 0, (unsigned long)(b.s3Seen ? now - b.s3Ms : 0), (unsigned)b.s3State, (unsigned long)b.s3Timer,
-             c2Ok ? 1 : 0, (unsigned long)(b.c2Seen ? now - b.c2Ms : 0), (double)b.c2.usHelmetDistance, b.c2.doorEnclosure ? 1 : 0, b.c2.doorPanel ? 1 : 0, b.c2.doorBackdoor ? 1 : 0, (unsigned)relayMask,
-             c1Ok ? 1 : 0, (unsigned long)b.t.pulses, coinAge, (unsigned long)b.t.rawEdges, (double)b.t.minGap,
-             (unsigned long)(now / 1000UL), hubResetReason(), (int)WiFi.softAPgetStationNum(), (unsigned)hubJoins, (unsigned)hubLeaves, (unsigned)hubLeaveWhy,
-             (unsigned)hubBypass[2], b.rules, b.heat, b.refresh, b.autorf, b.beep);
 }
 
 static void hubRefillJson(char* out, size_t n) {
@@ -256,40 +224,35 @@ static void hubRefillJson(char* out, size_t n) {
              (unsigned long)(now / 1000UL), hubResetReason(), (int)WiFi.softAPgetStationNum(), (unsigned)hubJoins, (unsigned)hubLeaves, (unsigned)hubLeaveWhy,
              r.box[0], r.box[1], r.box[2], r.test);
 }
-// What the home page shows: who is online, each box's step / timer / coins, the Refilling Station's levels.
+// What the home page shows: who is online (13 boards), each box's step / timer / coins, the Refilling Station's levels.
 void hubFillWs(JsonDocument& doc) {
     uint32_t now = millis();
-    bool n[12];
+    bool n[13];
     uint8_t  bs[3]; uint32_t bt[3]; uint32_t bc[3];
     uint16_t rraw[3]; uint8_t rst[3], rvalve, rqueue, rfail, rtest; uint16_t rmax[3];
     portENTER_CRITICAL(&hubMux);
-    n[0]  = hubFresh(hubB[0].t.seen, hubB[0].t.ms, now);        // A1
-    n[1]  = hubFresh(hubB[0].a2Seen, hubB[0].a2Ms, now);        // A2
-    n[2]  = hubFresh(hubB[0].a3Seen, hubB[0].a3Ms, now);        // A3
-    n[3]  = hubFresh(hubB[0].s3Seen, hubB[0].s3Ms, now);        // S3A
-    n[4]  = hubFresh(hubC.t.seen, hubC.t.ms, now);              // C1
-    n[5]  = hubFresh(hubC.c2Seen, hubC.c2Ms, now);              // C2
-    n[6]  = hubFresh(hubC.s3Seen, hubC.s3Ms, now);              // S3C
-    n[7]  = hubFresh(hubB[1].t.seen, hubB[1].t.ms, now);        // B1
-    n[8]  = hubFresh(hubB[1].a2Seen, hubB[1].a2Ms, now);        // B2
-    n[9]  = hubFresh(hubB[1].a3Seen, hubB[1].a3Ms, now);        // B3
-    n[10] = hubFresh(hubB[1].s3Seen, hubB[1].s3Ms, now);        // S3B
-    n[11] = hubFresh(hubR.seen, hubR.ms, now);                  // Refilling Station
-    bs[0] = hubB[0].s3State; bt[0] = hubB[0].s3Timer; bc[0] = hubB[0].t.pulses;
-    bs[1] = hubC.s3State;    bt[1] = hubC.s3Timer;    bc[1] = hubC.t.pulses;
-    bs[2] = hubB[1].s3State; bt[2] = hubB[1].s3Timer; bc[2] = hubB[1].t.pulses;
+    // order of the flags: Box 1 = A1 A2 A3 S3A | Box 2 = C1 C2 C3 S3C | Box 3 = B1 B2 B3 S3B | Refilling Station   (the NODES list of script_js.h uses this order.
+    // NOT the order of the Online Server's "n" flags: there C3 is appended as the 13th so the older twelve places did not move - see online_hub.h / names.js)
+    for (int i = 0; i < 3; i++) {
+        n[i * 4 + 0] = hubFresh(hubB[i].t.seen, hubB[i].t.ms, now);        // terminal
+        n[i * 4 + 1] = hubFresh(hubB[i].a2Seen, hubB[i].a2Ms, now);        // sensors
+        n[i * 4 + 2] = hubFresh(hubB[i].a3Seen, hubB[i].a3Ms, now);        // relays
+        n[i * 4 + 3] = hubFresh(hubB[i].s3Seen, hubB[i].s3Ms, now);        // S3
+        bs[i] = hubB[i].s3State; bt[i] = hubB[i].s3Timer; bc[i] = hubB[i].t.pulses;
+    }
+    n[12] = hubFresh(hubR.seen, hubR.ms, now);                              // Refilling Station
     for (int i = 0; i < 3; i++) { rraw[i] = hubR.p.raw[i]; rst[i] = hubR.p.state[i]; rmax[i] = hubR.p.maxEdge[i]; }
     rvalve = hubR.p.valveMask; rqueue = hubR.p.queueMask; rfail = hubR.p.failMask; rtest = hubR.p.testMask;
     portEXIT_CRITICAL(&hubMux);
 
     JsonArray on = doc["n"].to<JsonArray>();
-    for (int i = 0; i < 12; i++) on.add(n[i] ? 1 : 0);
+    for (int i = 0; i < 13; i++) on.add(n[i] ? 1 : 0);
     doc["b1s"] = bs[0]; doc["b1t"] = bt[0]; doc["b1c"] = bc[0];
     doc["b2s"] = bs[1]; doc["b2t"] = bt[1]; doc["b2c"] = bc[1];
     doc["b3s"] = bs[2]; doc["b3t"] = bt[2]; doc["b3c"] = bc[2];
-    // rf = [online, valveMask, queueMask, failMask, testMask, then per box: raw, state (0 EMPTY..4 MAX, 255 sensor fault), maxEdge]
+    // rf = [online, valveMask, queueMask, failMask, testMask, then per box: raw, state (0 EMPTY..4 MAX, 254 not watched, 255 sensor fault), maxEdge]
     JsonArray rf = doc["rf"].to<JsonArray>();
-    rf.add(n[11] ? 1 : 0); rf.add(rvalve); rf.add(rqueue); rf.add(rfail); rf.add(rtest);
+    rf.add(n[12] ? 1 : 0); rf.add(rvalve); rf.add(rqueue); rf.add(rfail); rf.add(rtest);
     for (int i = 0; i < 3; i++) { rf.add(rraw[i]); rf.add(rst[i]); rf.add(rmax[i]); }
 }
 // ---------------------------------------------------------------------
@@ -311,17 +274,12 @@ static String hubArgStr(AsyncWebServerRequest* r, const char* name) {
     return r->hasParam(name) ? r->getParam(name)->value() : String("");
 }
 
-// kind -> subIndex for each node's CMD_SET_CONFIG; 0 = not a kind this node has
-static uint8_t hubSubFor(const String& kind, bool box3) {
-    if (kind == "rules")  return 1;
-    if (box3) {                                       // Box 3's new flow (2026-11-03): sensors 2, dry 3, drying 4 (the old levels / phases kinds are gone)
-        if (kind == "sensors") return 2;
-        if (kind == "dry")     return 3;
-        if (kind == "drying")  return 4;
-    } else {
-        if (kind == "levels") return 2;
-        if (kind == "phases") return 3;
-    }
+// kind -> subIndex for each box's CMD_SET_CONFIG; 0 = not a kind the boxes have
+static uint8_t hubSubFor(const String& kind) {
+    if (kind == "rules")   return 1;
+    if (kind == "sensors") return 2;
+    if (kind == "dry")     return 3;
+    if (kind == "drying")  return 4;
     if (kind == "refresh") return 5;
     if (kind == "autorefresh") return 6;
     if (kind == "beep") return 7;
@@ -336,17 +294,16 @@ static void hubSendSettings(uint8_t dev, uint8_t sub, const String& csv, const c
 
 static void hubAnswer(AsyncWebServerRequest* r) { r->send(200, "application/json", hubBuf); }
 
-// ---- Box 1 / Box 3 ----
-static void hubBox13Handler(AsyncWebServerRequest* r, uint8_t idx, uint8_t what) {   // what: 0 state, 1 send, 2 maint, 3 mask
-    uint8_t dev = (idx == 0) ? DEVICE_S3A : DEVICE_S3B;
+// ---- any box (idx 0 = Box 1, 1 = Box 2, 2 = Box 3) ----
+static void hubBoxHandler(AsyncWebServerRequest* r, uint8_t idx, uint8_t what) {   // what: 0 state, 1 send, 2 maint, 3 mask, 4 screen refresh
+    uint8_t dev = HUB_S3[idx];
     if (what == 1) {
-        String kind = hubArgStr(r, "kind");
-        hubSendSettings(dev, hubSubFor(kind, idx == 1), hubArgStr(r, "csv"), idx == 0 ? "Box 1" : "Box 3");
+        hubSendSettings(dev, hubSubFor(hubArgStr(r, "kind")), hubArgStr(r, "csv"), HUB_BOXNAME[idx]);
     } else if (what == 2) {
         hubBypass[idx] = 0;                                                  // maintenance starting or ending: the S3 puts the 2 s safety back on
         sendEspNowCmdDirect(dev, CMD_SET_MAINTENANCE, 0, 0, hubArgInt(r, "on", 0) == 1 ? 1 : 0);
     } else if (what == 3) {
-        uint16_t mask = (uint16_t)(hubArgInt(r, "v", 0) & (idx == 0 ? A3_MASK_ALL : B3_MASK_ALL));
+        uint16_t mask = (uint16_t)(hubArgInt(r, "v", 0) & B3_MASK_ALL);      // the 13 relays of every box (bits 8 and 9, the old drain pumps, are ignored by the relay board)
         uint8_t by = (hubArgInt(r, "by", 0) == 1) ? 1 : 0;                   // tick box "Bypass Safety 2 Seconds Relay"; riding on the relay command as its state byte
         hubBypass[idx] = by;
         sendEspNowCmdDirect(dev, CMD_SET_RELAY_MASK, 0, mask, by);
@@ -354,27 +311,7 @@ static void hubBox13Handler(AsyncWebServerRequest* r, uint8_t idx, uint8_t what)
         // Force refresh of the touch screen: the S3 node re-sends its terminal's current page as a hard refresh (controller re-init + redraw)
         sendEspNowCmdDirect(dev, CMD_TFT_HARD_REFRESH, 0, 0, 0);
     }
-    hubBox13Json(idx, hubBuf, sizeof(hubBuf));
-    hubAnswer(r);
-}
-
-// ---- Box 2 ----
-static void hubBox2Handler(AsyncWebServerRequest* r, uint8_t what) {
-    if (what == 1) {
-        String kind = hubArgStr(r, "kind");
-        uint8_t sub = (kind == "rules") ? 1 : ((kind == "heat") ? 2 : ((kind == "refresh") ? 5 : ((kind == "autorefresh") ? 6 : ((kind == "beep") ? 7 : 0))));
-        hubSendSettings(DEVICE_S3C, sub, hubArgStr(r, "csv"), "Box 2");
-    } else if (what == 2) {
-        hubBypass[2] = 0;
-        sendEspNowCmdDirect(DEVICE_S3C, CMD_SET_MAINTENANCE, 0, 0, hubArgInt(r, "on", 0) == 1 ? 1 : 0);
-    } else if (what == 3) {
-        uint8_t by = (hubArgInt(r, "by", 0) == 1) ? 1 : 0;
-        hubBypass[2] = by;
-        sendEspNowCmdDirect(DEVICE_S3C, CMD_SET_RELAY_MASK, 0, (uint16_t)(hubArgInt(r, "v", 0) & C2_MASK_ALL), by);
-    } else if (what == 4) {
-        sendEspNowCmdDirect(DEVICE_S3C, CMD_TFT_HARD_REFRESH, 0, 0, 0);   // force refresh of C1's touch screen (see the Box 1 / 3 handler)
-    }
-    hubBox2Json(hubBuf, sizeof(hubBuf));
+    hubBoxJson(idx, hubBuf, sizeof(hubBuf));
     hubAnswer(r);
 }
 
@@ -397,35 +334,35 @@ static void hubRefillHandler(AsyncWebServerRequest* r, uint8_t what) {   // what
 void hubBegin() {
     WiFi.onEvent(hubWifiEvent);
     memset(hubB, 0, sizeof(hubB));
-    memset(&hubC, 0, sizeof(hubC));
     memset(&hubR, 0, sizeof(hubR));
 }
 
 void hubRegisterRoutes() {
-    server.on("/box1", HTTP_GET, [](AsyncWebServerRequest* r) { sendCached(r, "text/html", PAGE_BOX1); });
-    server.on("/box2", HTTP_GET, [](AsyncWebServerRequest* r) { sendCached(r, "text/html", PAGE_BOX2); });
-    server.on("/box3", HTTP_GET, [](AsyncWebServerRequest* r) { sendCached(r, "text/html", PAGE_BOX3); });
+    // the three box pages are ONE page (PAGE_BOX); it reads which box it is from its own address
+    server.on("/box1", HTTP_GET, [](AsyncWebServerRequest* r) { sendCached(r, "text/html", PAGE_BOX); });
+    server.on("/box2", HTTP_GET, [](AsyncWebServerRequest* r) { sendCached(r, "text/html", PAGE_BOX); });
+    server.on("/box3", HTTP_GET, [](AsyncWebServerRequest* r) { sendCached(r, "text/html", PAGE_BOX); });
     server.on("/refill", HTTP_GET, [](AsyncWebServerRequest* r) { sendCached(r, "text/html", PAGE_REFILL); });
     server.on("/hub.css", HTTP_GET, [](AsyncWebServerRequest* r) { sendCached(r, "text/css", HUB_CSS); });                  // look of the four pages (hub_theme.h)
     server.on("/hub.js",  HTTP_GET, [](AsyncWebServerRequest* r) { sendCached(r, "application/javascript", HUB_JS); });
 
-    server.on("/api/b1/state", HTTP_GET, [](AsyncWebServerRequest* r) { hubBox13Handler(r, 0, 0); });
-    server.on("/api/b1/send",  HTTP_GET, [](AsyncWebServerRequest* r) { hubBox13Handler(r, 0, 1); });
-    server.on("/api/b1/maint", HTTP_GET, [](AsyncWebServerRequest* r) { hubBox13Handler(r, 0, 2); });
-    server.on("/api/b1/mask",  HTTP_GET, [](AsyncWebServerRequest* r) { hubBox13Handler(r, 0, 3); });
-    server.on("/api/b1/refresh", HTTP_GET, [](AsyncWebServerRequest* r) { hubBox13Handler(r, 0, 4); });
+    server.on("/api/b1/state", HTTP_GET, [](AsyncWebServerRequest* r) { hubBoxHandler(r, 0, 0); });
+    server.on("/api/b1/send",  HTTP_GET, [](AsyncWebServerRequest* r) { hubBoxHandler(r, 0, 1); });
+    server.on("/api/b1/maint", HTTP_GET, [](AsyncWebServerRequest* r) { hubBoxHandler(r, 0, 2); });
+    server.on("/api/b1/mask",  HTTP_GET, [](AsyncWebServerRequest* r) { hubBoxHandler(r, 0, 3); });
+    server.on("/api/b1/refresh", HTTP_GET, [](AsyncWebServerRequest* r) { hubBoxHandler(r, 0, 4); });
 
-    server.on("/api/b3/state", HTTP_GET, [](AsyncWebServerRequest* r) { hubBox13Handler(r, 1, 0); });
-    server.on("/api/b3/send",  HTTP_GET, [](AsyncWebServerRequest* r) { hubBox13Handler(r, 1, 1); });
-    server.on("/api/b3/maint", HTTP_GET, [](AsyncWebServerRequest* r) { hubBox13Handler(r, 1, 2); });
-    server.on("/api/b3/mask",  HTTP_GET, [](AsyncWebServerRequest* r) { hubBox13Handler(r, 1, 3); });
-    server.on("/api/b3/refresh", HTTP_GET, [](AsyncWebServerRequest* r) { hubBox13Handler(r, 1, 4); });
+    server.on("/api/b2/state", HTTP_GET, [](AsyncWebServerRequest* r) { hubBoxHandler(r, 1, 0); });
+    server.on("/api/b2/send",  HTTP_GET, [](AsyncWebServerRequest* r) { hubBoxHandler(r, 1, 1); });
+    server.on("/api/b2/maint", HTTP_GET, [](AsyncWebServerRequest* r) { hubBoxHandler(r, 1, 2); });
+    server.on("/api/b2/mask",  HTTP_GET, [](AsyncWebServerRequest* r) { hubBoxHandler(r, 1, 3); });
+    server.on("/api/b2/refresh", HTTP_GET, [](AsyncWebServerRequest* r) { hubBoxHandler(r, 1, 4); });
 
-    server.on("/api/b2/state", HTTP_GET, [](AsyncWebServerRequest* r) { hubBox2Handler(r, 0); });
-    server.on("/api/b2/send",  HTTP_GET, [](AsyncWebServerRequest* r) { hubBox2Handler(r, 1); });
-    server.on("/api/b2/maint", HTTP_GET, [](AsyncWebServerRequest* r) { hubBox2Handler(r, 2); });
-    server.on("/api/b2/mask",  HTTP_GET, [](AsyncWebServerRequest* r) { hubBox2Handler(r, 3); });
-    server.on("/api/b2/refresh", HTTP_GET, [](AsyncWebServerRequest* r) { hubBox2Handler(r, 4); });
+    server.on("/api/b3/state", HTTP_GET, [](AsyncWebServerRequest* r) { hubBoxHandler(r, 2, 0); });
+    server.on("/api/b3/send",  HTTP_GET, [](AsyncWebServerRequest* r) { hubBoxHandler(r, 2, 1); });
+    server.on("/api/b3/maint", HTTP_GET, [](AsyncWebServerRequest* r) { hubBoxHandler(r, 2, 2); });
+    server.on("/api/b3/mask",  HTTP_GET, [](AsyncWebServerRequest* r) { hubBoxHandler(r, 2, 3); });
+    server.on("/api/b3/refresh", HTTP_GET, [](AsyncWebServerRequest* r) { hubBoxHandler(r, 2, 4); });
 
     server.on("/api/refill/state", HTTP_GET, [](AsyncWebServerRequest* r) { hubRefillHandler(r, 0); });
     server.on("/api/refill/send",  HTTP_GET, [](AsyncWebServerRequest* r) { hubRefillHandler(r, 1); });

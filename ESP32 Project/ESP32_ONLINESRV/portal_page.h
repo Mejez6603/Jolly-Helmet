@@ -274,7 +274,7 @@ function up(s){const d=Math.floor(s/86400),h=Math.floor(s%86400/3600),m=Math.flo
 function dot(id,cls){$(id).className='dot '+(cls||'');}
 function bars(rssi){const q=rssi>-55?4:rssi>-65?3:rssi>-75?2:1;return '<span class="bars">'+[1,2,3,4].map(i=>'<i class="'+(i<=q?'on':'')+'" style="height:'+(4+i*3)+'px"></i>').join('')+'</span>';}
 function wifiHint(e){e=e||'';if(/password/i.test(e))return 'Check the password (it is case-sensitive), then Save and connect again.';if(/not found/i.test(e))return 'The board cannot see that network. Only 2.4 GHz works: a network that is 5 GHz only (often named ...5G) cannot be used. Move the board closer and try again.';if(/timeout|no answer/i.test(e))return 'The router did not answer. Check that it is on and in range, then try again.';return 'Check the name and the password, then Save and connect again.';}
-const GROUPS={B1:[0,1,2,3],B2:[4,5,6],B3:[7,8,9,10]};   /* Box 1 = A1 A2 A3 S3A, Box 2 = C1 C2 S3C, Box 3 = B1 B2 B3 S3B (same order as the V0 board string) */
+const GROUPS={B1:[0,1,2,3],B2:[4,5,6,12],B3:[7,8,9,10]};   /* Box 1 = A1 A2 A3 S3A, Box 2 = C1 C2 S3C + C3 (the relay board, last place), Box 3 = B1 B2 B3 S3B (same order as the V0 board string, 13 places) */
 let filled=false,lastOk=Date.now(),saveAt=0;
 function fillForm(s){$('ssid').value=s.ssid||'';$('server').value=s.server;$('iv').value=String(s.iv);$('tz').value=s.tz;$('mqmax').value=s.mqmax;
   $('extra').checked=!!s.extra;$('events').checked=!!s.events;$('insecure').checked=!!s.insecure;
@@ -301,7 +301,7 @@ function render(s){
   const bTxt=testing?'Testing...':!s.hasToken?'No token saved yet. Paste the Auth Token of your Blynk device, then Save and connect (the Wi-Fi is tested first).':s.blynk.age<0?'Not tried yet.':(s.blynk.ok?'Blynk upload OK':'Blynk upload FAILED: '+s.blynk.err)+' ('+ago(s.blynk.age)+' ago)'+(s.blynk.note?' - '+s.blynk.note:'')+(s.hasPtoken?' · public status device: '+(s.pub.tried?(s.pub.ok?'OK':'FAILED: '+s.pub.err):'waiting for the next upload'):'');
   const bR=$('blynkResult');bR.className='result '+(testing?'wait':!s.hasToken||s.blynk.age<0?'':s.blynk.ok?'ok':'bad');bR.textContent=bTxt;
   /* the Network Map */
-  const wifiUp=s.wifi.ok&&s.wifi.age>=0,blynkUp=s.blynk.ok&&s.blynk.age>=0,n=(s.radio&&s.radio.n)||'000000000000';
+  const wifiUp=s.wifi.ok&&s.wifi.age>=0,blynkUp=s.blynk.ok&&s.blynk.age>=0,n=(s.radio&&s.radio.n)||'0000000000000';
   dot('dInternet',testing?'wait':!s.hasToken?'off':blynkUp?'ok':s.blynk.age<0?'wait':'bad');$('tInternet').textContent=!s.hasToken?'Blynk (no token)':blynkUp?'Blynk · OK':s.blynk.age<0?'Blynk':'Blynk · failed';
   dot('dWifi',testing?'wait':!s.ssid?'off':wifiUp?'ok':s.wifi.age<0?'wait':'bad');$('tWifi').innerHTML='';
   {const t=$('tWifi');t.textContent=!s.ssid?'none chosen':s.ssid;if(wifiUp)t.insertAdjacentHTML('beforeend','<br>'+bars(s.wifi.rssi));}
@@ -315,7 +315,7 @@ function render(s){
   $('s_wifi').textContent=wifiTxt;
   $('s_blynk').textContent=s.blynk.age<0?(s.hasToken?'not tried yet':'no token yet'):(s.blynk.ok?'OK':'FAILED: '+s.blynk.err)+' ('+ago(s.blynk.age)+' ago)'+(s.blynk.note?' - '+s.blynk.note:'');
   $('s_pub').textContent=!s.hasPtoken?'not used':(s.pub.tried?(s.pub.ok?'OK':'FAILED: '+s.pub.err)+' ('+ago(s.pub.age)+' ago)':'waiting for the next upload');
-  $('s_radio').textContent=n.slice(0,12).split('').filter(c=>c==='1').length+' of 12 boards';
+  $('s_radio').textContent=n.slice(0,13).split('').filter(c=>c==='1').length+' of 13 boards';
   $('s_stats').textContent=s.radio.stats?'heard '+ago(s.radio.statsAge)+' ago':'not heard yet (is the LocalServer on?)';
   $('s_use').textContent=s.sessions;$('s_time').textContent=s.time;$('s_next').textContent=testing?'-':s.next+' s';
   $('s_mq').textContent=s.mq+(s.mqmax>0?' of '+s.mqmax:'');$('s_up').textContent=up(s.up)+' ('+s.rst+')';

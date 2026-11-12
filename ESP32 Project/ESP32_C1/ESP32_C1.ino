@@ -1,21 +1,34 @@
+// =====================================================================
+// *** ONE PROGRAM FOR THE THREE BOX TERMINALS (2026-11-12) ***  ESP32_A1 (Box 1), ESP32_B1 (Box 3) and ESP32_C1 (Box 2) contain exactly this program; the only
+// file that differs is box_config.h (device IDs, the settings state tag, TFT rotation + touch calibration, coin pin). Fix a bug here, copy the .ino to the other
+// two folders (same text, only the file name changes). The comments below were written for Box 3 and say B1 / B2 / B3 / S3B: in Box 1 read A1 / A2 / A3 / S3A,
+// in Box 2 read C1 / C2 / C3 / S3C. TOUCH CALIBRATION: use ESP32_C1_CALIBRATE on the unit, then edit TFT_CAL_DATA (and TFT_ROTATION) in ITS box_config.h.
+// =====================================================================
 #include <WiFi.h>
 #include <esp_wifi.h>
 #include <esp_now.h>
+#include <Preferences.h>
 #include <TFT_eSPI.h>
 #include "Shared_Common.h"
+#include "box_config.h"   // which unit this is: device IDs, settings tag, TFT rotation + touch calibration, coin pin (the ONLY file that differs between A1 / B1 / C1)
 
 // =====================================================================
-// NODE C1 - BOX 2 (HEATER) TERMINAL. REBUILT 2026-10-03 from the finished Box 1 terminal (ESP32_A1.ino): same code, same pins, same
+// NODE B1 - BOX 3 (CLEANING + DRYING) TERMINAL. Built 2026-10-03 from the finished Box 1 terminal (ESP32_A1.ino): same code, same pins, same
 // widgets (NR2 rating grid, NP numpad, PBAR progress bar, {STATUS} lines, {MINUTE}/{SECOND}/{TRY}/{MAXCOINS} tokens, coin diagnostics),
-// talking to S3C instead of S3A. Only the hardware facts of THIS unit differ from A1: its device ID, its TFT is mounted upside down
-// (rotation 3), its touch calibration, and (since 2026-10-16) its coin pin (GPIO 32, see below). The previous C1 (before the widgets existed) is archived as ESP32_C1_LEGACY_pre_widgets.ino.txt.
+// talking to S3B instead of S3A, under its own device ID. 2026-11-03: the trimmed Box 3 flow no longer uses the rating grid, numpad or {TRY}/{TRIES}
+// (the code is kept, it is harmless), and the touch debug (crosshair + per-touch serial line) is switched off (TOUCH_DEBUG). Pins: as A1 except the coin signal, which is now GPIO 32 (was 23; buzzer 21, TFT/touch as on the pin sheet).
+//
+// !! TOUCH CALIBRATION AND ROTATION BELOW ARE A1'S !! Box 3's own screen has not been calibrated yet. If a touch lands in the wrong
+// place or the picture is upside down, run ESP32_C1_CALIBRATE on this board, then put its 5 numbers into calData (and change the
+// rotation 1 <-> 3 if the screen is mounted upside down - in BOTH places: setup() AND the hard-refresh repaint in loop(); if they differ, the
+// screen flips every time it recovers from a white screen). This unit now runs rotation 3 (same as Box 2), calData flag 7 = rotation 3.
 // =====================================================================
+
+// 1 = print every touch and draw a red crosshair where it landed (only for calibrating the touch screen); 0 = off (the normal setting)
+#define TOUCH_DEBUG 0
 
 // Hardware Pin Mappings
-// COIN SIGNAL MOVED 2026-10-16 from GPIO 23 to GPIO 32 (this unit only: A1 / B1 still use 23). GPIO 32 is a quiet, boot-safe pin: no strapping or boot-time function,
-// no PWM burst at power-up, not flash / PSRAM / UART / JTAG, not used by the display or touch, and it has an internal pull-up (INPUT_PULLUP below).
-// Full C1 map: TFT CS 15 / DC 2 / RST 4 / MOSI 13 / SCK 14 / MISO 12 (TFT_eSPI User_Setup.h), touch CS 27, buzzer 21, coin 32.
-#define PIN_COIN_SIGNAL 32
+// PIN_COIN_SIGNAL, TFT_ROTATION and TFT_CAL_DATA come from box_config.h (they differ per unit); the rest of this program is the same in A1 / B1 / C1.
 #define PIN_BUZZER      21
 
 TFT_eSPI tft = TFT_eSPI();
@@ -128,7 +141,7 @@ const unsigned long WIDGET_TOUCH_GAP_MS = 180;
 // Dynamic Telemetry State
 uint32_t currentActiveTimer   = 0;
 uint32_t confirmedPulses      = 0;
-uint8_t  minCoinsNeeded       = 0; // synced from S3C via CMD_SYNC_VARS.subIndex - for {MINCOINS}
+uint8_t  minCoinsNeeded       = 0; // synced from S3B via CMD_SYNC_VARS.subIndex - for {MINCOINS}
 uint8_t  requiredCoinsNeeded  = 0; // Added 2026-09-13: synced via CMD_SYNC_VARS.state (otherwise
                                     // unused on that command) - for Step 5's {REQUIREDCOIN}
 
@@ -162,23 +175,48 @@ unsigned long lastTelemetryMillis = 0;
 const unsigned long TELEMETRY_INTERVAL_MS = 1000;
 
 // -------------------------------------------------------------
-// OUT OF ORDER - shown locally (not via a remote CMD_STEP_RENDER, since by definition S3C isn't
-// reachable to send one) whenever this node hasn't heard from S3C for ORPHANED_TIMEOUT_MS. S3C
+// OUT OF ORDER - shown locally (not via a remote CMD_STEP_RENDER, since by definition S3B isn't
+// reachable to send one) whenever this node hasn't heard from S3B for ORPHANED_TIMEOUT_MS. S3B
 // owns Box 1's entire cycle now - Master being reachable doesn't matter, since Master no longer
-// runs any of it (that's the whole point of the S3C migration - Box 1 survives Master going
+// runs any of it (that's the whole point of the S3B migration - Box 1 survives Master going
 // down). lastSeenMaster is still tracked for diagnostics, just not part of this decision.
 // -------------------------------------------------------------
 unsigned long lastSeenMaster = 0;
-unsigned long lastSeenS3C    = 0;
+unsigned long lastSeenS3B    = 0;
 // 15s, not 5s - a stretch of dropped ESP-NOW packets (RF interference, congestion) is a real,
 // observed occurrence on this hardware, and 5s was tripping OUT OF ORDER on and off during
-// completely normal operation. 15s still catches a genuinely dead S3C within a reasonable
+// completely normal operation. 15s still catches a genuinely dead S3B within a reasonable
 // window, but stops flickering on brief connectivity blips.
 const unsigned long ORPHANED_TIMEOUT_MS   = 15000;
 const unsigned long OUT_OF_ORDER_BLINK_MS = 500;
 bool outOfOrderActive  = false;
 bool outOfOrderVisible = false;
 unsigned long lastOutOfOrderToggle = 0;
+
+// (2026-11-03 ~6 AM) OUT OF ORDER with a helmet shut inside (S3B dead): B3's watchdog releases the enclosure lock by itself (it listens to B2); B1 owns the buzzer, so it listens
+// to B2 too and beeps (OOO_BEEP_MS on, OOO_BEEP_WAIT_MS off) while the door is shut with a helmet inside, until the door is seen open, the helmet is gone,
+// S3B is back, or OOO_BEEP_MAX_MS have passed (about B3's three unlock windows). Written by the ESP-NOW callback, read in loop().
+const unsigned long OOO_BEEP_MS      = 100;
+const unsigned long OOO_BEEP_WAIT_MS = 500;
+const unsigned long OOO_BEEP_MAX_MS  = 200000UL;
+const float         HELMET_DEFAULT_CM = 40.0f;    // "helmet inside" cutoff until S3B has told us the LocalServer's value
+float               oooHelmetCm      = HELMET_DEFAULT_CM; // same cutoff as B3 and S3B: 0 < distance < this = helmet inside (the LocalServer's "helmet counts as inside under", kept in flash)
+volatile float      helmetCmHeard    = 0.0f;      // the value S3B broadcast last (0 = nothing new); loop() adopts it and saves it
+Preferences         b1Prefs;
+static portMUX_TYPE b2Mux = portMUX_INITIALIZER_UNLOCKED;
+volatile uint32_t b2Count  = 0;                   // B2 reports heard (0 = never)
+volatile uint32_t b2LastMs = 0;
+volatile bool     b2DoorOpen = true;
+volatile float    b2HelmetCm = 0.0f;
+uint32_t oooCountSeen   = 0;
+uint8_t  oooTrappedTicks = 0;
+unsigned long oooBeepStartMs = 0, oooLastBeepMs = 0;
+
+// The words under OUT OF ORDER (steady, only the title blinks): 0 = nothing, 1 = "Your helmet is still inside" (a helmet is seen, door shut or open),
+// 2 = "Please close the door" (door open, nothing inside). Decided from B2's report; a change must hold for OOO_MSG_HOLD_MS so one bad echo does not flip it.
+const unsigned long OOO_MSG_HOLD_MS = 2000;
+uint8_t oooMsg = 0, oooMsgCand = 0;
+unsigned long oooMsgCandSince = 0;
 
 uint16_t parseHexColor(const char* hexStr) {
     if (!hexStr || hexStr[0] != '#') return TFT_WHITE;
@@ -221,7 +259,7 @@ void IRAM_ATTR onCoinChangeISR() {
     unsigned long nowMillis = millis();
     if (isMuted || (nowMillis < muteUntilMillis)) {
         pulseInProgress = false;
-        ets_printf("[C1] COIN IGNORED: EMI Noise Lockout Active!\n");
+        ets_printf("[" NODE_NAME "] COIN IGNORED: EMI Noise Lockout Active!\n");
         return;
     }
 
@@ -237,7 +275,7 @@ void IRAM_ATTR onCoinChangeISR() {
         fallTimeMicros = nowMicros;
         pulseInProgress = true;
         isrPulseCount++;
-        ets_printf("[C1] ISR PULSE DETECTED! Raw count: %u\n", isrPulseCount);
+        ets_printf("[" NODE_NAME "] ISR PULSE DETECTED! Raw count: %u\n", isrPulseCount);
     } else if (pinVal == HIGH && pulseInProgress) {
         pulseInProgress = false;
     }
@@ -245,7 +283,7 @@ void IRAM_ATTR onCoinChangeISR() {
 
 // Active Buzzer Hardware Control (Immediate Pin Drive)
 void triggerBuzzerHardware(uint32_t durationMs) {
-    Serial.printf("[C1 ACTION] >>> SOUNDING BUZZER ON PIN 21 FOR %d ms!\n", durationMs);
+    Serial.printf("[" NODE_NAME " ACTION] >>> SOUNDING BUZZER ON PIN 21 FOR %d ms!\n", durationMs);
     digitalWrite(PIN_BUZZER, HIGH);
     delay(durationMs);
     digitalWrite(PIN_BUZZER, LOW);
@@ -271,7 +309,7 @@ void parseDisplayPayload(const char* payload) {
     char* token = strtok_r(buf, "|", &outerSave);
     if (token && token[0] == '#') {
         currentBgColor = parseHexColor(token);
-        Serial.printf("[C1 ACTION] Setting TFT Screen Background: %s\n", token);
+        Serial.printf("[" NODE_NAME " ACTION] Setting TFT Screen Background: %s\n", token);
         token = strtok_r(NULL, "|", &outerSave);
     }
 
@@ -420,11 +458,11 @@ void interpolateTemplate(const char* tmpl, char* out, size_t maxLen) {
     out[maxLen - 1] = '\0';
 }
 
-// A touch result for S3C. value rides in param16: the rating (NR2 screens), the seconds ("NP_OK"), else 0.
+// A touch result for S3B. value rides in param16: the rating (NR2 screens), the seconds ("NP_OK"), else 0.
 void sendTouchAction(const char* action, uint16_t value) {
     CommandPacket pkt;
     memset(&pkt, 0, sizeof(CommandPacket));
-    pkt.targetDeviceID = DEVICE_S3C;
+    pkt.targetDeviceID = MY_S3;
     pkt.commandID      = CMD_TOUCH_ACTION;
     pkt.param16        = value;
     strncpy(pkt.payloadStr, action, sizeof(pkt.payloadStr) - 1);
@@ -634,7 +672,7 @@ bool handleWidgetTouch(uint16_t tx, uint16_t ty) {
             nr2.value = (uint8_t)(hit + 1);
             drawNr2All();
             triggerBuzzerHardware(30);
-            Serial.printf("[C1] RATING GRID: picked %u\n", nr2.value);
+            Serial.printf("[" NODE_NAME "] RATING GRID: picked %u\n", nr2.value);
             return true;
         }
     }
@@ -657,7 +695,7 @@ bool handleWidgetTouch(uint16_t tx, uint16_t ty) {
         } else if (code == 11) {   // OK
             uint16_t total = npTotalSeconds();
             if (total == 0) { triggerBuzzerHardware(20); return true; }   // nothing typed yet
-            Serial.printf("[C1] NUMPAD: OK with %u seconds\n", (unsigned)total);
+            Serial.printf("[" NODE_NAME "] NUMPAD: OK with %u seconds\n", (unsigned)total);
             sendTouchAction("NP_OK", total);
         } else if (code == 20) {
             sendTouchAction("NP_BACK", 0);
@@ -712,35 +750,67 @@ void drawScreenLayout() {
 void drawOutOfOrderText(bool visible) {
     tft.setTextDatum(MC_DATUM);
     tft.setTextColor(visible ? TFT_RED : TFT_BLACK, TFT_BLACK);
-    tft.drawString("OUT OF", 160, 95, 4);
-    tft.drawString("ORDER", 160, 145, 4);
+    tft.drawString("OUT OF", 160, 85, 4);
+    tft.drawString("ORDER", 160, 135, 4);
+    if (oooMsg != 0) {                                            // steady words for the customer
+        tft.setTextColor(TFT_WHITE, TFT_BLACK);
+        if (oooMsg == 1) {
+            tft.drawString("Your helmet is still inside.", 160, 185, 2);
+            tft.drawString("Take it out, then close the door.", 160, 210, 2);
+        } else {
+            tft.drawString("Please close the door.", 160, 195, 2);
+        }
+    }
+}
+
+// What B2 sees right now, as the message code above (0 when B2 is silent: the screen then says only OUT OF ORDER).
+uint8_t oooMessageNow(unsigned long now) {
+    uint32_t count, lastMs; bool doorOpen; float helmet;
+    portENTER_CRITICAL(&b2Mux);
+    count = b2Count; lastMs = b2LastMs; doorOpen = b2DoorOpen; helmet = b2HelmetCm;
+    portEXIT_CRITICAL(&b2Mux);
+    if (count == 0 || now < lastMs || now - lastMs > 5000UL) return 0;
+    if (helmet > 0.0f && helmet < oooHelmetCm) return 1;
+    return doorOpen ? 2 : 0;
 }
 
 // Call every loop() iteration. Enters/exits OUT OF ORDER and drives its blink independent of
-// the normal WYSIWYG screen pipeline (drawScreenLayout()/parseDisplayPayload()) - S3C is the
+// the normal WYSIWYG screen pipeline (drawScreenLayout()/parseDisplayPayload()) - S3B is the
 // only thing that ever sends a real CMD_STEP_RENDER, so if it's unreachable nobody else can
 // send one either (Master doesn't drive Box 1's screen at all anymore), and this renders itself.
 void tickOutOfOrder(unsigned long currentMillis) {
-    // lastSeenS3C is written from the ESP-NOW receive callback, which runs on a different
+    // lastSeenS3B is written from the ESP-NOW receive callback, which runs on a different
     // task/core than loop() - if a packet lands and updates it to a timestamp just ahead of
     // this loop() iteration's own currentMillis snapshot, the plain subtraction below would
     // underflow (both unsigned) into a huge number and read as "orphaned" for one tick, then
     // self-correct immediately - exactly the instant flip-then-recover seen in testing on Box 2,
-    // with zero relation to real connectivity. Guarding against currentMillis < lastSeenS3C
+    // with zero relation to real connectivity. Guarding against currentMillis < lastSeenS3B
     // avoids it (same fix applied to C1).
-    bool orphaned = (currentMillis >= lastSeenS3C) && (currentMillis - lastSeenS3C > ORPHANED_TIMEOUT_MS);
+    bool orphaned = (currentMillis >= lastSeenS3B) && (currentMillis - lastSeenS3B > ORPHANED_TIMEOUT_MS);
 
     if (orphaned && !outOfOrderActive) {
         outOfOrderActive  = true;
         outOfOrderVisible = true;
         lastOutOfOrderToggle = currentMillis;
+        oooMsg = oooMsgCand = oooMessageNow(currentMillis);       // a helmet already seen inside is announced at once
+        oooMsgCandSince = currentMillis;
         tft.fillScreen(TFT_BLACK);
         drawOutOfOrderText(true);
-        Serial.println("[C1] OUT OF ORDER: lost contact with S3C.");
+        Serial.println("[" NODE_NAME "] OUT OF ORDER: lost contact with S3B.");
     } else if (!orphaned && outOfOrderActive) {
         outOfOrderActive = false;
         screenNeedsRefresh = true; // let the normal pipeline repaint whatever screen is current
-        Serial.println("[C1] Reconnected - clearing OUT OF ORDER.");
+        Serial.println("[" NODE_NAME "] Reconnected - clearing OUT OF ORDER.");
+    }
+
+    if (outOfOrderActive) {                                       // the words follow what B2 sees (helmet taken out -> "Please close the door" -> nothing)
+        uint8_t cand = oooMessageNow(currentMillis);
+        if (cand != oooMsgCand) { oooMsgCand = cand; oooMsgCandSince = currentMillis; }
+        if (oooMsgCand != oooMsg && currentMillis - oooMsgCandSince >= OOO_MSG_HOLD_MS) {
+            oooMsg = oooMsgCand;
+            tft.fillScreen(TFT_BLACK);
+            drawOutOfOrderText(outOfOrderVisible);
+        }
     }
 
     if (outOfOrderActive && (currentMillis - lastOutOfOrderToggle >= OUT_OF_ORDER_BLINK_MS)) {
@@ -754,6 +824,41 @@ void tickOutOfOrder(unsigned long currentMillis) {
     }
 }
 
+// Called every loop(). Adopts the helmet cutoff S3B broadcast (the LocalServer's setting) and keeps it in flash, so it survives a power cut.
+void tickHelmetCutoff() {
+    float heard;
+    portENTER_CRITICAL(&b2Mux);
+    heard = helmetCmHeard;
+    portEXIT_CRITICAL(&b2Mux);
+    if (heard >= 1.0f && fabsf(heard - oooHelmetCm) > 0.04f) {
+        oooHelmetCm = heard;
+        b1Prefs.putFloat("helm_cm", oooHelmetCm);
+        Serial.printf("[" NODE_NAME "] Helmet cutoff is now %.1f cm (from the LocalServer via S3B).\n", (double)oooHelmetCm);
+    }
+}
+
+// Called every loop(). Beeps while OUT OF ORDER (S3B silent) and B2 sees the door shut with a helmet inside (2 reports in a row, like B3).
+void tickOooBeep(unsigned long now) {
+    uint32_t count, lastMs; bool doorOpen; float helmet;
+    portENTER_CRITICAL(&b2Mux);
+    count = b2Count; lastMs = b2LastMs; doorOpen = b2DoorOpen; helmet = b2HelmetCm;
+    portEXIT_CRITICAL(&b2Mux);
+    if (count != oooCountSeen) {                                   // a new B2 report
+        oooCountSeen = count;
+        bool trapped = !doorOpen && helmet > 0.0f && helmet < oooHelmetCm;
+        if (trapped) { if (oooTrappedTicks < 100) oooTrappedTicks++; } else oooTrappedTicks = 0;
+    }
+    bool fresh = (count != 0) && (now >= lastMs) && (now - lastMs <= 5000UL);
+    if (!fresh) oooTrappedTicks = 0;
+    if (!outOfOrderActive || oooTrappedTicks < 2) { oooBeepStartMs = 0; return; }
+    if (oooBeepStartMs == 0) { oooBeepStartMs = now; oooLastBeepMs = 0; Serial.println("[" NODE_NAME "] OUT OF ORDER with a helmet shut inside - beeping"); }
+    if (now - oooBeepStartMs > OOO_BEEP_MAX_MS) return;            // enough: somebody must come and look
+    if (oooLastBeepMs == 0 || now - oooLastBeepMs >= OOO_BEEP_MS + OOO_BEEP_WAIT_MS) {
+        oooLastBeepMs = now;
+        triggerBuzzerHardware(OOO_BEEP_MS);
+    }
+}
+
 // -------------------------------------------------------------
 // Core 3.3.7 ESP-NOW Callbacks
 // -------------------------------------------------------------
@@ -764,23 +869,46 @@ void onDataSent(const wifi_tx_info_t *tx_info, esp_now_send_status_t status) {
 void onDataRecv(const esp_now_recv_info_t *info, const uint8_t *incomingData, int len) {
     if (!info || !info->src_addr || !incomingData || len <= 0) return;
 
+    if (len == (int)sizeof(A2SensorPacket)) {       // B2's sensor report: only used for the OUT OF ORDER beep (tickOooBeep)
+        A2SensorPacket s;
+        memcpy(&s, incomingData, sizeof(A2SensorPacket));
+        if (s.deviceID == MY_SENS) {
+            portENTER_CRITICAL(&b2Mux);
+            b2DoorOpen = s.doorEnclosure; b2HelmetCm = s.usHelmetCm; b2LastMs = millis(); b2Count = b2Count + 1;
+            portEXIT_CRITICAL(&b2Mux);
+        }
+        return;
+    }
+
     if (len == sizeof(CommandPacket)) {
         CommandPacket cmd;
         memcpy(&cmd, incomingData, sizeof(CommandPacket));
-        if (cmd.commandID != CMD_SYNC_VARS && cmd.commandID != CMD_HEARTBEAT) {
-            // CMD_SYNC_VARS/CMD_HEARTBEAT fire every 1s regardless of activity - logging them
-            // drowns out real events
-            Serial.printf("\n[C1 RX] >>> INCOMING COMMAND PACKET! Target: %d | Opcode: %d | Param: %d\n",
+        if (cmd.commandID != CMD_SYNC_VARS && cmd.commandID != CMD_HEARTBEAT && cmd.commandID != CMD_SET_CONFIG) {
+            // CMD_SYNC_VARS/CMD_HEARTBEAT fire every 1s regardless of activity, S3B's settings list (CMD_SET_CONFIG) seven times every 2 s -
+            // logging them drowns out real events
+            Serial.printf("\n[" NODE_NAME " RX] >>> INCOMING COMMAND PACKET! Target: %d | Opcode: %d | Param: %d\n",
                           cmd.targetDeviceID, cmd.commandID, cmd.param16);
         }
 
-        if (cmd.targetDeviceID == DEVICE_C1 || cmd.targetDeviceID == 0) {
+        // S3B's settings list (broadcast every 2 s, state 3 = Box 3's copy): subIndex 2 = SENSORS = "helmetCm,offlineSec". The first number is the
+        // LocalServer's "helmet counts as inside under" - the OUT OF ORDER message and beep must use the same cutoff as S3B and B3.
+        if (cmd.commandID == CMD_SET_CONFIG && cmd.targetDeviceID == 0 && cmd.state == BOX_TAG && cmd.subIndex == 2) {
+            cmd.payloadStr[sizeof(cmd.payloadStr) - 1] = '\0';
+            float v = strtof(cmd.payloadStr, nullptr);
+            if (v >= 1.0f && v <= 200.0f) {
+                portENTER_CRITICAL(&b2Mux);
+                helmetCmHeard = v;
+                portEXIT_CRITICAL(&b2Mux);
+            }
+        }
+
+        if (cmd.targetDeviceID == MY_ID || cmd.targetDeviceID == 0) {
             if (cmd.commandID == CMD_BUZZER) {
                 triggerBuzzerHardware(cmd.param16 > 0 ? cmd.param16 : 250);
             } else if (cmd.commandID == CMD_SET_COLOR) {
                 currentBgColor = cmd.param16;
                 screenNeedsRefresh = true;
-                Serial.printf("[C1 ACTION] Updated background color to 0x%04X\n", currentBgColor);
+                Serial.printf("[" NODE_NAME " ACTION] Updated background color to 0x%04X\n", currentBgColor);
             } else if (cmd.commandID == CMD_STEP_RENDER) {
                 tapAnywhereAdvances = (cmd.state == 1); // Added 2026-09-13 - see its own declaration
                 parseDisplayPayload(cmd.payloadStr);
@@ -794,12 +922,12 @@ void onDataRecv(const esp_now_recv_info_t *info, const uint8_t *incomingData, in
                 interrupts();
                 confirmedPulses = 0;
                 screenNeedsRefresh = true;
-                Serial.println("[C1 ACTION] Coin pulses reset to 0.");
+                Serial.println("[" NODE_NAME " ACTION] Coin pulses reset to 0.");
             } else if (cmd.commandID == CMD_MUTE_COINS) {
                 isMuted = true;
                 muteUntilMillis = millis() + (cmd.param16 > 0 ? cmd.param16 : 250);
                 pulseInProgress = false;
-                Serial.printf("[C1 LOCKOUT] Muting coin slot for %u ms (Relay EMI protection)\n", cmd.param16 > 0 ? cmd.param16 : 250);
+                Serial.printf("[" NODE_NAME " LOCKOUT] Muting coin slot for %u ms (Relay EMI protection)\n", cmd.param16 > 0 ? cmd.param16 : 250);
             } else if (cmd.commandID == CMD_SYNC_VARS) {
                 currentActiveTimer = cmd.param16;
                 minCoinsNeeded = cmd.subIndex; // piggybacked on the otherwise-unused subIndex
@@ -807,12 +935,12 @@ void onDataRecv(const esp_now_recv_info_t *info, const uint8_t *incomingData, in
                                                 // or struct field needed for {MINCOINS}
                 requiredCoinsNeeded = cmd.state; // Added 2026-09-13 - same trick, on the
                                                   // otherwise-unused state field, for {REQUIREDCOIN}
-                lastSeenS3C = millis(); // CMD_SYNC_VARS is exclusively S3C's traffic to A1, same
+                lastSeenS3B = millis(); // CMD_SYNC_VARS is exclusively S3B's traffic to A1, same
                                          // as CMD_HEARTBEAT - counting both makes a single dropped
                                          // packet harmless instead of flickering OUT OF ORDER
             } else if (cmd.commandID == CMD_HEARTBEAT) {
                 if (cmd.subIndex == DEVICE_SERVER) lastSeenMaster = millis();
-                else if (cmd.subIndex == DEVICE_S3C) lastSeenS3C = millis();
+                else if (cmd.subIndex == MY_S3) lastSeenS3B = millis();
             } else if (cmd.commandID == CMD_STATUS_LINE) {
                 // Added 2026-10-02: one line of the cleaning "kill feed" for {STATUS}/{STATUS2}/{STATUS3}.
                 if (cmd.subIndex < 3) {
@@ -820,13 +948,13 @@ void onDataRecv(const esp_now_recv_info_t *info, const uint8_t *incomingData, in
                     strncpy(statusLines[cmd.subIndex], cmd.payloadStr, 31);
                     statusLines[cmd.subIndex][31] = '\0';
                 }
-                lastSeenS3C = millis();   // S3C-only traffic, like CMD_SYNC_VARS
+                lastSeenS3B = millis();   // S3B-only traffic, like CMD_SYNC_VARS
             } else if (cmd.commandID == CMD_SET_TOKEN) {
                 // Added 2026-10-02: plain numbers for {TRY}, {TRIES}, {MAXCOINS}.
                 if (cmd.subIndex == TOKEN_TRY)           tokenTry = cmd.param16;
                 else if (cmd.subIndex == TOKEN_TRIES)    tokenTries = cmd.param16;
                 else if (cmd.subIndex == TOKEN_MAXCOINS) tokenMaxCoins = cmd.param16;
-                lastSeenS3C = millis();
+                lastSeenS3B = millis();
             }
         }
     }
@@ -836,25 +964,30 @@ void setup() {
     Serial.begin(115200);
     delay(100);
     Serial.println("\n=======================================================");
-    Serial.println("   NODE C1: BOX 2 (HEATER) TERMINAL INITIALIZING (CORE 3.3.7)");
+    Serial.println("   NODE " NODE_NAME ": " BOX_NAME " (CLEANING + DRYING) TERMINAL INITIALIZING (CORE 3.3.7)");
     Serial.println("=======================================================");
 
     pinMode(PIN_BUZZER, OUTPUT);
     digitalWrite(PIN_BUZZER, LOW);
 
+    b1Prefs.begin(BOX_NVS, false);
+    oooHelmetCm = b1Prefs.getFloat("helm_cm", HELMET_DEFAULT_CM);
+    if (!(oooHelmetCm >= 1.0f && oooHelmetCm <= 200.0f)) oooHelmetCm = HELMET_DEFAULT_CM;
+    Serial.printf("[" NODE_NAME "] Helmet counts as inside under %.1f cm (the LocalServer value S3B last told us; default %.0f).\n", (double)oooHelmetCm, (double)HELMET_DEFAULT_CM);
+
     pinMode(PIN_COIN_SIGNAL, INPUT_PULLUP);
     attachInterrupt(digitalPinToInterrupt(PIN_COIN_SIGNAL), onCoinChangeISR, FALLING);
-    Serial.printf("[C1] COIN SLOT: Pin %d configured with INPUT_PULLUP and FALLING ISR.\n", PIN_COIN_SIGNAL);
+    Serial.printf("[" NODE_NAME "] COIN SLOT: Pin %d configured with INPUT_PULLUP and FALLING ISR.\n", PIN_COIN_SIGNAL);
 
     // Initialize ST7789 TFT on SPI (CS=15, DC=2, RST=4, SCK=14, MOSI=13)
     tft.init();
-    tft.setRotation(3); // 320x240 Landscape, flipped 180 - this unit's TFT is mounted upside down
-    uint16_t calData[5] = {408, 3325, 535, 3051, 7};
+    tft.setRotation(TFT_ROTATION); // 320x240 Landscape
+    uint16_t calData[5] = TFT_CAL_DATA;
     tft.setTouch(calData);
-    Serial.println("[C1] DISPLAY: ST7789 initialized with touch calibration matrix.");
+    Serial.println("[" NODE_NAME "] DISPLAY: ST7789 initialized with touch calibration matrix.");
     
-    // Boot Layout (Step 1/TAPS) - matches S3C's own SCREEN_TAPS exactly (updated 2026-09-13, was
-    // the old coin-prompt Welcome screen), so if this device boots before S3C (and misses the
+    // Boot Layout (Step 1/TAPS) - matches S3B's own SCREEN_TAPS exactly (updated 2026-09-13, was
+    // the old coin-prompt Welcome screen), so if this device boots before S3B (and misses the
     // one-shot initial broadcast) it shows something correct instead of a stale/wrong screen.
     tapAnywhereAdvances = true;
     parseDisplayPayload("#000000|ST,160,110,#FFFFFF,TAP! to,MC,2|TT,160,136,#FFFF00,CONTINUE,500,MC,4");
@@ -867,10 +1000,10 @@ void setup() {
                            // disables this; every other node was missing it)
     WiFi.disconnect();
     esp_wifi_set_channel(ESPNOW_WIFI_CHANNEL, WIFI_SECOND_CHAN_NONE);
-    Serial.println("[C1] WIFI: Forced STA mode on Channel 1.");
+    Serial.println("[" NODE_NAME "] WIFI: Forced STA mode on Channel 1.");
 
     if (esp_now_init() != ESP_OK) {
-        Serial.println("[C1] ESP-NOW: Initialization Failed!");
+        Serial.println("[" NODE_NAME "] ESP-NOW: Initialization Failed!");
         return;
     }
     esp_now_register_send_cb(onDataSent);
@@ -882,7 +1015,7 @@ void setup() {
     peerInfo.channel = ESPNOW_WIFI_CHANNEL;
     peerInfo.encrypt = false;
     esp_now_add_peer(&peerInfo);
-    Serial.println("[C1] ESP-NOW: Broadcast peer registered on Channel 1.");
+    Serial.println("[" NODE_NAME "] ESP-NOW: Broadcast peer registered on Channel 1.");
 
     triggerBuzzerHardware(100);
 }
@@ -902,7 +1035,7 @@ void loop() {
 
     if (pulses != confirmedPulses) {
         confirmedPulses = pulses;
-        Serial.printf("[C1] COIN VALIDATED: +1 Pulse. Total Pulses sent to Master: %u\n", confirmedPulses);
+        Serial.printf("[" NODE_NAME "] COIN VALIDATED: +1 Pulse. Total Pulses sent to Master: %u\n", confirmedPulses);
         triggerBuzzerHardware(60);
     }
 
@@ -915,13 +1048,15 @@ void loop() {
         currentTouchY = ty;
         isTouchPressed = true;
 
-        Serial.printf("[C1] TOUCH EVENT: Screen Tapped at Raw X: %d, Y: %d\n", tx, ty);
-        // The red crosshair is a debug aid that stays until the next full repaint; the rating grid and
-        // numpad redraw themselves on every tap, so they would just collect crosshairs.
+#if TOUCH_DEBUG
+        // Touch debug (OFF since 2026-11-03: the panelists asked for it to go): every touch prints its raw position, and a red crosshair is drawn at it that
+        // stays until the next full repaint. Set TOUCH_DEBUG to 1 above only while calibrating the screen.
+        Serial.printf("[" NODE_NAME "] TOUCH EVENT: Screen Tapped at Raw X: %d, Y: %d\n", tx, ty);
         if (!nr2.active && !np.active) {
             tft.fillCircle(tx, ty, 2, TFT_RED);
             tft.drawCircle(tx, ty, 6, TFT_WHITE);
         }
+#endif
 
         // Widgets (2026-10-02) act on a fresh press only, with a short gap, so holding a finger down does
         // not type the same digit again. A press they use is not also offered to the buttons.
@@ -942,11 +1077,11 @@ void loop() {
                 // and no btnItems[] hit-test at all.
                 lastTouchTime = currentMillis;
                 triggerBuzzerHardware(80);
-                Serial.println("[C1] TOUCH MAPPED: Any-tap advance -> Target Action: TAP_ADVANCE");
+                Serial.println("[" NODE_NAME "] TOUCH MAPPED: Any-tap advance -> Target Action: TAP_ADVANCE");
 
                 CommandPacket pkt;
                 memset(&pkt, 0, sizeof(CommandPacket));
-                pkt.targetDeviceID = DEVICE_S3C;
+                pkt.targetDeviceID = MY_S3;
                 pkt.commandID      = CMD_TOUCH_ACTION;
                 strncpy(pkt.payloadStr, "TAP_ADVANCE", sizeof(pkt.payloadStr) - 1);
                 esp_now_send(BROADCAST_MAC, (uint8_t*)&pkt, sizeof(CommandPacket));
@@ -957,11 +1092,11 @@ void loop() {
 
                         lastTouchTime = currentMillis;
                         triggerBuzzerHardware(80);
-                        Serial.printf("[C1] TOUCH MAPPED: Screen Button Hit -> Target Action: %s\n", btnItems[i].action);
+                        Serial.printf("[" NODE_NAME "] TOUCH MAPPED: Screen Button Hit -> Target Action: %s\n", btnItems[i].action);
 
                         CommandPacket pkt;
                         memset(&pkt, 0, sizeof(CommandPacket));
-                        pkt.targetDeviceID = DEVICE_S3C; // S3C owns Box 1's state machine now, not Local Server
+                        pkt.targetDeviceID = MY_S3; // S3B owns Box 1's state machine now, not Local Server
                         pkt.commandID      = CMD_TOUCH_ACTION;
                         pkt.param16        = nr2.active ? nr2.value : 0; // rating picked on a rating-grid screen
                         strncpy(pkt.payloadStr, btnItems[i].action, sizeof(pkt.payloadStr) - 1);
@@ -976,14 +1111,16 @@ void loop() {
     }
     prevTouched = touched;
 
+    tickHelmetCutoff();
     tickOutOfOrder(currentMillis);
+    tickOooBeep(currentMillis);
 
     if (!outOfOrderActive) {
         // 4. Repaint Screen
         if (screenNeedsRefresh) {
             screenNeedsRefresh = false;
             if (pendingHardRefresh) {
-                // Only reached when S3C explicitly sent CMD_TFT_HARD_REFRESH, i.e. right after the
+                // Only reached when S3B explicitly sent CMD_TFT_HARD_REFRESH, i.e. right after the
                 // enclosure lock solenoid engaged (Unlocked->Locked) - that's the one transition
                 // observed to sag the shared supply enough to brown out the ST7789 controller
                 // itself (powers back up blank/white until re-initialized, not just a corrupted
@@ -993,7 +1130,7 @@ void loop() {
                 // the narrowly-scoped software stopgap until then.
                 pendingHardRefresh = false;
                 tft.init();
-                tft.setRotation(3); // tft.init() resets rotation to its own default - must
+                tft.setRotation(TFT_ROTATION); // tft.init() resets rotation to its own default - must
                                      // reapply every time, or this repaint flips the screen
                                      // instead of fixing it.
             }
@@ -1045,7 +1182,7 @@ void loop() {
 
         TelemetryPacket packet;
         memset(&packet, 0, sizeof(TelemetryPacket));
-        packet.deviceID     = DEVICE_C1;
+        packet.deviceID     = MY_ID;
         packet.pulseCount   = confirmedPulses;
         packet.touchX       = currentTouchX;
         packet.touchY       = currentTouchY;

@@ -1,8 +1,14 @@
 // =====================================================================
+// *** ONE PROGRAM FOR THE THREE SENSOR BOARDS (2026-11-12) ***  ESP32_A2 (Box 1), ESP32_B2 (Box 3) and ESP32_C2 (Box 2) contain exactly this program; the only file
+// that differs is box_config.h (its device ID). Fix a bug here, copy the .ino to the other two folders (same text, only the file name changes). The comments below
+// were written for Box 3 and say B2 / B3 / S3B: in Box 1 read A2 / A3 / S3A, in Box 2 read C2 / C3 / S3C. A2 and C2 used to carry relays / water sensors / three
+// ultrasonics; since 2026-11-12 every box has the same sensing board (helmet + 4 door reeds) and a separate relay board (A3 / B3 / C3).
+// =====================================================================
+// =====================================================================
 //  NODE B2 - BOX 3 SENSING BOARD (sensors only)           (ESP32, core 3.3.7)
 //  Created 2026-10-03 from Box 1's sensing board (ESP32_A2.ino); TRIMMED 2026-11-03 for the Refilling Station: the two Main Container ultrasonics and the
 //  two analog water sensors are GONE from this board (the Refilling Station reads the containers now), so B2 only measures the HELMET ultrasonic and the
-//  door reeds. It still sends the same A2SensorPacket (device ID DEVICE_B2) so nothing else on the radio changes; the container and water fields are
+//  door reeds. It still sends the same A2SensorPacket (device ID MY_ID) so nothing else on the radio changes; the container and water fields are
 //  always 0 / false. There is NO legacy bridge here (that was only for the old Box 1 S3A / LocalServer).
 //
 //  This board drives no relay (the relays, incl. the Heater, are on B3) and accepts no commands. It measures, debounces and reports: every ~1 s, and
@@ -19,6 +25,7 @@
 #include <esp_wifi.h>
 #include <esp_now.h>
 #include "Shared_Common.h"
+#include "box_config.h"   // which board this is (the ONLY file that differs between A2 / B2 / C2)
 
 // ---------------------------------------------------------------------
 // Pins
@@ -128,7 +135,7 @@ void onDataSent(const wifi_tx_info_t *tx_info, esp_now_send_status_t status) {
 void sendReport(uint32_t now) {
     A2SensorPacket p;
     memset(&p, 0, sizeof(p));                // the container ultrasonics and water sensors are not on this board any more: those fields stay 0 / false
-    p.deviceID      = DEVICE_B2;
+    p.deviceID      = MY_ID;
     p.usHelmetCm    = usHelmetCm;
     p.doorEnclosure = doorIsOpen(0);
     p.doorPanel     = doorIsOpen(1);
@@ -149,7 +156,7 @@ void setup() {
     Serial.begin(115200);
     delay(100);
     Serial.println("\n=======================================================");
-    Serial.println("   NODE B2: BOX 3 SENSING BOARD - helmet ultrasonic + doors (CORE 3.3.7)");
+    Serial.println("   NODE " NODE_NAME ": " BOX_NAME " SENSING BOARD - helmet ultrasonic + doors (CORE 3.3.7)");
     Serial.println("=======================================================");
 
     delay(20); // let the pulls settle, then take the starting levels as already-debounced
@@ -166,7 +173,7 @@ void setup() {
     esp_wifi_set_channel(ESPNOW_WIFI_CHANNEL, WIFI_SECOND_CHAN_NONE);
 
     if (esp_now_init() != ESP_OK) {
-        Serial.println("[B2] ESP-NOW: init failed - restarting in 3 s.");
+        Serial.println("[" NODE_NAME "] ESP-NOW: init failed - restarting in 3 s.");
         delay(3000);
         ESP.restart();
     }
@@ -179,7 +186,7 @@ void setup() {
     peerInfo.encrypt = false;
     esp_now_add_peer(&peerInfo);
 
-    Serial.println("[B2] ESP-NOW: channel 1 broadcast peer registered. Reporting every 1 s.");
+    Serial.println("[" NODE_NAME "] ESP-NOW: channel 1 broadcast peer registered. Reporting every 1 s.");
 }
 
 void loop() {
@@ -191,7 +198,7 @@ void loop() {
     for (uint8_t i = 0; i < DOOR_COUNT; i++) {
         if (updateDoor(i, now)) {
             changed = true;
-            Serial.printf("[B2] %-14s -> %s\n", DOOR_NAME[i], doorIsOpen(i) ? "OPEN" : "CLOSED");
+            Serial.printf("[" NODE_NAME "] %-14s -> %s\n", DOOR_NAME[i], doorIsOpen(i) ? "OPEN" : "CLOSED");
         }
     }
 
@@ -206,7 +213,7 @@ void loop() {
 
     if (now - lastSummaryMs >= SERIAL_SUMMARY_MS) {
         lastSummaryMs = now;
-        Serial.printf("[B2] helmet=%.1f cm | doors E:%s P:%s B:%s SIDE:%s | tx fail=%lu\n",
+        Serial.printf("[" NODE_NAME "] helmet=%.1f cm | doors E:%s P:%s B:%s SIDE:%s | tx fail=%lu\n",
                       (double)usHelmetCm,
                       doorIsOpen(0) ? "OPEN" : "shut", doorIsOpen(1) ? "OPEN" : "shut",
                       doorIsOpen(2) ? "OPEN" : "shut", doorIsOpen(3) ? "OPEN" : "shut",

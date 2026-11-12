@@ -10,19 +10,19 @@ function demoAll() {
   const clamp = v => Math.max(0, Math.min(100, Math.round(v)));
   const seq = Math.floor(t / 5);                                      // "new data" every 5 s
 
-  // Box 1 (step numbers of ST13): TAPS 10, INSERT COIN 14, CLEANING 5, FINISH 8
+  // Box 1 (step numbers of STEPS in names.js): TAPS 10, INSERT COIN 14, CLEANING 5, FINISH 8
   const p1 = t % 150; let b1;
   if (p1 < 30) b1 = [10, 0, 0, 0, 0]; else if (p1 < 40) b1 = [14, 0, Math.min(9, Math.floor((p1 - 30) / 1.2)), 0, 0];
   else if (p1 < 130) b1 = [5, Math.round(130 - p1), 9, 0, 7]; else b1 = [8, 0, 9, p1 < 136 ? 1 : 0, 0];
   const rl1 = b1[0] === 5 ? (1 << 3 | 1 << 4 | 1 << 5 | 1 << 6 | 1 << 7 | 1 << 11) : (b1[0] === 14 ? 1 << 11 : 0);
 
-  // Box 2 (ST2): TAPS 8, INSERT COIN 12, HEATING 3, COOL DOWN 13, FINISH 6
+  // Box 2 (since 2026-11-12 the same step numbers as Box 1 and 3): TAPS 10, INSERT COIN 14, CLEANING 5, AUTO DRY 34, COOL DOWN 32, FINISH 8
   const p2 = (t + 40) % 120; let b2;
-  if (p2 < 30) b2 = [8, 0, 0, 0, 0]; else if (p2 < 40) b2 = [12, 0, 4, 0, 0]; else if (p2 < 90) b2 = [3, Math.round(90 - p2), 6, 0, 8];
-  else if (p2 < 110) b2 = [13, Math.round(110 - p2), 6, 0, 8]; else b2 = [6, 0, 6, 1, 0];
-  const rl2 = b2[0] === 3 ? (1 << 3 | 1 << 4) : (b2[0] === 13 ? 1 << 5 : 0);
+  if (p2 < 30) b2 = [10, 0, 0, 0, 0]; else if (p2 < 40) b2 = [14, 0, 4, 0, 0]; else if (p2 < 70) b2 = [5, Math.round(70 - p2), 6, 0, 8];
+  else if (p2 < 90) b2 = [34, Math.round(90 - p2), 6, 0, 8]; else if (p2 < 110) b2 = [32, Math.round(110 - p2), 6, 0, 8]; else b2 = [8, 0, 6, 1, 0];
+  const rl2 = b2[0] === 5 ? (1 << 3 | 1 << 4 | 1 << 5 | 1 << 6 | 1 << 7 | 1 << 11) : (b2[0] === 34 ? (1 << 12 | 1 << 4 | 1 << 7) : (b2[0] === 14 ? 1 << 11 : 0));
 
-  // Box 3 (ST13): TAPS 10, SELECT MODE 29, DRYING 31, COOL DOWN 32, FINISH 8
+  // Box 3 (STEPS): TAPS 10, SELECT MODE 29, DRYING 31, COOL DOWN 32, FINISH 8
   const p3 = (t + 70) % 200; let b3;
   if (p3 < 25) b3 = [10, 0, 0, 0, 0]; else if (p3 < 35) b3 = [29, 0, 0, 0, 0]; else if (p3 < 135) b3 = [31, Math.round(135 - p3), 8, 0, 6];
   else if (p3 < 165) b3 = [32, Math.round(165 - p3), 8, 0, 6]; else b3 = [8, 0, 8, 0, 0];
@@ -31,7 +31,7 @@ function demoAll() {
   const cc = ((Date.now() - DEMO_T0) / 1000 + 25) % 120;
   const stOff = cycle && cc >= 60 && cc < 95;                       // the Refilling Station goes offline for a while (?demo=cycle)
   const cyOos = cycle && cc >= 20 && cc < 50, cyLow = cycle && cc >= 40 && cc < 75, cyEarly = cycle && cc >= 25 && cc < 40, cyOff = cycle && cc >= 85 && cc < 110, cyPause = cycle && cc >= 100 && cc < 115;
-  if (alerts || cyOos) b2 = [24, 0, 0, 0, 0];                       // Box 2 OUT OF ORDER
+  if (alerts || cyOos) b2 = [26, 0, 0, 0, 0];                       // Box 2 OUT OF ORDER (step 26)
   if (cyPause) b1[0] = 9;                                           // Box 1 SAFETY PAUSE
   const offA2 = alerts || cyOff;
   const box1 = offA2 ? [b1[0], b1[1], b1[2], 0, -1, -1, -1, 0, 0]                                   // Box 1 sensor board (A2) offline: no doors, helmet or levels
@@ -39,14 +39,14 @@ function demoAll() {
   const rfv = (raw, valve, fail, queued) => { raw = Math.max(0, Math.round(raw)); return [raw, raw <= 0 ? 0 : raw < 500 ? 1 : raw < 1000 ? 2 : raw < 1200 ? 3 : 4, valve, fail, 500, 1000, 1200, queued ? 1 : 0]; };
   const L = {
     seq, ts: Math.floor(Date.now() / 1000), iv: 60,
-    n: (offA2 ? '10111111111' : '11111111111') + (stOff ? '0' : '1'),
+    n: (offA2 ? '10111111111' : '11111111111') + (stOff ? '0' : '1') + '1',                // 13 places: A1 A2 A3 S3A C1 C2 S3C B1 B2 B3 S3B, the station, then C3
     b: [
       box1,
       [...b2, -1, -1, 0, rl2],
       [...b3, -1, -1, 0, rl3]
     ],
-    // the Refilling Station: per box [raw, state 0-4 (-2 = not watched), valve open, refill failed, mid edge, high edge, max edge, waiting in the queue]; for now it watches Box 3 only
-    rf: [[0, -2, 0, 0, 500, 1000, 1200, 0], [0, -2, 0, 0, 500, 1000, 1200, 0],
+    // the Refilling Station: per box [raw, state 0-4 (-2 = not watched), valve open, refill failed, mid edge, high edge, max edge, waiting in the queue]; since 2026-11-12 it watches all three boxes
+    rf: [rfv(940 + 50 * Math.sin(t / 170), 0, 0), rfv(760 + 80 * Math.sin(t / 230), 0, 0),
          alerts ? rfv(0, 0, 1) : cyLow ? rfv(230 + (t % 20) * 12, 1, 0) : cyEarly ? rfv(640, 0, 0) : rfv(1020 + 60 * Math.sin(t / 190), 0, 0)]
   };
 
@@ -63,7 +63,7 @@ function demoAll() {
 
 /* The same boxes as the PUBLIC status device would carry them: { seq, ts, iv, b:[[step, seconds left, heard, sessions] x3] } (see DATA_CONTRACT.md, section 5).
    "sessions" is each box's completed-sessions counter: it goes up when the cycle ends (Box 1: end of the cleaning, Box 2: end of the heating, Box 3: end of the drying),
-   which is when a customer's optional name disappears. (The names themselves live in SS.demoNames, see status.js.) */
+   which is when a customer's optional name disappears (every box runs the same flow since 2026-11-12: a cleaning, then its auto-dry, then the cool down). (The names themselves live in SS.demoNames, see status.js.) */
 function demoPublic() {
   const L = JSON.parse(demoAll().v0), t = (Date.now() - DEMO_T0) / 1000 + 25;
   const sess = [50 + Math.floor((t + 20) / 150), 20 + Math.floor((t + 70) / 120), 70 + Math.floor((t + 135) / 200)];

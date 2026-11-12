@@ -16,12 +16,11 @@ async function sendCmd(obj) {
 }
 
 // Names, in the order the nodes number their states / steps (same lists as the settings pages)
-const ST13 = ["IDLE","OPEN A","CHECKING A","REFILLING A","SENSORS (old)","CLEANING","ABORT","OPEN B","FINISH","SAFETY PAUSE","TAPS","WELCOME","RATE A","TIME ALLOT","INSERT COIN","RATE B","CANCEL","METHOD","CHECKING S","REFILLING S","SENSORS A","CLOSE DOOR A","SENSORS B","CLOSE DOOR B","FREE RETRY","MAINTENANCE","OUT OF ORDER","HELMET NOTICE A","HELMET NOTICE B","SELECT MODE","SELECT DRY ONLY","DRYING","COOL DOWN","RATE B1","AUTO DRY","START DRYING"];   // Box 1 (the old S3A flow, until Box 1 gets the Box 3 flow)
-// Box 3 (S3B, the trimmed 36-step flow of 2026-11-03): the same state numbers, names of the steps it really uses; "(old)" = Box 1 steps Box 3 no longer has
-const ST3 = ["IDLE","OPEN A","CHECKING","REFILLING (old)","SENSORS (old)","CLEANING","ABORT","OPEN B","FINISH","SAFETY PAUSE","TAPS","WELCOME","RATE A (old)","TIME ALLOT (old)","INSERT COIN","RATE B (old)","CANCEL","METHOD (old)","CHECKING S (old)","REFILLING S (old)","SENSORS A","CLOSE DOOR A","SENSORS B","CLOSE DOOR B","FREE RETRY (old)","MAINTENANCE","OUT OF ORDER","HELMET NOTICE A","HELMET NOTICE B","SELECT MODE","SELECT DRY ONLY","DRYING","COOL DOWN","RATE B1 (old)","AUTO DRY","START DRYING"];
-const ST2 = ["IDLE","OPEN A","SENSORS (old)","HEATING","ABORT","OPEN B","FINISH","SAFETY PAUSE","TAPS","WELCOME","RATE A","TIME ALLOT","INSERT COIN","COOL DOWN","RATE B","CANCEL","SENSORS A","CLOSE DOOR A","SENSORS B","CLOSE DOOR B","FREE RETRY","MAINTENANCE","HELMET NOTICE A","HELMET NOTICE B","OUT OF ORDER"];
+// (2026-11-12: ALL THREE boxes run the same 36-step flow now - the state numbers are the same in every box, "(unused)" = steps the flow no longer has)
+const ST3 = ["IDLE","OPEN A","CHECKING","REFILLING (unused)","SENSORS (unused)","CLEANING","ABORT","OPEN B","FINISH","SAFETY PAUSE","TAPS","WELCOME","RATE A (unused)","TIME ALLOT (unused)","INSERT COIN","RATE B (unused)","CANCEL","METHOD (unused)","CHECKING S (unused)","REFILLING S (unused)","SENSORS A","CLOSE DOOR A","SENSORS B","CLOSE DOOR B","FREE RETRY (unused)","MAINTENANCE","OUT OF ORDER","HELMET NOTICE A","HELMET NOTICE B","SELECT MODE","SELECT DRY ONLY","DRYING","COOL DOWN","RATE B1 (unused)","AUTO DRY","START DRYING"];
 const RFN = ["EMPTY","LOW","MID","HIGH","MAX"];   // Refilling Station level names (255 = sensor fault)
-const NODES = ["A1 Terminal (Box 1)","A2 Sensors (Box 1)","A3 Relays (Box 1)","S3A Brain (Box 1)","C1 Terminal (Box 2)","C2 Hub (Box 2)","S3C Brain (Box 2)","B1 Terminal (Box 3)","B2 Sensors (Box 3)","B3 Relays (Box 3)","S3B Brain (Box 3)","Refilling Station"];
+// the 13 boards, in the order of the "n" flags the board sends (hubFillWs in settings_hub.h)
+const NODES = ["A1 Terminal (Box 1)","A2 Sensors (Box 1)","A3 Relays (Box 1)","S3A Brain (Box 1)","C1 Terminal (Box 2)","C2 Sensors (Box 2)","C3 Relays (Box 2)","S3C Brain (Box 2)","B1 Terminal (Box 3)","B2 Sensors (Box 3)","B3 Relays (Box 3)","S3B Brain (Box 3)","Refilling Station"];
 
 
 
@@ -431,7 +430,7 @@ function renderRefill(rf, alerts) {
   let h = '';
   for (let i = 0; i < 3; i++) {
     const raw = rf[5 + i * 3], st = rf[6 + i * 3], mx = rf[7 + i * 3] || 1;
-    const cls = !ok || st >= 254 ? 'sx' : 's' + st;                       // 254 = not watched (the station watches Box 3 only for now), 255 = sensor fault
+    const cls = !ok || st >= 254 ? 'sx' : 's' + st;                       // 254 = not watched (that box's WATCH_BOX entry in the station firmware is false), 255 = sensor fault
     const pct = ok && st < 254 ? Math.max(2, Math.min(100, Math.round(100 * raw / mx))) : 0;
     let c = '';
     if (ok) {
@@ -510,8 +509,8 @@ function handleStatus(d) {
     if (dd) dd.style.color = nOn === NODES.length ? 'var(--success)' : (nOn === 0 ? 'var(--danger)' : 'var(--warning)'); }
 
   const alerts = [];
-  renderBox('b1', ST13, d.b1s, d.b1t, d.b1c, alerts, 'Box 1');
-  renderBox('b2', ST2,  d.b2s, d.b2t, d.b2c, alerts, 'Box 2');
+  renderBox('b1', ST3, d.b1s, d.b1t, d.b1c, alerts, 'Box 1');
+  renderBox('b2', ST3, d.b2s, d.b2t, d.b2c, alerts, 'Box 2');
   renderBox('b3', ST3,  d.b3s, d.b3t, d.b3c, alerts, 'Box 3');
   renderRefill(d.rf || [], alerts);
 

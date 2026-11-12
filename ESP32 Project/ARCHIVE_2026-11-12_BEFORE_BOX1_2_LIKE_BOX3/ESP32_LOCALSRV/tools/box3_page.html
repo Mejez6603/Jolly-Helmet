@@ -1,0 +1,196 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Box 3 Settings</title>
+<style>
+ body{font-family:system-ui,Arial,sans-serif;background:#111;color:#eee;margin:0;padding:12px;max-width:720px;margin:auto}
+ h1{font-size:18px;margin:4px 0 10px}
+ h2{font-size:14px;margin:18px 0 6px;color:#9ad}
+ .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:7px 0}
+ label{font-size:13px;color:#ccc}
+ button{background:#2a2a2a;color:#eee;border:1px solid #555;border-radius:8px;padding:9px 11px;font-size:14px}
+ button.on{background:#1b6e2e;border-color:#3c3}
+ button.go{background:#1e4f8a;border-color:#59f}
+ button.sm{padding:6px 8px;font-size:12px}
+ button:disabled{opacity:.4}
+ input,select{background:#222;color:#eee;border:1px solid #555;border-radius:6px;padding:7px;font-size:14px}
+ input.n{width:74px}
+ .box{border:1px solid #444;border-radius:8px;padding:8px;line-height:1.65}
+ .note{color:#aaa;font-size:12px;margin:4px 0;line-height:1.5}
+ .ok{color:#6d6}.warn{color:#fb4}.err{color:#f66}
+ .grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+ code{color:#9c9;word-break:break-all;font-size:12px}
+ details{margin-top:12px}
+</style></head><body>
+<h1>Box 3 settings &middot; Cleaning + Drying <span id="net" class="warn"></span></h1>
+<div class="note">Changes the S3B's saved settings over the air; the S3B keeps them in its own memory, so nothing is lost when this board is switched off.</div>
+
+<h2>Live</h2>
+<div class="box" id="live">...</div>
+
+<div class="note"><b>Coin check:</b> on the INSERT COIN screen the acceptor power should read ON. Insert a coin: "pulses B1 has counted" should rise by the coin's value within a second or two, and B1 beeps. If it stays the same, the coin signal is not reaching B1. The "coin wire" line counts every pulse edge B1 sees BEFORE its filter: if a 20-peso coin shows 20 edges but only 1 pulse counted, B1's filter is eating them; if it shows 1 edge, the acceptor itself only sent one pulse for that coin.</div>
+
+<h2>Containers and sensors (LEVELS)</h2>
+<div class="row"><label><input type="checkbox" id="lv_checks"> Check the container levels before serving a customer</label></div>
+<div class="note">Leave this OFF until the lines below are measured. With it ON, a container that is low and cannot be refilled greys CLEANING out (DRYING keeps working). Distances are what the ultrasonic on each Main Container reads, in cm from the sensor down to the liquid: <b>bigger = emptier</b>. Fill to the line you want, then tap "use live" next to it.</div>
+<div class="row"><b>Alcohol</b>
+ <label>Low at</label><input class="n" id="lv_alcLow" type="number" step="0.1"><button class="sm" onclick="useLive('lv_alcLow','als')">use live</button>
+ <label>High at</label><input class="n" id="lv_alcHigh" type="number" step="0.1"><button class="sm" onclick="useLive('lv_alcHigh','als')">use live</button></div>
+<div class="row"><b>Scented</b>
+ <label>Low at</label><input class="n" id="lv_sctLow" type="number" step="0.1"><button class="sm" onclick="useLive('lv_sctLow','sls')">use live</button>
+ <label>High at</label><input class="n" id="lv_sctHigh" type="number" step="0.1"><button class="sm" onclick="useLive('lv_sctHigh','sls')">use live</button></div>
+<div class="row"><label>Helmet counts as inside under</label><input class="n" id="lv_helm" type="number" step="0.5"><label>cm</label><button class="sm" onclick="useLive('lv_helm','helm')">use live</button></div>
+
+<div class="note"><b>Water sensors</b> (analog). With the sensor DRY tap "dry now", then put it in the liquid and tap "wet now" - the two switch-over numbers are worked out for you. Test each with its real liquid: alcohol barely conducts and may hardly react.</div>
+<div class="row"><b>Alcohol sensor</b> dry <input class="n" id="wsa_dry" type="number"><button class="sm" onclick="capWater('a','dry')">dry now</button>
+ wet <input class="n" id="wsa_wet" type="number"><button class="sm" onclick="capWater('a','wet')">wet now</button></div>
+<div class="row"><label>wet when</label><input class="n" id="lv_wsaIn" type="number"><label>dry again when</label><input class="n" id="lv_wsaOut" type="number"></div>
+<div class="row"><b>Scented sensor</b> dry <input class="n" id="wss_dry" type="number"><button class="sm" onclick="capWater('s','dry')">dry now</button>
+ wet <input class="n" id="wss_wet" type="number"><button class="sm" onclick="capWater('s','wet')">wet now</button></div>
+<div class="row"><label>wet when</label><input class="n" id="lv_wssIn" type="number"><label>dry again when</label><input class="n" id="lv_wssOut" type="number"></div>
+<div class="row"><label for="lv_wsHigher">The reading goes</label>
+ <select id="lv_wsHigher"><option value="1">UP when wet</option><option value="0">DOWN when wet</option></select>
+ <span class="note" id="wsNote"></span></div>
+
+<div class="row"><label>Refill tries</label><input class="n" id="lv_tries" type="number" min="1" max="99">
+ <label>every</label><input class="n" id="lv_interval" type="number" min="1" max="250"><label>s</label>
+ <label><input type="checkbox" id="lv_acs"> send the request to ACS 2</label></div>
+<div class="row"><button class="go" onclick="sendLevels()">Send LEVELS to S3B</button><button onclick="loadFrom('levels')">Reload from S3B</button><span id="lvStatus" class="note"></span></div>
+
+<h2>Rules (time, coins, free retry)</h2>
+<div class="note">Box 3 starts with a copy of Box 1's prices - set Box 3's own here. Rating bands: each rating from 1 to 10 should fall in exactly one band. The free retry is offered once when EITHER rating after a cleaning (odor or dryness) is in the free range.</div>
+<div id="bands"></div>
+<div class="row"><label>Shortest session</label><input class="n" id="ru_min" type="number" min="1" max="120"><label>min</label>
+ <label>Most coins</label><input class="n" id="ru_max" type="number" min="1" max="999"><span id="ru_maxnote" class="note"></span></div>
+<div class="row"><input class="n" id="ru_coins" type="number" min="1"><label>coin(s) =</label><input class="n" id="ru_val" type="number" step="any" min="0.1">
+ <select id="ru_unit"><option value="1">minute(s)</option><option value="0">second(s)</option></select></div>
+<div class="row"><label><input type="checkbox" id="ru_free"> One free retry after the ratings</label>
+ <label>from rating</label><input class="n" id="ru_freeR" type="number" min="1" max="10"><label>for</label><input class="n" id="ru_freeM" type="number" min="1" max="60"><label>min</label></div>
+<div class="row"><button class="go" onclick="sendRules()">Send RULES to S3B</button><button onclick="loadFrom('rules')">Reload from S3B</button><span id="ruStatus" class="note"></span></div>
+
+<h2>Cleaning phases (which relays run when)</h2>
+<div class="note">The cleaning is cut into a START part, a MIDDLE part (whatever is left) and an END part, and each relay is ON or OFF in each. Defaults: UV the first and last minute, humidifiers in the middle, <b>heater + UV the last minute</b>. The heater is a hair dryer: keep it in the END part only, never together with the humidifiers. If phasing is switched off for a cleaning, the heater stays OFF. The parts count real cleaning time, so a pause does not use them up. If the two parts overlap, the start wins.</div>
+<div class="row"><label><input type="checkbox" id="phP_on"> Phase the PAID cleaning</label>
+ <label><input type="checkbox" id="phF_on"> Phase the FREE retry</label></div>
+<div class="row"><b>PAID:</b> <label>Start part lasts</label><input class="n" id="phP_sv" type="number" min="0" step="any">
+ <select id="phP_su"><option value="0">% of the cleaning</option><option value="1">seconds</option><option value="2">minutes</option></select>
+ <label>End part lasts</label><input class="n" id="phP_ev" type="number" min="0" step="any">
+ <select id="phP_eu"><option value="0">% of the cleaning</option><option value="1">seconds</option><option value="2">minutes</option></select></div>
+<div id="phPRelays"></div>
+<div class="row"><b>FREE retry:</b> <label>Start part lasts</label><input class="n" id="phF_sv" type="number" min="0" step="any">
+ <select id="phF_su"><option value="0">% of the cleaning</option><option value="1">seconds</option><option value="2">minutes</option></select>
+ <label>End part lasts</label><input class="n" id="phF_ev" type="number" min="0" step="any">
+ <select id="phF_eu"><option value="0">% of the cleaning</option><option value="1">seconds</option><option value="2">minutes</option></select></div>
+<div id="phFRelays"></div>
+<div class="note err" id="phWarn"></div>
+<div class="row"><button class="go" onclick="sendPhases()">Send PHASES to S3B</button><button onclick="loadFrom('phases')">Reload from S3B</button><span id="phStatus" class="note"></span></div>
+
+<h2>Drying</h2>
+<div class="row"><label>Cool down lasts</label><input class="n" id="dr_cool" type="number" min="5" max="900"><label>seconds</label></div>
+<div class="note">After every drying, and after an abort during a drying, nothing runs for this long before the door can be opened (Box 3 has no fan). Default 60. The drying length itself comes from the customer's rating and the Rules above.</div>
+<div class="row"><button class="go" onclick="sendDrying()">Send DRYING to S3B</button><button onclick="loadFrom('drying')">Reload from S3B</button><span id="drStatus" class="note"></span></div>
+
+<h2>Maintenance</h2>
+<div class="note">Only works when the S3B is on the idle (TAPS) or OUT OF ORDER screen. While on, the relays below are switched by hand; the enclosure lock rests itself after 60 s. <b>Careful with the heater:</b> a hand-set heater switches itself off after 5 minutes, and leaving Maintenance switches everything off - keep the door shut and a helmet out of the way when testing it.</div>
+<div class="row"><button id="mt" onclick="q('/maint?on='+(S.state==25?0:1))">Maintenance</button></div>
+<div class="grid" id="rel"></div>
+
+<div class="note" id="diag"></div>
+
+<details><summary class="note">Raw settings as the S3B reports them</summary><div class="box"><code id="raw"></code></div></details>
+
+<script>
+const ST=["IDLE","OPEN A","CHECKING A","REFILLING A","SENSORS (old)","CLEANING","ABORT","OPEN B","FINISH","SAFETY PAUSE","TAPS","WELCOME","RATE A","TIME ALLOT","INSERT COIN","RATE B","CANCEL","METHOD","CHECKING S","REFILLING S","SENSORS A","CLOSE DOOR A","SENSORS B","CLOSE DOOR B","FREE RETRY","MAINTENANCE","OUT OF ORDER","HELMET NOTICE A","HELMET NOTICE B","SELECT MODE","SELECT DRY ONLY","DRYING","COOL DOWN","RATE B1"];
+const RN=["ENCLOSURE LOCK","PANEL LOCK","BACKDOOR LOCK","HUMIDIFIER 1 (ALC)","UV 1","HUMIDIFIER 2 (SCN)","HUMIDIFIER 3 (BOTH)","UV 2","DRAIN PUMP 1","DRAIN PUMP 2","ACS DOOR LOCK","COIN POWER","HEATER"];
+const LV=['lv_checks','lv_alcLow','lv_alcHigh','lv_sctLow','lv_sctHigh','lv_helm','lv_wsaIn','lv_wsaOut','lv_wssIn','lv_wssOut','lv_wsHigher','lv_tries','lv_interval','lv_acs'];
+const RU_EXTRA=['ru_min','ru_coins','ru_val','ru_unit','ru_max','ru_free','ru_freeR','ru_freeM'];
+const PHN=["Humidifier 1 (alcohol)","Humidifier 2 (scented)","Humidifier 3 (both)","UV 1","UV 2","HEATER (hair dryer)"];
+let S={}, dirty={levels:false,rules:false,phases:false,drying:false}, pend={levels:null,rules:null,phases:null,drying:null}, loaded={levels:'',rules:'',phases:'',drying:''}, mm=0;
+const $=id=>document.getElementById(id);
+// band rows
+const bandsBox=$('bands');
+for(let i=0;i<4;i++){const d=document.createElement('div');d.className='row';
+ d.innerHTML='<label>Rating</label><input class="n" id="ru_f'+i+'" type="number" min="1" max="10"><label>to</label><input class="n" id="ru_t'+i+'" type="number" min="1" max="10"><label>suggests</label><input class="n" id="ru_m'+i+'" type="number" min="1" max="120"><label>min</label>';bandsBox.appendChild(d);}
+// phase rows: one line per relay with a Start / Middle / End tick each, for the PAID cleaning (P) and the FREE retry (F)
+['P','F'].forEach(k=>{const box=$('ph'+k+'Relays');
+ PHN.forEach((n,i)=>{const d=document.createElement('div');d.className='row';
+  d.innerHTML='<b style="min-width:150px">'+n+'</b>'+[['1','Start'],['2','Middle'],['4','End']].map(p=>'<label><input type="checkbox" id="ph'+k+'_p'+i+'_'+p[0]+'"> '+p[1]+'</label>').join(' ');box.appendChild(d);});});
+// relay buttons
+const rel=$('rel');
+RN.forEach((n,i)=>{const b=document.createElement('button');b.id='r'+i;b.textContent=i+' '+n;b.onclick=()=>{mm^=(1<<i);q('/mask?v='+mm);};rel.appendChild(b);});
+// mark a form as edited so the live refresh does not overwrite typing
+document.querySelectorAll('input,select').forEach(el=>{el.addEventListener('input',()=>{const id=el.id;
+ if(id.startsWith('lv_')||id.startsWith('wsa_')||id.startsWith('wss_'))dirty.levels=true;else if(id.startsWith('ru_'))dirty.rules=true;else if(id.startsWith('ph'))dirty.phases=true;else if(id.startsWith('dr_'))dirty.drying=true;
+ if(id.startsWith('ph'))phCheck();});});
+
+function num(id){return parseFloat($(id).value);}
+function setv(id,v){const el=$(id);if(el.type==='checkbox')el.checked=!!(+v);else el.value=v;}
+function getv(id){const el=$(id);return el.type==='checkbox'?(el.checked?1:0):(el.value===''?'0':el.value);}
+function levelsCsv(){return LV.map(getv).join(',');}
+function updMaxNote(){const c=+getv('ru_coins'),v=+getv('ru_val'),u=+getv('ru_unit'),m=+getv('ru_max'),el=$('ru_maxnote');
+ if(!(c>0&&v>0&&m>0)){el.textContent='';return;}
+ const sec=m*v*(u?60:1)/c,mn=sec/60;el.textContent='= '+(mn>=1?(Math.round(mn*10)/10)+' min':Math.round(sec)+' s')+' of time, P'+m+' ('+m+' coins at 1 peso each)';}
+setInterval(updMaxNote,400);
+function rulesCsv(){const p=[];for(let i=0;i<4;i++){p.push(getv('ru_f'+i),getv('ru_t'+i),getv('ru_m'+i));}RU_EXTRA.forEach(id=>p.push(getv(id)));return p.join(',');}
+function fillLevels(csv){const v=csv.split(',');if(v.length!==14)return;LV.forEach((id,i)=>setv(id,v[i]));dirty.levels=false;}
+function fillRules(csv){const v=csv.split(',');if(v.length!==20)return;for(let i=0;i<4;i++){setv('ru_f'+i,v[i*3]);setv('ru_t'+i,v[i*3+1]);setv('ru_m'+i,v[i*3+2]);}RU_EXTRA.forEach((id,i)=>setv(id,v[12+i]));dirty.rules=false;}
+function patOf(k){const pat=[];for(let i=0;i<6;i++){let v=0;[1,2,4].forEach(b=>{if($('ph'+k+'_p'+i+'_'+b).checked)v|=b;});pat.push(v);}return pat;}
+function phasesCsv(){return [getv('phP_on'),getv('phF_on'),getv('phP_sv'),getv('phP_su'),getv('phP_ev'),getv('phP_eu'),getv('phF_sv'),getv('phF_su'),getv('phF_ev'),getv('phF_eu')].concat(patOf('P'),patOf('F')).join(',');}
+function fillPhases(csv){const v=csv.split(',');if(v.length!==22)return;
+ setv('phP_on',v[0]);setv('phF_on',v[1]);setv('phP_sv',v[2]);setv('phP_su',v[3]);setv('phP_ev',v[4]);setv('phP_eu',v[5]);
+ setv('phF_sv',v[6]);setv('phF_su',v[7]);setv('phF_ev',v[8]);setv('phF_eu',v[9]);
+ for(let i=0;i<6;i++){const a=+v[10+i],b=+v[16+i];[1,2,4].forEach(bit=>{$('phP_p'+i+'_'+bit).checked=!!(a&bit);$('phF_p'+i+'_'+bit).checked=!!(b&bit);});}
+ dirty.phases=false;phCheck();}
+// the heater must never run in a part where a humidifier is also on
+function phCheck(){const bad=[];[['P','PAID'],['F','FREE']].forEach(x=>{const p=patOf(x[0]);const mist=p[0]|p[1]|p[2];if(p[5]&mist)bad.push(x[1]);});
+ $('phWarn').textContent=bad.length?('Warning: in the '+bad.join(' and ')+' cleaning the heater shares a part with a humidifier - the mist and the hot air would run together. Untick one of them.'):'';}
+function drCsv(){return getv('dr_cool');}
+function fillDrying(csv){const v=csv.split(',');if(v.length!==1)return;setv('dr_cool',v[0]);dirty.drying=false;}
+function same(a,b){const x=a.split(',').map(parseFloat),y=b.split(',').map(parseFloat);if(x.length!==y.length)return false;return x.every((v,i)=>Math.abs(v-y[i])<0.06);}
+function useLive(id,key){const v=S[key];if(!S.a2ok||!(v>0)){alert('No live reading from B2 (or no echo).');return;}setv(id,(+v).toFixed(1));dirty.levels=true;}
+function capWater(w,which){
+ if(!S.a2ok){alert('No live reading from B2.');return;}
+ setv('ws'+w+'_'+which,w==='a'?S.raw0:S.raw1);dirty.levels=true;
+ const d=num('ws'+w+'_dry'),t=num('ws'+w+'_wet');
+ if(isNaN(d)||isNaN(t))return;
+ const gap=t-d,note=$('wsNote');
+ if(Math.abs(gap)<150){note.textContent='The '+(w==='a'?'alcohol':'scented')+' sensor barely reacts ('+Math.abs(gap)+') - not reliable for this liquid.';note.className='note err';}
+ else{note.textContent='';note.className='note';}
+ const enter=Math.round(d+0.6*gap),leave=Math.round(d+0.4*gap);
+ setv('lv_ws'+w+'In',enter);setv('lv_ws'+w+'Out',leave);
+ setv('lv_wsHigher',gap>0?1:0);
+}
+async function send(kind,csv,statusId){pend[kind]=csv;$(statusId).textContent='sending...';$(statusId).className='note';await q('/send?kind='+kind+'&csv='+encodeURIComponent(csv));dirty[kind]=false;}
+function sendLevels(){send('levels',levelsCsv(),'lvStatus');}
+function sendRules(){send('rules',rulesCsv(),'ruStatus');}
+function sendPhases(){send('phases',phasesCsv(),'phStatus');}
+function sendDrying(){send('drying',drCsv(),'drStatus');}
+const FILL={levels:fillLevels,rules:fillRules,phases:fillPhases,drying:fillDrying};
+const ST_EL={levels:'lvStatus',rules:'ruStatus',phases:'phStatus',drying:'drStatus'};
+function loadFrom(kind){if(S[kind])FILL[kind](S[kind]);}
+function age(ms){return (ms/1000).toFixed(1)+' s ago';}
+function render(){
+ const L=$('live');
+ let h='';
+ h+=S.s3aok?('S3B: <b class="ok">online</b> ('+age(S.s3aage)+') · step <b>'+(ST[S.state]||S.state)+'</b>'+(S.timer?(' · '+Math.floor(S.timer/60)+':'+String(S.timer%60).padStart(2,'0')+' left'):'')):'S3B: <b class="err">not heard</b> - is it on, on channel 1, running the new firmware?';
+ h+='<br>B2 sensors: '+(S.a2ok?('<b class="ok">ok</b> ('+age(S.a2age)+')'):'<b class="err">silent</b>');
+ h+=' · B3 relays: '+(S.a3ok?('<b class="ok">ok</b>'+(S.a3orph?' <span class="err">(B3 sees no S3B)</span>':'')+' · on: 0x'+S.a3mask.toString(16).toUpperCase().padStart(4,'0')):'<b class="err">silent</b>');
+ h+='<br>Coins: B1 '+(S.a1ok?'<b class="ok">ok</b>':'<b class="err">silent</b>')+' · pulses B1 has counted: <b>'+S.coins+'</b>'+(S.coinage>=0?(' (last change '+age(S.coinage)+')'):' (none since B1 started)')+' · acceptor power from B3: <b>'+(((S.a3mask>>11)&1)?'ON':'off')+'</b>';
+ h+='<br>Coin wire: B1 saw <b>'+S.raw+'</b> pulse edges in total · shortest gap between two <b>'+(S.gap>0?S.gap.toFixed(1)+' ms':'(none yet)')+'</b>'+(S.raw>S.coins?(' · <span class="warn">'+(S.raw-S.coins)+' edge(s) were filtered out or ignored</span>'):'');
+ if(S.a2ok){
+  h+='<br>Helmet <b>'+S.helm.toFixed(1)+'</b> cm · Alcohol container <b>'+S.als.toFixed(1)+'</b> cm · Scented container <b>'+S.sls.toFixed(1)+'</b> cm <span class="note">(0 = no echo)</span>';
+  h+='<br>Water sensors: alcohol raw <b>'+S.raw0+'</b> · scented raw <b>'+S.raw1+'</b> · enclosure door <b>'+(S.door?'OPEN':'shut')+'</b>';
+ }
+ L.innerHTML=h;
+ // keep the forms in step with the S3B unless the user is typing in them
+ ['levels','rules','phases','drying'].forEach(k=>{if(S[k]&&!dirty[k]&&S[k]!==loaded[k])FILL[k](S[k]);loaded[k]=S[k]||'';
+  if(pend[k]){const el=$(ST_EL[k]);if(S[k]&&same(S[k],pend[k])){el.textContent='S3B has these values ✓';el.className='note ok';pend[k]=null;}else el.textContent='waiting for the S3B to confirm (or it refused - see its serial log)...';}});
+ $('mt').className=S.state==25?'on':'';$('mt').textContent='Maintenance: '+(S.state==25?'ON':'OFF');
+ for(let i=0;i<13;i++){const b=$('r'+i);b.className=((S.a3mask>>i)&1)?'on':'';b.disabled=S.state!=25;}
+ if(S.state!=25)mm=0;
+ $('diag').textContent='This board: up '+S.up+' s · last restart: '+S.rst+' · phones connected '+S.clients+' · joins '+S.joins+' · drops '+S.leaves+(S.leaves?(' (last reason '+S.why+')'):'');
+ $('raw').textContent='rules  : '+(S.rules||'(not received yet)')+'\nlevels : '+(S.levels||'(not received yet)')+'\nphases : '+(S.phases||'(not received yet)')+'\ndrying : '+(S.drying||'(not received yet)');
+}
+async function q(u){try{const r=await fetch(u,{cache:'no-store'});S=await r.json();render();$('net').textContent='';}
+ catch(e){$('net').textContent='(no link)';}}
+q('/state');setInterval(()=>q('/state'),700);
+</script></body></html>

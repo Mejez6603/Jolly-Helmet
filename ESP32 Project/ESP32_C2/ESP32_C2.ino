@@ -1,239 +1,183 @@
+// =====================================================================
+// *** ONE PROGRAM FOR THE THREE SENSOR BOARDS (2026-11-12) ***  ESP32_A2 (Box 1), ESP32_B2 (Box 3) and ESP32_C2 (Box 2) contain exactly this program; the only file
+// that differs is box_config.h (its device ID). Fix a bug here, copy the .ino to the other two folders (same text, only the file name changes). The comments below
+// were written for Box 3 and say B2 / B3 / S3B: in Box 1 read A2 / A3 / S3A, in Box 2 read C2 / C3 / S3C. A2 and C2 used to carry relays / water sensors / three
+// ultrasonics; since 2026-11-12 every box has the same sensing board (helmet + 4 door reeds) and a separate relay board (A3 / B3 / C3).
+// =====================================================================
+// =====================================================================
+//  NODE B2 - BOX 3 SENSING BOARD (sensors only)           (ESP32, core 3.3.7)
+//  Created 2026-10-03 from Box 1's sensing board (ESP32_A2.ino); TRIMMED 2026-11-03 for the Refilling Station: the two Main Container ultrasonics and the
+//  two analog water sensors are GONE from this board (the Refilling Station reads the containers now), so B2 only measures the HELMET ultrasonic and the
+//  door reeds. It still sends the same A2SensorPacket (device ID MY_ID) so nothing else on the radio changes; the container and water fields are
+//  always 0 / false. There is NO legacy bridge here (that was only for the old Box 1 S3A / LocalServer).
+//
+//  This board drives no relay (the relays, incl. the Heater, are on B3) and accepts no commands. It measures, debounces and reports: every ~1 s, and
+//  immediately when a door changes, one A2SensorPacket (S3B decides what is "helmet inside").
+//
+//  Sensors:
+//    Helmet US          Echo 25 / Trig 26
+//    Door reeds (INPUT_PULLUP, HIGH = open): Enclosure 27, Panel 14, Backdoor 19, Side door 18
+//  The pins that used to serve the container ultrasonics (33/32, 22/23) and the water sensors (34/35) are left unconnected / free.
+//
+//  The helmet ultrasonic is read every 20 ms; the reported value is the MEDIAN of its last 5 readings (0 = no echo).
+// =====================================================================
 #include <WiFi.h>
 #include <esp_wifi.h>
 #include <esp_now.h>
 #include "Shared_Common.h"
+#include "box_config.h"   // which board this is (the ONLY file that differs between A2 / B2 / C2)
 
-// -------------------------------------------------------------
-// NODE C2 - BOX 2 (HEATER) ACTUATOR & SENSOR HUB
-// Same pin contract as Node A2 for doors/locks/helmet sensing.
-// Differences from A2: no Alcohol tank sensor (this unit doesn't
-// use alcohol), the old Humidifier relay pin is now a Heater
-// relay (same pin, different load), and there's a 6th relay (Fan)
-// that A2 doesn't have.
-//
-// UPDATED 2026-10-03 for the new Box 2 procedure (see ESP32_S3C.ino):
-//  - S3C now sends the WHOLE relay state as ONE CMD_SET_RELAY_MASK (6 bits, C2RelayIndex order) every couple of seconds, instead
-//    of six separate per-relay commands. A single dropped packet can no longer leave the box half-switched. The old per-relay
-//    CMD_SET_RELAY is still obeyed (the dashboard's manual relay buttons use it), but S3C's next re-send puts things back.
-//  - Relay pins are driven HIGH (inactive) BEFORE they become outputs, so nothing clicks at power-up.
-//  - Relays that turn ON are staggered 25 ms apart (heater + UV + fan together is a power surge on a small supply).
-//  - The orphaned-S3C safety shutdown now switches the UV off too (it used to leave only heater and fan to be forced off).
-//  - A door change is reported at once (not only on the next once-a-second report), so S3C can react within its 2-tick debounce.
-// The previous version is archived as ESP32_C2_LEGACY_pre_mask.ino.txt.
-// -------------------------------------------------------------
+// ---------------------------------------------------------------------
+// Pins
+// ---------------------------------------------------------------------
+#define US_HELMET_TRIG 26
+#define US_HELMET_ECHO 25
 
-// Ultrasonic Sensor (Helmet Detection): ECHO=25, TRIG=26 - same as A2
-#define US_TRIG_PIN 26
-#define US_ECHO_PIN 25
+#define PIN_DOOR_ENCLOSURE 27
+#define PIN_DOOR_PANEL     14
+#define PIN_DOOR_BACKDOOR  19
+#define PIN_DOOR_SIDE      18             // the Side door (A2SensorPacket::doorAcsSide)
+#define DOOR_OPEN_LEVEL    HIGH           // reed switch + INPUT_PULLUP: contact closed (door shut) = LOW, open = HIGH
 
-// Magnetic Door Reed Switches: Enclosure=27, Panel=14, Backdoor=19 (INPUT_PULLUP: LOW = Closed, HIGH = Open)
-#define PIN_MAG_ENCLOSURE 27
-#define PIN_MAG_PANEL     14
-#define PIN_MAG_BACKDOOR  19
+// ---------------------------------------------------------------------
+// Timing
+// ---------------------------------------------------------------------
+const uint32_t US_STEP_MS         = 20;    // one ultrasonic ping every 20 ms
+const uint32_t US_ECHO_TIMEOUT_US = 25000; // ~4.3 m; pulseIn returns 0 after this = no echo
+const uint32_t DOOR_DEBOUNCE_MS   = 50;    // reed switch must hold a new level this long
+const uint32_t REPORT_INTERVAL_MS = 1000;  // periodic broadcast
+const uint32_t REPORT_MIN_GAP_MS  = 100;   // never faster than this, even if inputs chatter
+const uint32_t SERIAL_SUMMARY_MS  = 1000;
 
-// Solenoid Locks (Active-LOW: LOW=Open, HIGH=Locked): Enclosure=4, Panel=16, Backdoor=17
-#define PIN_RELAY_ENCLOSURE_LOCK 4
-#define PIN_RELAY_PANEL_LOCK     16
-#define PIN_RELAY_BACKDOOR_LOCK  17
+// ---------------------------------------------------------------------
+// Helmet ultrasonic
+// ---------------------------------------------------------------------
+float   usRing[5];                       // last 5 readings
+uint8_t usRingCount = 0;
+uint8_t usRingHead  = 0;
+float   usHelmetCm  = 0.0f;              // current median (0 until 5 readings exist)
+uint32_t lastUsStepMs = 0;
 
-// Relays (Active-LOW): Heater=18 (was Humidifier's pin on A2), UV Lights=5, Fan=23 (new)
-#define PIN_RELAY_HEATER    18
-#define PIN_RELAY_UV_LIGHT  5
-#define PIN_RELAY_FAN       23
+float medianOf5(const float in[5]) {
+    float s[5];
+    for (uint8_t i = 0; i < 5; i++) s[i] = in[i];
+    for (uint8_t i = 1; i < 5; i++) {    // insertion sort
+        float key = s[i];
+        int8_t j = (int8_t)i - 1;
+        while (j >= 0 && s[j] > key) { s[j + 1] = s[j]; j--; }
+        s[j + 1] = key;
+    }
+    return s[2];
+}
 
-#define RELAY_ACTIVE   LOW
-#define RELAY_INACTIVE HIGH
-
-const uint8_t RELAY_PINS[6] = {
-    PIN_RELAY_ENCLOSURE_LOCK,
-    PIN_RELAY_PANEL_LOCK,
-    PIN_RELAY_BACKDOOR_LOCK,
-    PIN_RELAY_HEATER,
-    PIN_RELAY_UV_LIGHT,
-    PIN_RELAY_FAN
-};
-bool relayStates[6] = {false, false, false, false, false, false};
-
-// Edge Detection for Door Switches
-bool lastMagEnc = false;
-bool lastMagPan = false;
-bool lastMagBak = false;
-
-// Non-blocking Timers
-unsigned long lastTelemetryMillis = 0;
-const unsigned long TELEMETRY_INTERVAL_MS = 1000;
-unsigned long lastUSTriggerMillis = 0;
-unsigned long lastEarlyReportMillis = 0;
-
-// -------------------------------------------------------------
-// Orphaned safety watchdog - if this node hasn't heard from S3C for ORPHANED_TIMEOUT_MS, nobody
-// is coordinating Box 2's cycle. S3C owns the whole cycle now - Master being reachable doesn't
-// matter, since Master no longer runs any of it (that's the whole point of the S3C migration).
-// C2 has no screen to show anything, but it still needs to make sure nobody gets trapped: if the
-// enclosure door is found closed with a headgear detected inside while genuinely orphaned, it
-// forces the lock open, then releases it again once the door's confirmed open (same overheat-
-// avoidance pattern used throughout this project) rather than holding it open indefinitely or
-// leaving it locked. lastSeenMaster is still tracked for diagnostics, just not part of this.
-// -------------------------------------------------------------
-unsigned long lastSeenMaster = 0;
-unsigned long lastSeenS3C    = 0;
-// 15s, not 5s - a stretch of dropped ESP-NOW packets (RF interference, congestion) is a real,
-// observed occurrence on this hardware, and 5s was tripping the watchdog on and off during
-// completely normal operation (mirrors the same fix on C1's OUT OF ORDER detection). 15s still
-// catches a genuinely dead S3C within a reasonable window, but stops false-triggering on brief
-// connectivity blips.
-const unsigned long ORPHANED_TIMEOUT_MS = 15000;
-uint8_t watchdogClosedTicks   = 0;
-uint8_t watchdogOpenTicks     = 0;
-bool    watchdogForcedUnlock  = false;
-
-float usHelmetDist_cm = 0.0f;
-
-// A whole-board relay mask asked for by S3C: written by the receive callback, applied in loop() (the staggering needs delays,
-// which must not run in the radio task). -1 = nothing pending.
-volatile int16_t pendingMask = -1;
-
-float measureDistance(uint8_t trigPin, uint8_t echoPin) {
+float pingOnce(uint8_t trigPin, uint8_t echoPin) {
     digitalWrite(trigPin, LOW);
     delayMicroseconds(2);
     digitalWrite(trigPin, HIGH);
     delayMicroseconds(10);
     digitalWrite(trigPin, LOW);
-
-    long duration = pulseIn(echoPin, HIGH, 25000); // 25ms timeout (~4.3m max)
-    if (duration == 0) return 0.0f;
-    return (float)duration * 0.0343f / 2.0f;
+    long duration = pulseIn(echoPin, HIGH, US_ECHO_TIMEOUT_US);
+    return (duration == 0) ? 0.0f : (float)duration * 0.0343f / 2.0f;
 }
 
-void setRelayState(uint8_t index, bool state) {
-    if (index >= 6) return;
-    if (relayStates[index] == state) return;       // nothing changes - no log spam on the 2-second re-send
-    relayStates[index] = state;
-    digitalWrite(RELAY_PINS[index], state ? RELAY_ACTIVE : RELAY_INACTIVE);
+// At most one ping per call, at most once every US_STEP_MS.
+void tickUltrasonic(uint32_t now) {
+    if (now - lastUsStepMs < US_STEP_MS) return;
+    lastUsStepMs = now;
+    usRing[usRingHead] = pingOnce(US_HELMET_TRIG, US_HELMET_ECHO);
+    usRingHead = (uint8_t)((usRingHead + 1) % 5);
+    if (usRingCount < 5) usRingCount++;
+    if (usRingCount >= 5) usHelmetCm = medianOf5(usRing);
+}
 
-    if (index <= 2) {
-        // Solenoids (Pins 4, 16, 17)
-        Serial.printf("[C2] SOLENOID TRIGGERED: Pin %d set to %s\n",
-                      RELAY_PINS[index], state ? "LOW=OPEN" : "HIGH=LOCKED");
-    } else {
-        // Relays (Pins 18, 5, 23)
-        Serial.printf("[C2] RELAY TRIGGERED: Pin %d set to %s\n",
-                      RELAY_PINS[index], state ? "ON" : "OFF");
+// ---------------------------------------------------------------------
+// Doors: 0 enclosure, 1 panel, 2 backdoor, 3 side door (debounced digital inputs)
+// ---------------------------------------------------------------------
+#define DOOR_COUNT 4
+const uint8_t DOOR_PIN[DOOR_COUNT] = { PIN_DOOR_ENCLOSURE, PIN_DOOR_PANEL, PIN_DOOR_BACKDOOR, PIN_DOOR_SIDE };
+const char* const DOOR_NAME[DOOR_COUNT] = { "ENCLOSURE DOOR", "PANEL DOOR", "BACKDOOR", "SIDE DOOR" };
+
+int      doorStable[DOOR_COUNT];     // debounced pin level
+int      doorLastRaw[DOOR_COUNT];
+uint32_t doorSinceMs[DOOR_COUNT];
+
+bool doorIsOpen(uint8_t i) { return doorStable[i] == DOOR_OPEN_LEVEL; }
+
+// Returns true on the call where the debounced level changes.
+bool updateDoor(uint8_t i, uint32_t now) {
+    int raw = digitalRead(DOOR_PIN[i]);
+    if (raw != doorLastRaw[i]) {
+        doorLastRaw[i] = raw;
+        doorSinceMs[i] = now;
+        return false;
     }
-}
-
-// Whole mask at once: everything that turns OFF goes first (at once), then everything that turns ON, 25 ms apart.
-void applyRelayMask(uint16_t mask) {
-    for (uint8_t i = 0; i < C2_RELAY_COUNT; i++) if (!((mask >> i) & 1u)) setRelayState(i, false);
-    for (uint8_t i = 0; i < C2_RELAY_COUNT; i++) {
-        if ((mask >> i) & 1u) {
-            bool wasOff = !relayStates[i];
-            setRelayState(i, true);
-            if (wasOff) delay(25);
-        }
+    if (raw != doorStable[i] && (now - doorSinceMs[i]) >= DOOR_DEBOUNCE_MS) {
+        doorStable[i] = raw;
+        return true;
     }
+    return false;
 }
 
-bool magEncOpenNow = false, magPanOpenNow = false, magBakOpenNow = false;
+// ---------------------------------------------------------------------
+// ESP-NOW
+// ---------------------------------------------------------------------
+volatile uint32_t sendFailCount = 0;
+uint16_t txSeq         = 0;
+uint32_t lastReportMs  = 0;
+uint32_t lastSummaryMs = 0;
+bool     reportPending = false;   // an input changed and its early report has not gone out yet
 
-void sendTelemetry() {
-    TelemetryPacket packet;
-    memset(&packet, 0, sizeof(TelemetryPacket));
-    packet.deviceID         = DEVICE_C2;
-    packet.usHelmetDistance = usHelmetDist_cm;
-    packet.doorEnclosure    = magEncOpenNow;
-    packet.doorPanel        = magPanOpenNow;
-    packet.doorBackdoor     = magBakOpenNow;
-    for (int i = 0; i < 6; i++) {
-        packet.relayStates[i] = relayStates[i];
-    }
-    esp_now_send(BROADCAST_MAC, (uint8_t*)&packet, sizeof(TelemetryPacket));
-}
-
-// -------------------------------------------------------------
-// Core 3.3.7 ESP-NOW Callbacks
-// -------------------------------------------------------------
 void onDataSent(const wifi_tx_info_t *tx_info, esp_now_send_status_t status) {
     if (!tx_info) return;
+    if (status != ESP_NOW_SEND_SUCCESS) sendFailCount = sendFailCount + 1;
 }
 
-void onDataRecv(const esp_now_recv_info_t *info, const uint8_t *incomingData, int len) {
-    if (!info || !info->src_addr || !incomingData || len <= 0) return;
-    if (len != sizeof(CommandPacket)) return;
-
-    CommandPacket cmd;
-    memcpy(&cmd, incomingData, sizeof(CommandPacket));
-
-    // Broadcast (targetDeviceID 0) - checked before the strict target filter below since it's
-    // meant for every node, not just C2.
-    if (cmd.commandID == CMD_HEARTBEAT) {
-        if (cmd.subIndex == DEVICE_SERVER) lastSeenMaster = millis();
-        else if (cmd.subIndex == DEVICE_S3C) lastSeenS3C = millis();
-        return;
-    }
-
-    if (cmd.targetDeviceID != DEVICE_C2) return; // broadcast traffic meant for another node - not an error
-
-    if (cmd.commandID == CMD_SET_RELAY_MASK) {
-        pendingMask = (int16_t)(cmd.param16 & C2_MASK_ALL);
-        lastSeenS3C = millis();       // S3C re-sends the mask every ~2 s: each one is proof of life, so one dropped heartbeat is harmless
-    } else if (cmd.commandID == CMD_SET_RELAY) {
-        Serial.printf("[C2 RX] CMD_SET_RELAY %d -> %d\n", cmd.subIndex, cmd.state);
-        setRelayState(cmd.subIndex, cmd.state == 1);
-        // A manual relay toggle from Master's dashboard also counts here, which just means the watchdog waits a little longer to
-        // fire in that case - never a safety problem, since that requires an actual person actively driving the dashboard.
-        lastSeenS3C = millis();
-    }
+void sendReport(uint32_t now) {
+    A2SensorPacket p;
+    memset(&p, 0, sizeof(p));                // the container ultrasonics and water sensors are not on this board any more: those fields stay 0 / false
+    p.deviceID      = MY_ID;
+    p.usHelmetCm    = usHelmetCm;
+    p.doorEnclosure = doorIsOpen(0);
+    p.doorPanel     = doorIsOpen(1);
+    p.doorBackdoor  = doorIsOpen(2);
+    p.doorAcsSide   = doorIsOpen(3);
+    p.seq           = txSeq++;
+    esp_now_send(BROADCAST_MAC, (uint8_t*)&p, sizeof(A2SensorPacket));
+    lastReportMs = now;
 }
 
 void setup() {
+    // Only the TRIG pin is an output - make it quiet first.
+    pinMode(US_HELMET_TRIG, OUTPUT);
+    digitalWrite(US_HELMET_TRIG, LOW);
+    pinMode(US_HELMET_ECHO, INPUT);
+    for (uint8_t i = 0; i < DOOR_COUNT; i++) pinMode(DOOR_PIN[i], INPUT_PULLUP);
+
     Serial.begin(115200);
     delay(100);
     Serial.println("\n=======================================================");
-    Serial.println("   NODE C2: BOX 2 (HEATER) ACTUATOR & SENSOR HUB (CORE 3.3.7)");
+    Serial.println("   NODE " NODE_NAME ": " BOX_NAME " SENSING BOARD - helmet ultrasonic + doors (CORE 3.3.7)");
     Serial.println("=======================================================");
 
-    // 1. Configure Relays & Solenoids (HIGH = Inactive / Locked) - driven BEFORE the pin becomes an output so it never glitches LOW
-    for (int i = 0; i < 6; i++) {
-        digitalWrite(RELAY_PINS[i], RELAY_INACTIVE);
-        pinMode(RELAY_PINS[i], OUTPUT);
-        digitalWrite(RELAY_PINS[i], RELAY_INACTIVE);
+    delay(20); // let the pulls settle, then take the starting levels as already-debounced
+    uint32_t now = millis();
+    for (uint8_t i = 0; i < DOOR_COUNT; i++) {
+        doorStable[i]  = digitalRead(DOOR_PIN[i]);
+        doorLastRaw[i] = doorStable[i];
+        doorSinceMs[i] = now;
     }
-    Serial.println("[C2] RELAYS: Solenoids (4, 16, 17) and Relays (18 Heater, 5 UV, 23 Fan) set to HIGH (Locked/Inactive).");
 
-    // 2. Configure Magnetic Door Reed Switches (Pins 27, 14, 19 with INPUT_PULLUP)
-    pinMode(PIN_MAG_ENCLOSURE, INPUT_PULLUP);
-    pinMode(PIN_MAG_PANEL, INPUT_PULLUP);
-    pinMode(PIN_MAG_BACKDOOR, INPUT_PULLUP);
-    lastMagEnc = (digitalRead(PIN_MAG_ENCLOSURE) == HIGH);
-    lastMagPan = (digitalRead(PIN_MAG_PANEL) == HIGH);
-    lastMagBak = (digitalRead(PIN_MAG_BACKDOOR) == HIGH);
-    magEncOpenNow = lastMagEnc; magPanOpenNow = lastMagPan; magBakOpenNow = lastMagBak;
-    Serial.println("[C2] SENSORS: Door reed switches initialized on pins 27 (Enc), 14 (Pan), 19 (Bak) with INPUT_PULLUP.");
-
-    // 3. Configure Ultrasonic Sensor Pin (Helmet: ECHO=25, TRIG=26) - no Alcohol sensor on this unit
-    pinMode(US_TRIG_PIN, OUTPUT);
-    pinMode(US_ECHO_PIN, INPUT);
-    digitalWrite(US_TRIG_PIN, LOW);
-    Serial.println("[C2] ULTRASONIC: Helmet (ECHO=25, TRIG=26) initialized.");
-
-    // 4. Force Wi-Fi Channel 1 for exact Master SoftAP Alignment
     WiFi.mode(WIFI_STA);
-    WiFi.setSleep(false); // modem sleep periodically powers down the receiver to save power,
-                           // even with no AP joined - causes several-second gaps in ESP-NOW
-                           // reception on a roughly-periodic cycle otherwise (Master already
-                           // disables this; every other node was missing it)
+    WiFi.setSleep(false); // modem sleep makes ESP-NOW drop out for seconds at a time
     WiFi.disconnect();
     esp_wifi_set_channel(ESPNOW_WIFI_CHANNEL, WIFI_SECOND_CHAN_NONE);
-    Serial.println("[C2] WIFI INIT: Setting STA Mode... Channel forced to 1 to match Master SoftAP.");
 
-    // 5. Initialize ESP-NOW
     if (esp_now_init() != ESP_OK) {
-        Serial.println("[C2] ESP-NOW: Initialization Failed!");
-        return;
+        Serial.println("[" NODE_NAME "] ESP-NOW: init failed - restarting in 3 s.");
+        delay(3000);
+        ESP.restart();
     }
     esp_now_register_send_cb(onDataSent);
-    esp_now_register_recv_cb(onDataRecv);
 
     esp_now_peer_info_t peerInfo;
     memset(&peerInfo, 0, sizeof(esp_now_peer_info_t));
@@ -241,100 +185,40 @@ void setup() {
     peerInfo.channel = ESPNOW_WIFI_CHANNEL;
     peerInfo.encrypt = false;
     esp_now_add_peer(&peerInfo);
-    Serial.println("[C2] ESP-NOW: Channel 1 Broadcast Peer registered.");
+
+    Serial.println("[" NODE_NAME "] ESP-NOW: channel 1 broadcast peer registered. Reporting every 1 s.");
 }
 
 void loop() {
-    unsigned long currentMillis = millis();
+    uint32_t now = millis();
 
-    // 0. A relay mask from S3C
-    if (pendingMask >= 0) {
-        uint16_t m = (uint16_t)pendingMask;
-        pendingMask = -1;
-        applyRelayMask(m);
-    }
+    tickUltrasonic(now);
 
-    // 1. Sample Ultrasonic Sensor every 100ms
-    if (currentMillis - lastUSTriggerMillis >= 100) {
-        lastUSTriggerMillis = currentMillis;
-        usHelmetDist_cm = measureDistance(US_TRIG_PIN, US_ECHO_PIN);
-    }
-
-    // 2. Read Magnetic Reed Switches and Detect State Changes
-    bool magEncOpen = (digitalRead(PIN_MAG_ENCLOSURE) == HIGH);
-    bool magPanOpen = (digitalRead(PIN_MAG_PANEL) == HIGH);
-    bool magBakOpen = (digitalRead(PIN_MAG_BACKDOOR) == HIGH);
-    magEncOpenNow = magEncOpen; magPanOpenNow = magPanOpen; magBakOpenNow = magBakOpen;
-
-    if (magEncOpen != lastMagEnc || magPanOpen != lastMagPan || magBakOpen != lastMagBak) {
-        lastMagEnc = magEncOpen;
-        lastMagPan = magPanOpen;
-        lastMagBak = magBakOpen;
-        Serial.printf("[C2] DOOR STATE CHANGE: Enclosure: %s | Panel: %s | Backdoor: %s\n",
-                      magEncOpen ? "OPEN" : "CLOSED",
-                      magPanOpen ? "OPEN" : "CLOSED",
-                      magBakOpen ? "OPEN" : "CLOSED");
-        if (currentMillis - lastEarlyReportMillis >= 150) {      // tell S3C right away (a bouncing reed cannot flood the radio)
-            lastEarlyReportMillis = currentMillis;
-            sendTelemetry();
+    bool changed = false;
+    for (uint8_t i = 0; i < DOOR_COUNT; i++) {
+        if (updateDoor(i, now)) {
+            changed = true;
+            Serial.printf("[" NODE_NAME "] %-14s -> %s\n", DOOR_NAME[i], doorIsOpen(i) ? "OPEN" : "CLOSED");
         }
     }
 
-    // 3. 1-Second Sensor Status Output & Telemetry Transmission
-    if (currentMillis - lastTelemetryMillis >= TELEMETRY_INTERVAL_MS) {
-        lastTelemetryMillis = currentMillis;
-
-        bool helmetSafetyPass = (usHelmetDist_cm > 0.0f && usHelmetDist_cm < 30.0f);
-        Serial.printf("[C2] SENSOR: Helmet %d cm (%s) | door %s | relays enc%d pan%d bak%d heat%d uv%d fan%d\n",
-                      (int)usHelmetDist_cm, helmetSafetyPass ? "inside" : "no helmet", magEncOpen ? "OPEN" : "closed",
-                      relayStates[0], relayStates[1], relayStates[2], relayStates[3], relayStates[4], relayStates[5]);
-
-        sendTelemetry();
-
-        // Orphaned safety watchdog - see the comment on lastSeenMaster/lastSeenS3C above.
-        // lastSeenS3C is written from the ESP-NOW receive callback, which runs on a different
-        // task/core than loop() - if a packet lands and updates it to a timestamp just ahead of
-        // this loop() iteration's own currentMillis snapshot, the plain subtraction below would
-        // underflow (both unsigned) into a huge number and read as "orphaned" for one tick, then
-        // self-correct immediately. Guarding against currentMillis < lastSeenS3C avoids it (same
-        // race identified and fixed on C1's OUT OF ORDER detection).
-        bool orphaned = (currentMillis >= lastSeenS3C) && (currentMillis - lastSeenS3C > ORPHANED_TIMEOUT_MS);
-        if (orphaned) {
-            // Nothing is safely regulating the Heater/UV/Fan anymore - S3C owned that decision, and if it disappears
-            // mid-Heating those relays would otherwise just keep running unattended and uncontrolled indefinitely
-            // (and UV light must never shine on whoever opens the door). Force them off regardless of door state.
-            if (relayStates[C2_RELAY_HEATER] || relayStates[C2_RELAY_FAN] || relayStates[C2_RELAY_UV_LIGHT]) {
-                Serial.println("[C2] ORPHANED WATCHDOG: Forcing Heater, UV and Fan OFF - no coordinator reachable.");
-                setRelayState(C2_RELAY_HEATER, false);
-                setRelayState(C2_RELAY_UV_LIGHT, false);
-                setRelayState(C2_RELAY_FAN, false);
-            }
-
-            if (!magEncOpen) { // door closed
-                watchdogOpenTicks = 0;
-                watchdogClosedTicks++;
-                if (watchdogClosedTicks == 2 && helmetSafetyPass) {
-                    Serial.println("[C2] ORPHANED WATCHDOG: Door closed with headgear inside and no coordinator reachable - forcing enclosure unlock.");
-                    setRelayState(C2_RELAY_ENCLOSURE_LOCK, true);
-                    watchdogForcedUnlock = true;
-                }
-                // Door closed with no headgear detected - leave it alone, nothing to do.
-            } else { // door open
-                watchdogClosedTicks = 0;
-                if (watchdogForcedUnlock) {
-                    watchdogOpenTicks++;
-                    if (watchdogOpenTicks >= 2) {
-                        // Confirmed open (not reed-switch bounce) - release rather than holding
-                        // it energized for however long the door sits open.
-                        setRelayState(C2_RELAY_ENCLOSURE_LOCK, false);
-                        watchdogForcedUnlock = false;
-                    }
-                }
-            }
-        } else {
-            watchdogClosedTicks  = 0;
-            watchdogOpenTicks    = 0;
-            watchdogForcedUnlock = false;
-        }
+    // Periodic report, plus an early one when something changed (rate-limited, never dropped).
+    if (changed) reportPending = true;
+    bool due = (now - lastReportMs) >= REPORT_INTERVAL_MS;
+    bool early = reportPending && (now - lastReportMs) >= REPORT_MIN_GAP_MS;
+    if (due || early) {
+        sendReport(now);
+        reportPending = false;
     }
+
+    if (now - lastSummaryMs >= SERIAL_SUMMARY_MS) {
+        lastSummaryMs = now;
+        Serial.printf("[" NODE_NAME "] helmet=%.1f cm | doors E:%s P:%s B:%s SIDE:%s | tx fail=%lu\n",
+                      (double)usHelmetCm,
+                      doorIsOpen(0) ? "OPEN" : "shut", doorIsOpen(1) ? "OPEN" : "shut",
+                      doorIsOpen(2) ? "OPEN" : "shut", doorIsOpen(3) ? "OPEN" : "shut",
+                      (unsigned long)sendFailCount);
+    }
+
+    delay(1); // yield
 }

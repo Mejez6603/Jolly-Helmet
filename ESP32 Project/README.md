@@ -2,7 +2,7 @@
 
 Three coin-operated boxes that clean (UV + mist) and dry (UV + heater) motorcycle helmets, one **Refilling Station** that keeps their liquid containers full, a **LocalServer** (the technician's Control Center) and an **Online Server** that sends a snapshot to the cloud (Blynk) for a monitoring web page. Everything inside the machine talks over **ESP-NOW** (Wi-Fi channel 1, broadcast, no router, no internet); the web pages are served from flash memory.
 
-*Rewritten 2026-11-03 for the Refilling Station design. The old two-box / ACS / "Master" description is gone: the ACS (alcohol container system) was replaced by one Refilling Station.*
+*Rewritten 2026-11-03 for the Refilling Station design; updated 2026-11-12: Box 1 and Box 2 are now built exactly like Box 3 (one program per node type, a small `box_config.h` per folder). The old two-box / ACS / "Master" description is gone.*
 
 ---
 
@@ -10,13 +10,13 @@ Three coin-operated boxes that clean (UV + mist) and dry (UV + heater) motorcycl
 
 | Part | Boards | What it does |
 |---|---|---|
-| **Box 1** (cleaner) | S3A main controller, A1 TFT display + coin slot, A2 sensors, A3 relay controller | the customer flow of Box 1. Still the OLDER flow (ratings, time picker). To be rebuilt like Box 3. |
-| **Box 2** (dryer) | S3C main controller, C1 TFT display + coin slot, C2 sensors + relays | the customer flow of Box 2 (24 steps). To be rebuilt like Box 3. |
-| **Box 3** (cleaner + dryer) | S3B main controller, B1 TFT display + coin slot, B2 sensors (helmet, doors), B3 relay controller (+ heater) | the trimmed 36-step flow: tap, checking, mode, coins, door, helmet, cleaning, auto-dry, door, thank you. |
+| **Box 1** (cleaner + dryer) | S3A main controller, A1 TFT display + coin slot, A2 sensors (helmet, doors), A3 relay controller (+ heater) | the same 36-step flow as Box 3 (rebuilt 2026-11-12). |
+| **Box 2** (cleaner + dryer) | S3C main controller, C1 TFT display + coin slot, C2 sensors (helmet, doors), **C3 relay controller (new board)** (+ heater) | the same 36-step flow as Box 3 (rebuilt 2026-11-12; its relays used to be on C2). |
+| **Box 3** (cleaner + dryer) | S3B main controller, B1 TFT display + coin slot, B2 sensors (helmet, doors), B3 relay controller (+ heater) | the trimmed 36-step flow: tap, checking, mode, coins, door, helmet, cleaning, auto-dry, door, thank you. The first box built; the other two copy it. |
 | **Refilling Station** | ESP32-WROOM `ESP32_REFILL`: 3 water-level sensors, 3 normally-closed valves | works alone: one valve at a time, EMPTY first then LOW. The boxes only read its levels. |
-| **LocalServer** | ESP32-S3 `ESP32_LOCALSRV` | Wi-Fi `JollyHelmet-Local` (192.168.4.1): Dashboard, session log, revenue, one settings page per box and one for the Refilling Station, maintenance. |
+| **LocalServer** | ESP32-S3 `ESP32_LOCALSRV` | Wi-Fi `JollyHelmet-Local` (192.168.4.1): Dashboard (13 devices), session log, revenue, one settings page for each box (the same page, `/box1` `/box2` `/box3`) and one for the Refilling Station, maintenance. |
 | **Online Server** | ESP32-S3 `ESP32_ONLINESRV` | listens only, uploads a JSON snapshot to Blynk every minute, router-style setup page. |
-| **Online web page** | `ONLINE_WEB\` (static site) | Monitor (boxes drawn as machines, level dials, network map), Alerts, Reports; `status.html` for customers. |
+| **Online web page** | `ONLINE_WEB\` (static site) | Monitor (boxes drawn as machines, level dials, network map), Alerts, Reports; `status.html` for customers. 13 boards (the 13th, Box 2's relay board, is last). |
 | **ENTRY board** | `ESP32_ENTRY` | form to type the previous customers into the LocalServer. |
 
 Customer rule for the container: on the first tap the box shows CHECKING (2 s), then WELCOME; on the next tap CLEANING is offered only when the Refilling Station was heard in the last 15 s **and** the box's container reads MID, HIGH or MAX. Otherwise the customer gets SELECT DRY ONLY.
@@ -31,29 +31,35 @@ The Refilling Station: levels per box EMPTY / LOW / MID / HIGH / MAX from a raw 
 
 ```
 ESP32 Project/
-├── ESP32_REFILL/            Refilling Station firmware (+ tools\refill_simulator.html: the queue logic with 17 self-tests)
-├── ESP32_S3B/  B1  B2  B3   Box 3: main controller (+ tools\s3b_flow_test.html: 31 scenario tests), TFT display, sensors, relays
-├── ESP32_S3A/  A1  A2  A3   Box 1 (older flow)
-├── ESP32_S3C/  C1  C2       Box 2
+├── ESP32_REFILL/            Refilling Station firmware (+ tools\refill_simulator.html: the queue logic with 24 self-tests)
+├── ESP32_S3A/ S3B/ S3C      the three main controllers: ONE program (the same .ino in all three), only box_config.h differs (+ ESP32_S3B\tools\s3b_flow_test.html: scenario tests of that logic)
+├── ESP32_A1/ B1/ C1         the three TFT + coin terminals: one program, box_config.h = rotation, touch calibration, coin pin
+├── ESP32_A2/ B2/ C2         the three sensor boards (helmet ultrasonic + 4 door reeds): one program
+├── ESP32_A3/ B3/ C3         the three relay boards (13 channels incl. the heater): one program   (C3 = new, Box 2)
 ├── ESP32_LOCALSRV/          LocalServer (settings_pages.h = the settings pages, settings_hub.h = their API, index_html.h/script_js.h = Dashboard)
-├── ESP32_ONLINESRV/         Online Server (+ the master copy of Shared_Common.h)
+├── ESP32_ONLINESRV/         Online Server
 ├── ESP32_ENTRY/             ENTRY board
 ├── ONLINE_WEB/              the monitoring web page (upload to any web host) + DATA_CONTRACT.md
 ├── FLOWCHART_SYSTEM/  FLOWCHART_BOX3/   charts
 ├── MANUAL/                  the user manual (Word is the master; build tools in MANUAL\build)
-├── BOX 3 STEP corrected.txt the Box 3 flow (Box Cycle Designer export); BOX 1 STEP.txt / BOX 2 STEP.txt the other two
+├── BOX 3 STEP corrected.txt the flow that ALL THREE boxes run since 2026-11-12 (Box Cycle Designer export); BOX 1 STEP.txt / BOX 2 STEP.txt are the OLD Box 1 / Box 2 flows (kept for history, no longer used)
 ├── ARCHIVE_2026-11-03_BEFORE_REFILLING_STATION/   the ACS firmware and the files that were replaced
+├── ARCHIVE_2026-11-12_BEFORE_BOX1_2_LIKE_BOX3/    the whole project as it was before Box 1 and Box 2 were rebuilt (rollback)
 └── ...bench / test / helper sketches (A1_WIDGET_TEST, A3_BENCH_TEST, B3_RELAY_TEST, C1_CALIBRATE, *_CONFIG_BENCH, RESTATE)
 ```
 
+### One program per node type (since 2026-11-12)
+
+Box 1, Box 2 and Box 3 are the same machine, so each node type is ONE program: `ESP32_S3A.ino` = `ESP32_S3B.ino` = `ESP32_S3C.ino` (same text, only the file name differs); the same for the terminals (`ESP32_A1/B1/C1.ino`), the sensor boards (`A2/B2/C2`) and the relay boards (`A3/B3/C3`). What differs lives in `box_config.h` of each folder (device ids, the settings tag, flash names, screen rotation, touch calibration, coin pin). **To change the behaviour of a box, edit one .ino, then copy it to the other two folders under the other two names** (compare with `cmp` / `Get-FileHash`). The comments inside were written for Box 3 and say B1 / B2 / B3 / S3B; read A1 / A2 / A3 / S3A for Box 1 and C1 / C2 / C3 / S3C for Box 2.
+
 ### The shared header
 
-`Shared_Common.h` (device ids, packet layouts, commands, the Refilling Station's rules) must be **byte-for-byte identical in every node folder** (Arduino sketches cannot share a header). The master copy is `ESP32_ONLINESRV\Shared_Common.h`; after any change copy it to all the others, then check:
+`Shared_Common.h` (device ids, packet layouts, commands, the Refilling Station's rules) must be **byte-for-byte identical in every node folder** (Arduino sketches cannot share a header). Edit any one copy (the working copy during the 2026-11-12 rebuild was `ESP32_S3B\Shared_Common.h`), copy it to all the others (22 folders, test sketches included), then check from the project folder:
 
 ```powershell
-Get-ChildItem -Recurse -Filter Shared_Common.h | ForEach-Object { (Get-FileHash $_.FullName).Hash.Substring(0,8) } | Group-Object
+Get-ChildItem -Path 'ESP32_*' -Recurse -Filter Shared_Common.h | ForEach-Object { (Get-FileHash $_.FullName).Hash.Substring(0,8) } | Group-Object
 ```
-(one group = all identical; `ESP32_S3A_COMMTEST` is an old test sketch with its own copy). Packets are told apart by their SIZE, so every packet has a `static_assert` against all the others.
+(one group of 22 = all identical; the `ARCHIVE_*` folders keep older copies on purpose and are not part of the check). Packets are told apart by their SIZE, so every packet has a `static_assert` against all the others.
 
 ---
 
@@ -68,7 +74,7 @@ Get-ChildItem -Recurse -Filter Shared_Common.h | ForEach-Object { (Get-FileHash 
 
 ## Troubleshooting (kept from the early builds)
 
-**Touchscreen stops responding after changing `tft.setRotation()`** - the touch calibration belongs to the rotation it was captured at. Re-run `ESP32_C1_CALIBRATE` at the rotation used in production and copy its `calData` into the firmware (B1 still has A1's numbers: calibrate it).
+**Touchscreen stops responding after changing `tft.setRotation()`** - the touch calibration belongs to the rotation it was captured at. Re-run `ESP32_C1_CALIBRATE` at the rotation used in production and copy its `calData` into the firmware (B1 still has A1's numbers: calibrate it; A1 and C1 have their own, kept in each folder's `box_config.h` as `TFT_CAL_DATA`).
 
 **Coins inserted but nothing happens** - check that `Shared_Common.h` is identical everywhere and every board was reflashed after the last protocol change (a stale board misreads packets as another type). Watch the S3's serial log for `[S3B COIN]` lines.
 

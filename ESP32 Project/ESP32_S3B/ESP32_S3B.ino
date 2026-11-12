@@ -1,9 +1,16 @@
+// =====================================================================
+// *** ONE PROGRAM FOR ALL THREE BOXES (2026-11-12) ***  ESP32_S3A (Box 1), ESP32_S3B (Box 3) and ESP32_S3C (Box 2) contain exactly this program; the only file that
+// differs is box_config.h (which box: its own device IDs, the settings state tag, the Refilling Station slot, the flash namespace). Fix a bug here, copy the
+// .ino to the other two folders (same text, only the file name changes). The comments below were written for Box 3 and say B1 / B2 / B3 / S3B: in Box 1 read
+// A1 / A2 / A3 / S3A, in Box 2 read C1 / C2 / C3 / S3C. The browser test ESP32_S3B\tools\s3b_flow_test.html is a port of THIS logic and covers all three boxes.
+// =====================================================================
 #include <WiFi.h>
 #include <esp_wifi.h>
 #include <esp_now.h>
 #include <Preferences.h>
 #include "Shared_Common.h"
-#include "S3B_Screens.h"
+#include "box_config.h"   // which box this is (the ONLY file that differs between S3A / S3B / S3C)
+#include "BoxScreens.h"    // the 36-step flow's screens (identical in all three boxes)
 
 // =====================================================================
 // NODE S3B - BOX 3 (CLEANING + DRYING) INTERNAL SERVER MANAGEMENT (ESP32-S3)          (core 3.3.7)
@@ -253,7 +260,7 @@ void saveConfigToNVS() {
 }
 
 void loadConfigFromNVS() {
-    prefs.begin("s3b_nvs", false);
+    prefs.begin(BOX_NVS, false);
     rateCoins        = prefs.getUShort("rate_c", rateCoins);
     rateValue        = prefs.getFloat("rate_v", rateValue);
     rateUnitMin      = prefs.getBool("rate_u", rateUnitMin);
@@ -269,7 +276,7 @@ void loadConfigFromNVS() {
     beepLenMs        = prefs.getUShort("beep_len", beepLenMs);
     beepWaitMs       = prefs.getUShort("beep_wait", beepWaitMs);
     bookedCoins      = prefs.getUInt("booked", 0);              // survives a reboot: the LocalServer books the difference to what it last saw
-    lastKnownPulsesB1 = prefs.getUInt("last_b1_pulses", 0);     // survives an S3B reboot mid-session
+    lastKnownPulsesB1 = prefs.getUInt(BOX_PULSE_KEY, 0);     // survives an S3B reboot mid-session
     // sanity after an old / damaged flash: the rate must buy the required coins, and the tail cannot be longer than the auto-dry
     if (maxCoins < rateCoins) maxCoins = rateCoins;
     if (heaterOffTailSec > autoDrySec) heaterOffTailSec = autoDrySec;
@@ -368,13 +375,13 @@ bool applyBeepCsv(const char* s) {
 
 void broadcastSettingsCsv() {
     char buf[200];
-    rulesToCsv(buf, sizeof(buf));    sendCmd(0, CMD_SET_CONFIG, 1, 0, 3, buf);   delay(2);   // state = 3: Box 3's copy (S3A sends 0, S3C 2)
-    sensorsToCsv(buf, sizeof(buf));  sendCmd(0, CMD_SET_CONFIG, 2, 0, 3, buf);   delay(2);
-    autoDryToCsv(buf, sizeof(buf));  sendCmd(0, CMD_SET_CONFIG, 3, 0, 3, buf);   delay(2);
-    dryingToCsv(buf, sizeof(buf));   sendCmd(0, CMD_SET_CONFIG, 4, 0, 3, buf);   delay(2);
-    refreshToCsv(buf, sizeof(buf));  sendCmd(0, CMD_SET_CONFIG, 5, 0, 3, buf);   delay(2);
-    autoRefreshToCsv(buf, sizeof(buf));  sendCmd(0, CMD_SET_CONFIG, 6, 0, 3, buf);   delay(2);
-    beepToCsv(buf, sizeof(buf));     sendCmd(0, CMD_SET_CONFIG, 7, 0, 3, buf);
+    rulesToCsv(buf, sizeof(buf));    sendCmd(0, CMD_SET_CONFIG, 1, 0, BOX_TAG, buf);   delay(2);   // state = 3: Box 3's copy (S3A sends 0, S3C 2)
+    sensorsToCsv(buf, sizeof(buf));  sendCmd(0, CMD_SET_CONFIG, 2, 0, BOX_TAG, buf);   delay(2);
+    autoDryToCsv(buf, sizeof(buf));  sendCmd(0, CMD_SET_CONFIG, 3, 0, BOX_TAG, buf);   delay(2);
+    dryingToCsv(buf, sizeof(buf));   sendCmd(0, CMD_SET_CONFIG, 4, 0, BOX_TAG, buf);   delay(2);
+    refreshToCsv(buf, sizeof(buf));  sendCmd(0, CMD_SET_CONFIG, 5, 0, BOX_TAG, buf);   delay(2);
+    autoRefreshToCsv(buf, sizeof(buf));  sendCmd(0, CMD_SET_CONFIG, 6, 0, BOX_TAG, buf);   delay(2);
+    beepToCsv(buf, sizeof(buf));     sendCmd(0, CMD_SET_CONFIG, 7, 0, BOX_TAG, buf);
 }
 
 // ---------------------------------------------------------------------
@@ -393,18 +400,18 @@ bool holdTicks(uint8_t &counter, bool cond, uint8_t need) {
 
 // Box 3 is index 2 on the Refilling Station.
 bool stationHeard() { return lastStationMs != 0 && (uint32_t)(millis() - lastStationMs) < (uint32_t)refillOfflineSec * 1000UL; }
-uint8_t myContainerLevel() { return stationHeard() ? stSnap.state[2] : (uint8_t)REFILL_UNKNOWN; }
+uint8_t myContainerLevel() { return stationHeard() ? stSnap.state[BOX_STATION_IDX] : (uint8_t)REFILL_UNKNOWN; }
 // CLEANING needs liquid: MID, HIGH or MAX. EMPTY, LOW, a sensor fault or a silent station = DRYING only.
 bool cleaningAllowed() { uint8_t l = myContainerLevel(); return l <= REFILL_MAX && l >= REFILL_MID; }
 
 // ---------------------------------------------------------------------
 // Messages to the other nodes
 // ---------------------------------------------------------------------
-void sendBuzzer(uint16_t ms) { sendCmd(DEVICE_B1, CMD_BUZZER, 0, ms, 0); }
-void sendToken(uint8_t id, uint16_t value) { sendCmd(DEVICE_B1, CMD_SET_TOKEN, id, value, 0); delay(2); }
+void sendBuzzer(uint16_t ms) { sendCmd(MY_TERM, CMD_BUZZER, 0, ms, 0); }
+void sendToken(uint8_t id, uint16_t value) { sendCmd(MY_TERM, CMD_SET_TOKEN, id, value, 0); delay(2); }
 
 void sendStatusLines() {
-    for (uint8_t i = 0; i < 3; i++) { sendCmd(DEVICE_B1, CMD_STATUS_LINE, i, 0, 0, statusLines[i]); delay(2); }
+    for (uint8_t i = 0; i < 3; i++) { sendCmd(MY_TERM, CMD_STATUS_LINE, i, 0, 0, statusLines[i]); delay(2); }
 }
 void pushStatus(const char* text) {
     strncpy(statusLines[2], statusLines[1], 31);
@@ -419,9 +426,9 @@ void clearStatus() {
 }
 
 void resetCoinSession() {
-    sendCmd(DEVICE_B1, CMD_RESET_COINS, 0, 0, 0);
+    sendCmd(MY_TERM, CMD_RESET_COINS, 0, 0, 0);
     lastKnownPulsesB1 = 0;
-    prefs.putUInt("last_b1_pulses", 0);
+    prefs.putUInt(BOX_PULSE_KEY, 0);
 }
 
 // ---------------------------------------------------------------------
@@ -471,7 +478,7 @@ const char* screenForCurrentState() {
 }
 
 void showScreen() {
-    sendCmd(DEVICE_B1, CMD_STEP_RENDER, 0, 0, anyTapFlagForCurrentState(), screenForCurrentState());
+    sendCmd(MY_TERM, CMD_STEP_RENDER, 0, 0, anyTapFlagForCurrentState(), screenForCurrentState());
 }
 
 // ---------------------------------------------------------------------
@@ -521,12 +528,12 @@ uint16_t desiredMaskForState() {
 }
 
 void sendMask() {
-    sendCmd(DEVICE_B3, CMD_SET_RELAY_MASK, 0, desiredMask, 0);
+    sendCmd(MY_REL, CMD_SET_RELAY_MASK, 0, desiredMask, 0);
     lastMaskSentMs = millis();
 }
 
 void muteB1AndScheduleRedraw(bool hardRefresh) {
-    sendCmd(DEVICE_B1, CMD_MUTE_COINS, 0, 250, 0);
+    sendCmd(MY_TERM, CMD_MUTE_COINS, 0, 250, 0);
     b1RedrawAtMillis = millis() + 300;
     if (hardRefresh) b1HardRefreshPending = true;
 }
@@ -541,7 +548,7 @@ void applyDesiredMask() {
     desiredMask = m;
     muteB1AndScheduleRedraw(refreshNow);
     sendMask();
-    Serial.printf("[S3B] relay mask -> 0x%04X\n", (unsigned)desiredMask);
+    Serial.printf("[" NODE_NAME "] relay mask -> 0x%04X\n", (unsigned)desiredMask);
 }
 
 // ---------------------------------------------------------------------
@@ -550,7 +557,7 @@ void applyDesiredMask() {
 void enterState(MachineState s);
 
 void goOutOfOrder(const char* why) {
-    Serial.printf("[S3B] OUT OF ORDER: %s\n", why);
+    Serial.printf("[" NODE_NAME "] OUT OF ORDER: %s\n", why);
     enterState(STATE_OUT_OF_ORDER);
 }
 
@@ -559,7 +566,7 @@ void startOooRelease(const char* why) {
     oooUnlock = true; oooUnlockSec = 0;
     unlockHeldSec = 0; lockRestSec = 0; lockResting = false;
     lastBeepMs = 0;                                           // the first beep comes at once
-    Serial.printf("[S3B] OUT OF ORDER: enclosure UNLOCKED (%s)\n", why);
+    Serial.printf("[" NODE_NAME "] OUT OF ORDER: enclosure UNLOCKED (%s)\n", why);
 }
 
 // AFTER A REBOOT (a power cut takes the S3 down while B1 / B2 / B3 keep running on the UPS): a helmet that is still shut inside is handed back BEFORE anybody
@@ -579,7 +586,7 @@ void bootHelmetCheck(bool closed, bool hp) {
     if (!beforePayment || !systemReady()) { bootHold = 0; return; }
     if (holdTicks(bootHold, closed && hp, 3)) {
         bootCheckDone = true;
-        Serial.println("[S3B] Reboot with a helmet still shut inside - handing it back first (OPEN B)");
+        Serial.println("[" NODE_NAME "] Reboot with a helmet still shut inside - handing it back first (OPEN B)");
         enterState(STATE_RETRIEVE);
     }
 }
@@ -595,7 +602,7 @@ void bookCoins(uint32_t n) {
 void commitPayment() {
     sessionPaid = true;
     bookCoins(sessionCoins);
-    Serial.printf("[S3B COIN] Payment complete: %lu coin(s) booked, running total %lu\n", (unsigned long)sessionCoins, (unsigned long)bookedCoins);
+    Serial.printf("[" NODE_NAME " COIN] Payment complete: %lu coin(s) booked, running total %lu\n", (unsigned long)sessionCoins, (unsigned long)bookedCoins);
 }
 
 // One record per paid session, for the LocalServer's Finished / Cancelled statistics: aborted = the customer pressed ABORT mid-cycle.
@@ -606,7 +613,7 @@ void recordSession(bool aborted) {
     lastSessionDurationSec = (durationSec > 65535UL) ? 65535 : (uint16_t)durationSec;
     lastSessionCoins       = (uint16_t)coinsUsed | (aborted ? SESSION_CANCELLED_FLAG : 0);
     completedSessionSeq++;
-    Serial.printf("[S3B STATS] Session #%u %s: %s, %us, %u coins.\n",
+    Serial.printf("[" NODE_NAME " STATS] Session #%u %s: %s, %us, %u coins.\n",
                   (unsigned)completedSessionSeq, aborted ? "ABORTED (cancelled)" : "finished", sessionMode == MODE_DRY ? "DRYING" : "CLEANING",
                   (unsigned)lastSessionDurationSec, (unsigned)coinsUsed);
 }
@@ -654,7 +661,7 @@ void enterState(MachineState s) {
     }
     applyDesiredMask();
     showScreen();
-    Serial.printf("[S3B] -> %s\n", stateName(s));
+    Serial.printf("[" NODE_NAME "] -> %s\n", stateName(s));
 }
 
 // A customer has tapped the TAPS screen.
@@ -687,7 +694,7 @@ void beginCleaning() {
     sessionCoinsAtStart = lastKnownPulsesB1;
     runTotalSec = activeTimer > 9999UL ? 9999UL : activeTimer;
     clearStatus();
-    Serial.printf("[S3B] Cleaning starts: %lus\n", (unsigned long)activeTimer);
+    Serial.printf("[" NODE_NAME "] Cleaning starts: %lus\n", (unsigned long)activeTimer);
     enterState(STATE_CLEANING);
     syncRunStatus(true);                      // after enterState: the state decides what is ON
     sendBuzzer(250);
@@ -698,7 +705,7 @@ void beginAutoDry() {
     activeTimer = autoDrySec;
     runTotalSec = autoDrySec > 9999 ? 9999 : autoDrySec;
     clearStatus();
-    Serial.printf("[S3B] Auto-dry starts: %us (heater off for the last %us)\n", (unsigned)autoDrySec, (unsigned)heaterOffTailSec);
+    Serial.printf("[" NODE_NAME "] Auto-dry starts: %us (heater off for the last %us)\n", (unsigned)autoDrySec, (unsigned)heaterOffTailSec);
     enterState(STATE_AUTO_DRY);
     syncRunStatus(true);
 }
@@ -714,7 +721,7 @@ void beginDrying() {
     sessionCoinsAtStart = lastKnownPulsesB1;
     runTotalSec = activeTimer > 9999UL ? 9999UL : activeTimer;
     clearStatus();
-    Serial.printf("[S3B] Drying starts: %lus\n", (unsigned long)activeTimer);
+    Serial.printf("[" NODE_NAME "] Drying starts: %lus\n", (unsigned long)activeTimer);
     enterState(STATE_DRYING);
     syncRunStatus(true);
     sendBuzzer(250);
@@ -725,7 +732,7 @@ void beginCoolDown() {
     activeTimer  = coolDownSec;
     coolTotalSec = coolDownSec > 9999 ? 9999 : coolDownSec;
     clearStatus();
-    Serial.printf("[S3B] Cool down starts: %us\n", (unsigned)coolDownSec);
+    Serial.printf("[" NODE_NAME "] Cool down starts: %us\n", (unsigned)coolDownSec);
     enterState(STATE_COOL_DOWN);
     pushStatus("UV: OFF");
     pushStatus("HEATER: OFF");
@@ -733,7 +740,7 @@ void beginCoolDown() {
 
 void finishDrying() {
     recordSession(false);
-    Serial.println("[S3B] Drying complete -> cool down");
+    Serial.println("[" NODE_NAME "] Drying complete -> cool down");
     beginCoolDown();
 }
 
@@ -747,14 +754,14 @@ void beginPayment(uint8_t mode) {
     sessionMode = mode;
     requiredCoinsForSession = minCoinsRequired;
     activeTimer = 0;
-    Serial.printf("[S3B] Mode: %s, %u coin(s) required\n", mode == MODE_DRY ? "DRYING" : "CLEANING", (unsigned)requiredCoinsForSession);
+    Serial.printf("[" NODE_NAME "] Mode: %s, %u coin(s) required\n", mode == MODE_DRY ? "DRYING" : "CLEANING", (unsigned)requiredCoinsForSession);
     enterState(STATE_INSERT_COIN);
 }
 
 // A button from B1 (queued by the radio callback, handled here in loop()).
 void handleTouch(const char* a, uint16_t v) {
     MachineState st = currentMachineState;
-    Serial.printf("[S3B TOUCH] '%s' value=%u in %s\n", a, v, stateName(st));
+    Serial.printf("[" NODE_NAME " TOUCH] '%s' value=%u in %s\n", a, v, stateName(st));
 
     if (!strcmp(a, "TAP_ADVANCE")) {
         if (st == STATE_TAPS) beginSession();
@@ -766,7 +773,7 @@ void handleTouch(const char* a, uint16_t v) {
     } else if (!strcmp(a, "INSERT_CANCEL")) {
         if (st == STATE_INSERT_COIN) { returnState = STATE_INSERT_COIN; enterState(STATE_CANCEL_CONFIRM); }
     } else if (!strcmp(a, "CANCEL_YES")) {
-        if (st == STATE_CANCEL_CONFIRM) { Serial.println("[S3B] Cancelled by the customer"); enterState(STATE_TAPS); }
+        if (st == STATE_CANCEL_CONFIRM) { Serial.println("[" NODE_NAME "] Cancelled by the customer"); enterState(STATE_TAPS); }
     } else if (!strcmp(a, "CANCEL_NO")) {
         if (st == STATE_CANCEL_CONFIRM) enterState(returnState);
     } else if (!strcmp(a, "ABORT")) {
@@ -774,8 +781,8 @@ void handleTouch(const char* a, uint16_t v) {
     } else if (!strcmp(a, "ABORT_YES")) {
         if (st == STATE_ABORT_CONFIRM) {
             recordSession(true);                       // a paid session that was cut short: recorded as Cancelled, its coins stay booked
-            if (returnState == STATE_DRYING) { Serial.println("[S3B] Drying aborted by the customer -> cool down first"); beginCoolDown(); }
-            else { Serial.println("[S3B] Cleaning aborted by the customer -> auto-dry (the helmet is wet)"); beginAutoDry(); }
+            if (returnState == STATE_DRYING) { Serial.println("[" NODE_NAME "] Drying aborted by the customer -> cool down first"); beginCoolDown(); }
+            else { Serial.println("[" NODE_NAME "] Cleaning aborted by the customer -> auto-dry (the helmet is wet)"); beginAutoDry(); }
         }
     } else if (!strcmp(a, "ABORT_NO")) {
         if (st == STATE_ABORT_CONFIRM) enterState(returnState);     // back to the cleaning / drying, time and bar untouched
@@ -787,7 +794,7 @@ void handleTouch(const char* a, uint16_t v) {
 void handleMaintenance(uint8_t on) {
     if (on) {
         if (currentMachineState == STATE_TAPS || currentMachineState == STATE_OUT_OF_ORDER) { maintMask = 0; maintBypass = false; enterState(STATE_MAINTENANCE); }
-        else Serial.println("[S3B] Maintenance refused: only possible from the idle screen");
+        else Serial.println("[" NODE_NAME "] Maintenance refused: only possible from the idle screen");
     } else if (currentMachineState == STATE_MAINTENANCE) {
         maintMask = 0; maintBypass = false;
         enterState(STATE_TAPS);
@@ -803,7 +810,7 @@ void maintAutoOffTick(unsigned long now) {
     for (uint8_t b = 0; b < 16; b++) {
         if ((timed & A3_BIT(b)) && (uint32_t)(now - maintOnAtMs[b]) >= MAINT_AUTOOFF_MS) { maintMask &= (uint16_t)(~A3_BIT(b)); changed = true; }
     }
-    if (changed) { Serial.println("[S3B] Maintenance: a hand-set relay was on for 2 s - switched off (safety)"); applyDesiredMask(); }
+    if (changed) { Serial.println("[" NODE_NAME "] Maintenance: a hand-set relay was on for 2 s - switched off (safety)"); applyDesiredMask(); }
 }
 
 // ---------------------------------------------------------------------
@@ -816,7 +823,7 @@ void tickState() {
 
     switch (currentMachineState) {
         case STATE_CHECKING:                           // "Checking Main Container" for 2 s; the level itself is judged at the tap on WELCOME
-            if (!systemReady()) { goOutOfOrder(b2Alive() ? "relay board B3 is not answering" : "sensor board B2 is not answering"); break; }
+            if (!systemReady()) { goOutOfOrder(b2Alive() ? "relay board " REL_NAME " is not answering" : "sensor board " SENS_NAME " is not answering"); break; }
             if (stepRemainingSec > 0) stepRemainingSec--;
             if (stepRemainingSec == 0) enterState(STATE_WELCOME);
             break;
@@ -824,7 +831,7 @@ void tickState() {
         case STATE_WELCOME:                            // before the customer pays: a dead sensor / relay board must not take their coins
         case STATE_SELECT_MODE:
         case STATE_SELECT_DRY_ONLY:
-            if (!systemReady()) goOutOfOrder(b2Alive() ? "relay board B3 is not answering" : "sensor board B2 is not answering");
+            if (!systemReady()) goOutOfOrder(b2Alive() ? "relay board " REL_NAME " is not answering" : "sensor board " SENS_NAME " is not answering");
             break;
 
         case STATE_INSERT_COIN:
@@ -864,7 +871,7 @@ void tickState() {
 
         case STATE_CLEANING:
             if (holdTicks(holdA, open, 2)) {           // the door opened mid-cycle: UV and mist off at once
-                Serial.println("[S3B] SAFETY: the door opened during cleaning");
+                Serial.println("[" NODE_NAME "] SAFETY: the door opened during cleaning");
                 returnState = STATE_CLEANING;
                 enterState(STATE_PAUSED_SAFETY);
                 break;
@@ -877,20 +884,20 @@ void tickState() {
 
         case STATE_AUTO_DRY:
             if (holdTicks(holdA, open, 2)) {           // the door opened mid-cycle: heater and UV off at once
-                Serial.println("[S3B] SAFETY: the door opened during the auto-dry");
+                Serial.println("[" NODE_NAME "] SAFETY: the door opened during the auto-dry");
                 returnState = STATE_AUTO_DRY;
                 enterState(STATE_PAUSED_SAFETY);
                 break;
             }
             if (activeTimer > 0) {
                 activeTimer--;
-                if (activeTimer == 0) { Serial.println("[S3B] Auto-dry complete -> open the door"); enterState(STATE_RETRIEVE); }
+                if (activeTimer == 0) { Serial.println("[" NODE_NAME "] Auto-dry complete -> open the door"); enterState(STATE_RETRIEVE); }
             }
             break;
 
         case STATE_DRYING:
             if (holdTicks(holdA, open, 2)) {           // the door opened mid-cycle: heater and UV off at once
-                Serial.println("[S3B] SAFETY: the door opened during drying");
+                Serial.println("[" NODE_NAME "] SAFETY: the door opened during drying");
                 returnState = STATE_DRYING;
                 enterState(STATE_PAUSED_SAFETY);
                 break;
@@ -904,15 +911,15 @@ void tickState() {
         case STATE_COOL_DOWN:                          // nothing runs; the enclosure stays locked until the wait is over
             if (activeTimer > 0) {
                 activeTimer--;
-                if (activeTimer == 0) { Serial.println("[S3B] Cool down complete -> open the door"); enterState(STATE_RETRIEVE); }
+                if (activeTimer == 0) { Serial.println("[" NODE_NAME "] Cool down complete -> open the door"); enterState(STATE_RETRIEVE); }
             }
             break;
 
         case STATE_PAUSED_SAFETY: {
             bool resume = holdTicks(holdA, closed && hp, 2);
             bool needIn = holdTicks(holdB, closed && !hp, 2);
-            if (resume) { Serial.println("[S3B] Safety restored - carrying on"); unlockForPause = false; enterState(returnState); break; }
-            if (needIn && !unlockForPause) { Serial.println("[S3B] Door shut but no helmet - unlocking so it can be reopened"); unlockForPause = true; unlockHeldSec = 0; }
+            if (resume) { Serial.println("[" NODE_NAME "] Safety restored - carrying on"); unlockForPause = false; enterState(returnState); break; }
+            if (needIn && !unlockForPause) { Serial.println("[" NODE_NAME "] Door shut but no helmet - unlocking so it can be reopened"); unlockForPause = true; unlockHeldSec = 0; }
             if (unlockForPause && holdTicks(holdC, open, 2)) unlockForPause = false;     // release once it is genuinely open
             break;
         }
@@ -950,7 +957,7 @@ void tickState() {
 
         case STATE_OUT_OF_ORDER: {                     // a node went silent; clears itself when both answer again
             if (systemReady()) {
-                Serial.println("[S3B] Back in order");
+                Serial.println("[" NODE_NAME "] Back in order");
                 enterState(STATE_TAPS);
                 break;
             }
@@ -959,13 +966,13 @@ void tickState() {
             bool gone    = holdTicks(holdC, !hp, 2);
             if (!b2Alive()) {                                     // the door and the helmet cannot be seen: one short unlock window per outage, no beep
                 oooBeep = false;
-                if (!oooBlindDone) { oooBlindDone = true; startOooRelease("sensor board B2 silent - one blind unlock window"); }
+                if (!oooBlindDone) { oooBlindDone = true; startOooRelease("sensor board " SENS_NAME " silent - one blind unlock window"); }
                 else if (oooUnlock && ++oooUnlockSec >= OOO_BLIND_SEC) oooUnlock = false;
             } else {
                 if (oooBlindDone) { oooBlindDone = false; oooUnlock = false; }       // B2 is back: only what it sees counts now
                 if (opened || gone) { oooUnlock = false; oooGaveUp = false; }        // door seen open / helmet taken: the next shut door with a helmet is a new episode
                 else if (trapped && !oooUnlock && !oooGaveUp) startOooRelease("door shut with a helmet inside");
-                if (oooUnlock && ++oooUnlockSec >= OOO_RELEASE_MAX_SEC) { oooUnlock = false; oooGaveUp = true; Serial.println("[S3B] OUT OF ORDER: release time used up - lock engaged again"); }
+                if (oooUnlock && ++oooUnlockSec >= OOO_RELEASE_MAX_SEC) { oooUnlock = false; oooGaveUp = true; Serial.println("[" NODE_NAME "] OUT OF ORDER: release time used up - lock engaged again"); }
                 oooBeep = oooUnlock && closed;
             }
             break;
@@ -990,7 +997,7 @@ void processPulses() {
     if (pc > lastKnownPulsesB1) {
         uint32_t newPulses = pc - lastKnownPulsesB1;
         lastKnownPulsesB1 = pc;
-        prefs.putUInt("last_b1_pulses", lastKnownPulsesB1);
+        prefs.putUInt(BOX_PULSE_KEY, lastKnownPulsesB1);
         if (coinsAcceptedNow()) {
             uint32_t added = newPulses * secondsPerCoin;
             activeTimer += added;
@@ -1002,14 +1009,14 @@ void processPulses() {
                 needScreenRedraw = true;               // the bar's total grew
                 coinFlag = true;
             }
-            Serial.printf("[S3B COIN] +%lus. activeTimer = %lus, session coins %lu\n", (unsigned long)added, (unsigned long)activeTimer, (unsigned long)sessionCoins);
+            Serial.printf("[" NODE_NAME " COIN] +%lus. activeTimer = %lus, session coins %lu\n", (unsigned long)added, (unsigned long)activeTimer, (unsigned long)sessionCoins);
         } else {
-            Serial.printf("[S3B COIN] %lu pulse(s) ignored in %s (the acceptor should be off)\n", (unsigned long)newPulses, stateName(currentMachineState));
+            Serial.printf("[" NODE_NAME " COIN] %lu pulse(s) ignored in %s (the acceptor should be off)\n", (unsigned long)newPulses, stateName(currentMachineState));
         }
     } else if (pc < lastKnownPulsesB1) {
         // B1's counter went back down (it rebooted or was reset) - resync rather than double-credit
         lastKnownPulsesB1 = pc;
-        prefs.putUInt("last_b1_pulses", lastKnownPulsesB1);
+        prefs.putUInt(BOX_PULSE_KEY, lastKnownPulsesB1);
     }
 }
 
@@ -1021,14 +1028,14 @@ void coinSettleCheck() {
     unsigned long now = millis();
     if (coinReachedMs == 0) {
         coinReachedMs = now; if (coinLastPulseMs == 0 || (long)(coinLastPulseMs - now) > 0) coinLastPulseMs = now;
-        Serial.printf("[S3B COIN] %lu of %lu required coin(s) in - waiting for the acceptor to finish counting\n", (unsigned long)sessionCoins, (unsigned long)requiredCoinsForSession);
+        Serial.printf("[" NODE_NAME " COIN] %lu of %lu required coin(s) in - waiting for the acceptor to finish counting\n", (unsigned long)sessionCoins, (unsigned long)requiredCoinsForSession);
     }
     bool quiet  = (unsigned long)(now - coinLastPulseMs) >= COIN_SETTLE_MS;
     bool capped = (unsigned long)(now - coinReachedMs)   >= COIN_SETTLE_MAX_MS;
     if (!quiet && !capped) return;
     uint32_t timeCoins = sessionCoins > maxCoins ? maxCoins : sessionCoins;     // time never goes past the most coins one session can take
     activeTimer = timeCoins * secondsPerCoin;                                   // ALL the coins counted buy time (20 pesos for 15 required = 5 min + 5 coins more)
-    Serial.printf("[S3B COIN] Counting finished: %lu coin(s) = %lu s%s\n", (unsigned long)sessionCoins, (unsigned long)activeTimer, capped && !quiet ? " (stopped waiting after the cap)" : "");
+    Serial.printf("[" NODE_NAME " COIN] Counting finished: %lu coin(s) = %lu s%s\n", (unsigned long)sessionCoins, (unsigned long)activeTimer, capped && !quiet ? " (stopped waiting after the cap)" : "");
     coinReachedMs = 0;
     commitPayment();                                                            // the coins are revenue from here on
     enterState(STATE_INSTRUCTIONS);
@@ -1043,7 +1050,7 @@ void onDataRecv(const esp_now_recv_info_t *info, const uint8_t *incomingData, in
     if (len == (int)sizeof(CommandPacket)) {
         CommandPacket cmd;
         memcpy(&cmd, incomingData, sizeof(CommandPacket));
-        if (cmd.targetDeviceID != DEVICE_S3B) return;
+        if (cmd.targetDeviceID != MY_S3) return;
         if (cmd.commandID != CMD_TOUCH_ACTION && cmd.commandID != CMD_SET_CONFIG &&
             cmd.commandID != CMD_SET_MAINTENANCE && cmd.commandID != CMD_SET_RELAY_MASK &&
             cmd.commandID != CMD_TFT_HARD_REFRESH) return;
@@ -1057,7 +1064,7 @@ void onDataRecv(const esp_now_recv_info_t *info, const uint8_t *incomingData, in
     if (len == (int)sizeof(TelemetryPacket)) {
         TelemetryPacket p;
         memcpy(&p, incomingData, sizeof(TelemetryPacket));
-        if (p.deviceID == DEVICE_B1) {
+        if (p.deviceID == MY_TERM) {
             portENTER_CRITICAL(&rxMux);
             b1Pulses = p.pulseCount; b1Seen = true;
             portEXIT_CRITICAL(&rxMux);
@@ -1067,7 +1074,7 @@ void onDataRecv(const esp_now_recv_info_t *info, const uint8_t *incomingData, in
     if (len == (int)sizeof(A2SensorPacket)) {
         A2SensorPacket p;
         memcpy(&p, incomingData, sizeof(A2SensorPacket));
-        if (p.deviceID != DEVICE_B2) return;
+        if (p.deviceID != MY_SENS) return;
         portENTER_CRITICAL(&rxMux);
         nodeB2 = p; lastB2Ms = millis();
         portEXIT_CRITICAL(&rxMux);
@@ -1076,7 +1083,7 @@ void onDataRecv(const esp_now_recv_info_t *info, const uint8_t *incomingData, in
     if (len == (int)sizeof(A3StatusPacket)) {
         A3StatusPacket p;
         memcpy(&p, incomingData, sizeof(A3StatusPacket));
-        if (p.deviceID != DEVICE_B3) return;
+        if (p.deviceID != MY_REL) return;
         portENTER_CRITICAL(&rxMux);
         b3Mask = p.relayMask; b3Orphaned = p.orphaned; lastB3Ms = millis();
         portEXIT_CRITICAL(&rxMux);
@@ -1109,7 +1116,7 @@ void handleQueuedCommand(const CommandPacket& cmd) {
         // "Force refresh" from the dashboard: restart B1's touch screen and redraw the current page (cures a white or garbled screen)
         b1HardRefreshPending = true;
         b1RedrawAtMillis = millis() + 50;
-        Serial.println("[S3B] screen refresh requested from the dashboard");
+        Serial.println("[" NODE_NAME "] screen refresh requested from the dashboard");
     } else if (cmd.commandID == CMD_SET_CONFIG) {
         bool ok = false;
         if (cmd.subIndex == 1) ok = applyRulesCsv(cmd.payloadStr);
@@ -1119,8 +1126,8 @@ void handleQueuedCommand(const CommandPacket& cmd) {
         else if (cmd.subIndex == 5) ok = applyRefreshCsv(cmd.payloadStr);
         else if (cmd.subIndex == 6) ok = applyAutoRefreshCsv(cmd.payloadStr);
         else if (cmd.subIndex == 7) ok = applyBeepCsv(cmd.payloadStr);
-        if (ok) { saveConfigToNVS(); Serial.printf("[S3B CONFIG] Updated & saved (type %u)\n", cmd.subIndex); }
-        else Serial.printf("[S3B CONFIG] REJECTED (type %u): '%s'\n", cmd.subIndex, cmd.payloadStr);
+        if (ok) { saveConfigToNVS(); Serial.printf("[" NODE_NAME " CONFIG] Updated & saved (type %u)\n", cmd.subIndex); }
+        else Serial.printf("[" NODE_NAME " CONFIG] REJECTED (type %u): '%s'\n", cmd.subIndex, cmd.payloadStr);
     }
 }
 
@@ -1132,8 +1139,8 @@ void printConfig() {
     rulesToCsv(r, sizeof(r)); sensorsToCsv(s, sizeof(s)); autoDryToCsv(a, sizeof(a));
     static const char* const LVL[5] = {"EMPTY", "LOW", "MID", "HIGH", "MAX"};
     uint8_t lv = myContainerLevel();
-    Serial.println("---- S3B settings ----");
-    Serial.printf("state: %s | B2 %s | B3 %s | Refilling Station %s, Box 3 container %s -> CLEANING %s\n", stateName(currentMachineState),
+    Serial.println("---- " NODE_NAME " settings ----");
+    Serial.printf("state: %s | " SENS_NAME " %s | " REL_NAME " %s | Refilling Station %s, " BOX_NAME " container %s -> CLEANING %s\n", stateName(currentMachineState),
                   b2Alive() ? "ok" : "SILENT", b3Alive() ? "ok" : "SILENT", stationHeard() ? "heard" : "NOT HEARD", lv <= REFILL_MAX ? LVL[lv] : "unknown",
                   cleaningAllowed() ? "available" : "UNAVAILABLE (drying only)");
     Serial.printf("rules : %u coin(s) = %.2f %s (%.2f s/coin) | required %u coins = %us | max %u coins\n", rateCoins, (double)rateValue, rateUnitMin ? "min" : "s",
@@ -1199,7 +1206,7 @@ void serialConsole() {
 void broadcastStatus() {
     BoxStatusPacket packet;
     memset(&packet, 0, sizeof(BoxStatusPacket));
-    packet.deviceID               = DEVICE_S3B;
+    packet.deviceID               = MY_S3;
     packet.machineState           = (uint8_t)currentMachineState;
     packet.activeTimer            = activeTimer;
     packet.stepRemainingSec       = stepRemainingSec;
@@ -1214,7 +1221,7 @@ void broadcastStatus() {
 void broadcastBooked() {
     CoinBookPacket p;
     memset(&p, 0, sizeof(p));
-    p.deviceID    = DEVICE_S3B;
+    p.deviceID    = MY_S3;
     p.magic       = COINBOOK_MAGIC;
     p.bookedCoins = bookedCoins;
     p.seq         = ++bookSeq;
@@ -1243,7 +1250,7 @@ void oneSecondTick() {
                        (currentMachineState == STATE_MAINTENANCE && (maintMask & A3_BIT(A3_RELAY_ENCLOSURE_LOCK))));
     if (lockWanted) {
         if (!lockResting) {
-            if (++unlockHeldSec >= LOCK_MAX_ON_SEC) { lockResting = true; lockRestSec = 0; Serial.println("[S3B] Enclosure lock rests for a few seconds (solenoid duty cap)"); }
+            if (++unlockHeldSec >= LOCK_MAX_ON_SEC) { lockResting = true; lockRestSec = 0; Serial.println("[" NODE_NAME "] Enclosure lock rests for a few seconds (solenoid duty cap)"); }
         } else if (++lockRestSec >= LOCK_REST_SEC) {
             lockResting = false; unlockHeldSec = 0;
         }
@@ -1256,7 +1263,7 @@ void oneSecondTick() {
         if (++maintHeaterSec >= MAINT_HEATER_MAX_SEC) {
             maintMask &= (uint16_t)(~A3_BIT(B3_RELAY_HEATER));
             maintHeaterSec = 0;
-            Serial.println("[S3B] Maintenance: the heater was on for 5 minutes - switched off");
+            Serial.println("[" NODE_NAME "] Maintenance: the heater was on for 5 minutes - switched off");
         }
     } else {
         maintHeaterSec = 0;
@@ -1270,9 +1277,9 @@ void oneSecondTick() {
     if (coinFlag) { coinFlag = false; pushStatus("COIN INSERTED"); }
 
     // The once-a-second broadcasts. Small gaps: several back-to-back sends can overflow ESP-NOW's queue.
-    sendCmd(DEVICE_B1, CMD_SYNC_VARS, (uint8_t)min(minCoinsRequired, (uint32_t)255), (uint16_t)activeTimer, (uint8_t)min(requiredCoinsForSession, (uint32_t)255));
+    sendCmd(MY_TERM, CMD_SYNC_VARS, (uint8_t)min(minCoinsRequired, (uint32_t)255), (uint16_t)activeTimer, (uint8_t)min(requiredCoinsForSession, (uint32_t)255));
     delay(2);
-    sendCmd(0, CMD_HEARTBEAT, DEVICE_S3B, 0, 0);
+    sendCmd(0, CMD_HEARTBEAT, MY_S3, 0, 0);
     delay(2);
     broadcastStatus();
     delay(2);
@@ -1291,7 +1298,7 @@ void setup() {
     Serial.begin(115200);
     delay(300);
     Serial.println("\n=======================================================");
-    Serial.println("   NODE S3B: BOX 3 (CLEANING + DRYING) INTERNAL SERVER MANAGEMENT (ESP32-S3)");
+    Serial.println("   NODE " NODE_NAME ": " BOX_NAME " (CLEANING + DRYING) INTERNAL SERVER MANAGEMENT (ESP32-S3)");
     Serial.println("   Type 'help' for the console.");
     Serial.println("=======================================================");
 
@@ -1307,7 +1314,7 @@ void setup() {
     esp_wifi_set_channel(ESPNOW_WIFI_CHANNEL, WIFI_SECOND_CHAN_NONE);
 
     if (esp_now_init() != ESP_OK) {
-        Serial.println("[S3B] ESP-NOW: Initialization FAILED!");
+        Serial.println("[" NODE_NAME "] ESP-NOW: Initialization FAILED!");
         return;
     }
     esp_now_register_send_cb(onDataSent);
@@ -1371,7 +1378,7 @@ void loop() {
         needScreenRedraw = false;
         if (b1HardRefreshPending) {
             b1HardRefreshPending = false;
-            sendCmd(DEVICE_B1, CMD_TFT_HARD_REFRESH, 0, 0, anyTapFlagForCurrentState(), screenForCurrentState());
+            sendCmd(MY_TERM, CMD_TFT_HARD_REFRESH, 0, 0, anyTapFlagForCurrentState(), screenForCurrentState());
         } else {
             showScreen();
         }

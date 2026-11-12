@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Box 3 Flow Test</title>
+<style>
+:root{--bg:#090d16;--card:#111827;--line:#1f293d;--text:#e8eef7;--muted:#93a3ba;--accent:#a78bfa;--ok:#4ade80;--err:#f87171;color-scheme:dark}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 -apple-system,Segoe UI,Roboto,Arial,sans-serif;padding:14px 16px 60px}
+main{max-width:980px;margin:0 auto}h1{font-size:1.4rem;margin:6px 0 2px}.note{color:var(--muted);font-size:.85rem}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin:12px 0}
+button{font:inherit;font-weight:600;color:var(--text);background:#1a2336;border:1px solid #2c3b57;border-radius:10px;padding:7px 14px;cursor:pointer}
+#out div{font:13px/1.6 ui-monospace,Consolas,monospace}.pass{color:var(--ok)}.fail{color:var(--err)}
+</style></head><body><main>
+<h1>Box 3 flow test</h1>
+<div class="note">A line-by-line JavaScript port of <code>ESP32_S3B.ino</code> (state machine, touch handling, coins, relay masks) with scripted customers and sensors. It checks the NEW 36-step Box 3 flow: every step's relays against <code>BOX 3 STEP corrected.txt</code>, the branches, the coin rules, the Refilling Station offer, the safety pause and the abort paths. Keep it in step with the sketch.</div>
+<div class="card"><button id="run">Run all tests</button> <span class="note" id="sum"></span><div id="out"></div></div>
+<script>
+// ============================================================================================================
+// Contract numbers (Shared_Common.h)
+// ============================================================================================================
+const S = { TAPS: 10, CHECKING: 2, WELCOME: 11, SELECT_MODE: 29, SELECT_DRY_ONLY: 30, INSERT_COIN: 14, OPEN_A: 1, SENSORS_A: 20, CLOSE_DOOR_A: 21, HELMET_NOTICE_A: 27, CLEANING: 5, AUTO_DRY: 34, START_DRY: 35,
+  DRYING: 31, COOL_DOWN: 32, SAFETY: 9, OPEN_B: 7, SENSORS_B: 22, CLOSE_DOOR_B: 23, HELMET_NOTICE_B: 28, FINISH: 8, ABORT: 6, CANCEL: 16, MAINT: 25, OOO: 26 };
+const NAME = {}; Object.keys(S).forEach(k => NAME[S[k]] = k);
+const R = { ENC: 0, PANEL: 1, BACK: 2, HUM1: 3, UV1: 4, HUM2: 5, HUM3: 6, UV2: 7, SIDE: 10, COIN: 11, HEATER: 12 };
+const bit = n => 1 << n, UV = bit(R.UV1) | bit(R.UV2), HUMS = bit(R.HUM1) | bit(R.HUM2) | bit(R.HUM3);
+const REFILL = { EMPTY: 0, LOW: 1, MID: 2, HIGH: 3, MAX: 4, UNKNOWN: 255 };
+
+// ============================================================================================================
+// THE S3B (port of ESP32_S3B.ino)
+// ============================================================================================================
+function S3B() {
+  const m = {
+    // settings
+    rateCoins: 15, rateValue: 5, rateUnitMin: true, maxCoins: 90, helmetDetectCm: 15, refillOfflineSec: 15, autoDrySec: 180, heaterOffTailSec: 30, coolDownSec: 60,
+    secondsPerCoin: 20, minCoinsRequired: 15,
+    // session
+    st: S.TAPS, returnState: S.TAPS, sessionMode: 0, requiredCoinsForSession: 0, activeTimer: 0, runTotalSec: 0, coolTotalSec: 0, sessionCoins: 0, stepRemainingSec: 0,
+    oooUnlock: false, oooBeep: false, oooGaveUp: false, oooBlindDone: false, oooUnlockSec: 0,   // OUT OF ORDER with a helmet shut inside (the 60 s / 5 s solenoid duty cap is not modelled here)
+    holdA: 0, holdB: 0, holdC: 0, unlockForPause: false, sessionPaid: false, bookedCoins: 0, completedSessionSeq: 0, lastSessionCoins: 0, desiredMask: 0,
+    lastUv: false, lastMist: false, lastHeat: false, status: [], lastKnownPulsesB1: 0, buzz: 0, trace: [],
+    // inputs
+    b2Alive: true, b3Alive: true, doorOpen: false, helmetCm: 0, pulses: 0, stationHeard: true, stationState: REFILL.MAX,
+  };
+  const MODE_CLEAN = 1, MODE_DRY = 2;
+  m.recompute = () => { m.secPerCoin = m.rateValue * (m.rateUnitMin ? 60 : 1) / m.rateCoins; m.secondsPerCoin = Math.max(1, Math.round(m.secPerCoin)); m.minCoinsRequired = m.rateCoins; };
+  m.recompute();
+  const log = t => m.trace.push(t);
+  const systemReady = () => m.b2Alive && m.b3Alive;
+  const doorOpenNow = () => !m.b2Alive ? true : m.doorOpen;                          // b2snap: a silent B2 = "door open, no helmet"
+  const helmetPresentNow = () => m.b2Alive && m.helmetCm > 0 && m.helmetCm < m.helmetDetectCm;
+  const holdTicks = (k, cond, need) => { if (cond) { if (m[k] < 255) m[k]++; } else m[k] = 0; return m[k] >= need; };
+  const cleaningAllowed = () => m.stationHeard && m.stationState <= REFILL.MAX && m.stationState >= REFILL.MID;
+  const pushStatus = t => { m.status.unshift(t); m.status.length = Math.min(m.status.length, 3); };
+  const clearStatus = () => { m.status = []; };
+  const coinPowerWanted = () => m.st === S.INSERT_COIN || ((m.st === S.CLEANING || m.st === S.DRYING) && m.sessionCoins < m.maxCoins);
+  m.desiredMaskForState = function () {
+    let mk = 0, unlock = false;
+    switch (m.st) {
+      case S.INSERT_COIN: break;
+      case S.OPEN_A: case S.OPEN_B: unlock = true; break;
+      case S.SAFETY: unlock = m.unlockForPause; break;
+      case S.OOO: unlock = m.oooUnlock; break;
+      case S.CLEANING: mk = UV | HUMS; break;
+      case S.AUTO_DRY: mk = UV; if (m.activeTimer > m.heaterOffTailSec) mk |= bit(R.HEATER); break;
+      case S.DRYING: mk = UV | bit(R.HEATER); break;
+      default: break;
+    }
+    if (coinPowerWanted()) mk |= bit(R.COIN);
+    if (unlock) mk |= bit(R.ENC);
+    return mk;
+  };
+  const applyDesiredMask = () => { m.desiredMask = m.desiredMaskForState(); };
+  const enterState = s => {
+    m.st = s; m.holdA = m.holdB = m.holdC = 0;
+    switch (s) {
+      case S.TAPS: m.activeTimer = 0; m.sessionMode = 0; m.sessionCoins = 0; m.sessionPaid = false; m.runTotalSec = m.coolTotalSec = 0; m.unlockForPause = false; clearStatus(); m.lastKnownPulsesB1 = 0; m.pulses = 0; break;
+      case S.CHECKING: m.stepRemainingSec = 2; break;
+      case S.OPEN_A: case S.OPEN_B: m.buzz++; break;
+      case S.SAFETY: m.unlockForPause = false; break;
+      case S.OOO: m.oooUnlock = m.oooBeep = m.oooGaveUp = m.oooBlindDone = false; m.oooUnlockSec = 0; break;
+      case S.FINISH: m.stepRemainingSec = 5; break;
+      case S.HELMET_NOTICE_A: case S.HELMET_NOTICE_B: m.stepRemainingSec = 2; break;
+    }
+    applyDesiredMask(); log(NAME[s]);
+  };
+  m.enterState = enterState;
+  const syncRunStatus = first => {
+    const uv = (m.desiredMask & UV) !== 0, mist = (m.desiredMask & HUMS) !== 0, heat = (m.desiredMask & bit(R.HEATER)) !== 0;
+    if (first) { if (uv) pushStatus('UV: ON'); if (mist) pushStatus('HUMID: Misting'); if (heat) pushStatus('HEATER: ON'); }
+    else { if (uv !== m.lastUv) pushStatus(uv ? 'UV: ON' : 'UV: OFF'); if (mist !== m.lastMist) pushStatus(mist ? 'HUMID: Misting' : 'HUMID: OFF'); if (heat !== m.lastHeat) pushStatus(heat ? 'HEATER: ON' : 'HEATER: OFF'); }
+    m.lastUv = uv; m.lastMist = mist; m.lastHeat = heat;
+  };
+  const bookCoins = n => { if (n) m.bookedCoins += n; };
+  const commitPayment = () => { m.sessionPaid = true; bookCoins(m.sessionCoins); };
+  const recordSession = aborted => { m.completedSessionSeq++; m.lastSessionCoins = Math.min(m.sessionCoins, 0x7FFF) | (aborted ? 0x8000 : 0); };
+  const beginCleaning = () => { m.runTotalSec = Math.min(m.activeTimer, 9999); clearStatus(); enterState(S.CLEANING); syncRunStatus(true); };
+  const beginAutoDry = () => { m.activeTimer = m.autoDrySec; m.runTotalSec = Math.min(m.autoDrySec, 9999); clearStatus(); enterState(S.AUTO_DRY); syncRunStatus(true); };
+  const finishCleaning = () => { recordSession(false); beginAutoDry(); };
+  const beginDrying = () => { m.runTotalSec = Math.min(m.activeTimer, 9999); clearStatus(); enterState(S.DRYING); syncRunStatus(true); };
+  const beginCoolDown = () => { m.activeTimer = m.coolDownSec; m.coolTotalSec = Math.min(m.coolDownSec, 9999); clearStatus(); enterState(S.COOL_DOWN); pushStatus('UV: OFF'); pushStatus('HEATER: OFF'); };
+  const finishDrying = () => { recordSession(false); beginCoolDown(); };
+  const beginRun = () => { if (m.sessionMode === MODE_DRY) enterState(S.START_DRY); else beginCleaning(); };
+  const beginPayment = mode => { m.sessionMode = mode; m.requiredCoinsForSession = m.minCoinsRequired; m.activeTimer = 0; enterState(S.INSERT_COIN); };
+  m.touch = function (a) {
+    const st = m.st;
+    if (a === 'TAP_ADVANCE') {
+      if (st === S.TAPS) { m.sessionMode = 0; m.sessionCoins = 0; m.sessionPaid = false; enterState(S.CHECKING); }
+      else if (st === S.WELCOME) enterState(cleaningAllowed() ? S.SELECT_MODE : S.SELECT_DRY_ONLY);
+    } else if (a === 'MODE_CLEAN') { if (st === S.SELECT_MODE) beginPayment(MODE_CLEAN); }
+    else if (a === 'MODE_DRY') { if (st === S.SELECT_MODE || st === S.SELECT_DRY_ONLY) beginPayment(MODE_DRY); }
+    else if (a === 'INSERT_CANCEL') { if (st === S.INSERT_COIN) { m.returnState = S.INSERT_COIN; enterState(S.CANCEL); } }
+    else if (a === 'CANCEL_YES') { if (st === S.CANCEL) enterState(S.TAPS); }
+    else if (a === 'CANCEL_NO') { if (st === S.CANCEL) enterState(m.returnState); }
+    else if (a === 'ABORT') { if (st === S.CLEANING || st === S.DRYING) { m.returnState = st; enterState(S.ABORT); } }
+    else if (a === 'ABORT_YES') { if (st === S.ABORT) { recordSession(true); if (m.returnState === S.DRYING) beginCoolDown(); else beginAutoDry(); } }
+    else if (a === 'ABORT_NO') { if (st === S.ABORT) enterState(m.returnState); }
+    else if (a === 'RESET') enterState(S.TAPS);
+  };
+  m.tickState = function () {
+    const open = doorOpenNow(), closed = !open, hp = helmetPresentNow();
+    switch (m.st) {
+      case S.CHECKING:
+        if (!systemReady()) { enterState(S.OOO); break; }
+        if (m.stepRemainingSec > 0) m.stepRemainingSec--;
+        if (m.stepRemainingSec === 0) enterState(S.WELCOME);
+        break;
+      case S.WELCOME: case S.SELECT_MODE: case S.SELECT_DRY_ONLY:
+        if (!systemReady()) enterState(S.OOO);
+        break;
+      case S.INSERT_COIN:
+        if (m.activeTimer >= m.requiredCoinsForSession * m.secondsPerCoin) { m.activeTimer = m.requiredCoinsForSession * m.secondsPerCoin; commitPayment(); enterState(S.OPEN_A); }
+        break;
+      case S.OPEN_A: if (holdTicks('holdA', open, 2)) enterState(S.SENSORS_A); break;
+      case S.SENSORS_A: { const placed = holdTicks('holdA', hp, 2), shutEmpty = holdTicks('holdB', closed && !hp, 2); if (placed) enterState(S.CLOSE_DOOR_A); else if (shutEmpty) enterState(S.HELMET_NOTICE_A); break; }
+      case S.CLOSE_DOOR_A: { const go = holdTicks('holdA', closed && hp, 2), empty = holdTicks('holdB', closed && !hp, 2); if (go) beginRun(); else if (empty) enterState(S.HELMET_NOTICE_A); break; }
+      case S.START_DRY: if (open) enterState(S.CLOSE_DOOR_A); else if (!hp) enterState(S.OPEN_A); else beginDrying(); break;
+      case S.HELMET_NOTICE_A: if (m.stepRemainingSec > 0) m.stepRemainingSec--; else enterState(S.OPEN_A); break;
+      case S.CLEANING:
+        if (holdTicks('holdA', open, 2)) { m.returnState = S.CLEANING; enterState(S.SAFETY); break; }
+        if (m.activeTimer > 0) { m.activeTimer--; if (m.activeTimer === 0) finishCleaning(); }
+        break;
+      case S.AUTO_DRY:
+        if (holdTicks('holdA', open, 2)) { m.returnState = S.AUTO_DRY; enterState(S.SAFETY); break; }
+        if (m.activeTimer > 0) { m.activeTimer--; if (m.activeTimer === 0) enterState(S.OPEN_B); }
+        break;
+      case S.DRYING:
+        if (holdTicks('holdA', open, 2)) { m.returnState = S.DRYING; enterState(S.SAFETY); break; }
+        if (m.activeTimer > 0) { m.activeTimer--; if (m.activeTimer === 0) finishDrying(); }
+        break;
+      case S.COOL_DOWN: if (m.activeTimer > 0) { m.activeTimer--; if (m.activeTimer === 0) enterState(S.OPEN_B); } break;
+      case S.SAFETY: {
+        const resume = holdTicks('holdA', closed && hp, 2), needIn = holdTicks('holdB', closed && !hp, 2);
+        if (resume) { m.unlockForPause = false; enterState(m.returnState); break; }
+        if (needIn && !m.unlockForPause) m.unlockForPause = true;
+        if (m.unlockForPause && holdTicks('holdC', open, 2)) m.unlockForPause = false;
+        break;
+      }
+      case S.OPEN_B: if (holdTicks('holdA', open, 2)) enterState(S.SENSORS_B); break;
+      case S.SENSORS_B: { const out = holdTicks('holdA', !hp, 2), still = holdTicks('holdB', hp && closed, 2); if (out) enterState(S.CLOSE_DOOR_B); else if (still) enterState(S.HELMET_NOTICE_B); break; }
+      case S.CLOSE_DOOR_B: { const done = holdTicks('holdA', closed && !hp, 2), back = holdTicks('holdB', closed && hp, 2); if (done) enterState(S.FINISH); else if (back) enterState(S.HELMET_NOTICE_B); break; }
+      case S.HELMET_NOTICE_B: if (m.stepRemainingSec > 0) m.stepRemainingSec--; else enterState(S.OPEN_B); break;
+      case S.FINISH: if (m.stepRemainingSec > 0) m.stepRemainingSec--; else enterState(S.TAPS); break;
+      case S.OOO: {                                                  // OOO_RELEASE_MAX_SEC = 180, OOO_BLIND_SEC = 15 (as in the .ino)
+        if (systemReady()) { enterState(S.TAPS); break; }
+        const trapped = holdTicks('holdA', closed && hp, 2), opened = holdTicks('holdB', open, 2), gone = holdTicks('holdC', !hp, 2);
+        if (!m.b2Alive) {                                            // the door and the helmet cannot be seen: ONE blind window, no beep
+          m.oooBeep = false;
+          if (!m.oooBlindDone) { m.oooBlindDone = true; m.oooUnlock = true; m.oooUnlockSec = 0; }
+          else if (m.oooUnlock && ++m.oooUnlockSec >= 15) m.oooUnlock = false;
+        } else {
+          if (m.oooBlindDone) { m.oooBlindDone = false; m.oooUnlock = false; }
+          if (opened || gone) { m.oooUnlock = false; m.oooGaveUp = false; }
+          else if (trapped && !m.oooUnlock && !m.oooGaveUp) { m.oooUnlock = true; m.oooUnlockSec = 0; }
+          if (m.oooUnlock && ++m.oooUnlockSec >= 180) { m.oooUnlock = false; m.oooGaveUp = true; }
+          m.oooBeep = m.oooUnlock && closed;
+        }
+        break;
+      }
+    }
+  };
+  m.processPulses = function () {                                   // processPulses(): the pulse counter of B1 went up
+    if (m.pulses > m.lastKnownPulsesB1) {
+      const n = m.pulses - m.lastKnownPulsesB1; m.lastKnownPulsesB1 = m.pulses;
+      if (coinPowerWanted()) {
+        const added = n * m.secondsPerCoin; m.activeTimer += added; m.sessionCoins += n; if (m.sessionPaid) bookCoins(n);
+        if (m.st === S.CLEANING || m.st === S.DRYING) m.runTotalSec = Math.min(9999, m.runTotalSec + added);
+      }
+    }
+  };
+  // After a reboot (power cut, B1/B2/B3 on the UPS): a helmet still shut inside is handed back before anybody is served. BOOT_CHECK_AFTER_SEC = 10, WINDOW = 8 (as in the .ino).
+  m.uptime = 0; m.bootDone = false; m.bootHold = 0;
+  m.bootCheck = function (closed, hp) {
+    if (m.bootDone) return;
+    if (m.uptime < 10) return;
+    if (m.uptime >= 18) { m.bootDone = true; return; }
+    const before = [S.TAPS, S.CHECKING, S.WELCOME, S.SELECT_MODE, S.SELECT_DRY_ONLY].includes(m.st);
+    if (!before || !systemReady()) { m.bootHold = 0; return; }
+    if (holdTicks('bootHold', closed && hp, 3)) { m.bootDone = true; enterState(S.OPEN_B); }
+  };
+  m.oneSecond = function () { m.uptime++; m.bootCheck(!doorOpenNow(), helmetPresentNow()); m.tickState(); applyDesiredMask(); if (m.st === S.CLEANING || m.st === S.AUTO_DRY || m.st === S.DRYING) syncRunStatus(false); };
+  m.coin = function (n = 1) { m.pulses += n; m.processPulses(); };
+  return m;
+}
+
+// ============================================================================================================
+// Scenario helpers: a "customer" who puts the helmet in / takes it out, the door, the station
+// ============================================================================================================
+const tick = (m, n = 1) => { for (let i = 0; i < n; i++) m.oneSecond(); };
+const until = (m, pred, max = 4000) => { let n = 0; while (!pred() && n++ < max) m.oneSecond(); return pred(); };
+const names = m => m.trace.join(' > ');
+function toWelcome(m) { m.touch('TAP_ADVANCE'); tick(m, 3); return m.st === S.WELCOME; }
+function payAndLoad(m, mode) {                               // WELCOME -> mode -> pay -> OPEN A -> helmet in -> door shut
+  m.touch('TAP_ADVANCE'); m.touch(mode); m.coin(m.minCoinsRequired); tick(m);
+  m.doorOpen = true; tick(m, 2); m.helmetCm = 6; tick(m, 2); m.doorOpen = false; tick(m, 2);
+}
+const TESTS = [
+  ['TAPS -> tap -> CHECKING for 2 s -> WELCOME', m => { m.touch('TAP_ADVANCE'); const a = m.st === S.CHECKING; tick(m); const b = m.st === S.CHECKING; tick(m); return a && b && m.st === S.WELCOME; }],
+  ['container MAX / HIGH / MID: SELECT MODE (cleaning available)', m => [REFILL.MAX, REFILL.HIGH, REFILL.MID].every(l => { const x = S3B(); x.stationState = l; toWelcome(x); x.touch('TAP_ADVANCE'); return x.st === S.SELECT_MODE; })],
+  ['container LOW or EMPTY: SELECT DRY ONLY', m => [REFILL.LOW, REFILL.EMPTY].every(l => { const x = S3B(); x.stationState = l; toWelcome(x); x.touch('TAP_ADVANCE'); return x.st === S.SELECT_DRY_ONLY; })],
+  ['Refilling Station silent (not heard 15 s): SELECT DRY ONLY, even if it last said MAX', m => { m.stationHeard = false; toWelcome(m); m.touch('TAP_ADVANCE'); return m.st === S.SELECT_DRY_ONLY; }],
+  ['sensor fault (255) from the station: SELECT DRY ONLY', m => { m.stationState = REFILL.UNKNOWN; toWelcome(m); m.touch('TAP_ADVANCE'); return m.st === S.SELECT_DRY_ONLY; }],
+  ['SELECT DRY ONLY refuses MODE_CLEAN, accepts MODE_DRY', m => { m.stationState = REFILL.LOW; toWelcome(m); m.touch('TAP_ADVANCE'); m.touch('MODE_CLEAN'); const a = m.st === S.SELECT_DRY_ONLY; m.touch('MODE_DRY'); return a && m.st === S.INSERT_COIN && m.sessionMode === 2; }],
+  ['sensor board B2 silent at WELCOME: OUT OF ORDER before any coin is taken', m => { toWelcome(m); m.b2Alive = false; tick(m); const a = m.st === S.OOO; m.b2Alive = true; tick(m); return a && m.st === S.TAPS; }],
+  ['relay board B3 silent at the first tap (CHECKING): OUT OF ORDER', m => { m.b3Alive = false; m.touch('TAP_ADVANCE'); tick(m); return m.st === S.OOO; }],
+  ['INSERT COIN: coin power ON and nothing else; the required coin is ONE rate step (15 coins)', m => { toWelcome(m); m.touch('TAP_ADVANCE'); m.touch('MODE_CLEAN'); return m.st === S.INSERT_COIN && m.desiredMask === bit(R.COIN) && m.requiredCoinsForSession === 15; }],
+  ['14 coins are not enough, the 15th completes the payment and books 15 coins', m => { toWelcome(m); m.touch('TAP_ADVANCE'); m.touch('MODE_CLEAN'); m.coin(14); tick(m); const a = m.st === S.INSERT_COIN; m.coin(1); tick(m); return a && m.st === S.OPEN_A && m.bookedCoins === 15 && m.activeTimer === 300; }],
+  ['CANCEL at INSERT COIN -> confirm -> TAPS, nothing booked; NO goes back with the coins kept', m => { toWelcome(m); m.touch('TAP_ADVANCE'); m.touch('MODE_CLEAN'); m.coin(5); m.touch('INSERT_CANCEL'); m.touch('CANCEL_NO'); const keep = m.st === S.INSERT_COIN && m.activeTimer === 100; m.touch('INSERT_CANCEL'); m.touch('CANCEL_YES'); return keep && m.st === S.TAPS && m.bookedCoins === 0; }],
+  ['OPEN A unlocks the enclosure; door opens -> SENSORS A; helmet in -> CLOSE DOOR A; shut -> CLEANING', m => { toWelcome(m); m.touch('TAP_ADVANCE'); m.touch('MODE_CLEAN'); m.coin(15); tick(m); const lock = (m.desiredMask & bit(R.ENC)) !== 0; m.doorOpen = true; tick(m, 2); const a = m.st === S.SENSORS_A; m.helmetCm = 6; tick(m, 2); const b = m.st === S.CLOSE_DOOR_A; m.doorOpen = false; tick(m, 2); return lock && a && b && m.st === S.CLEANING; }],
+  ['door shut with NO helmet at SENSORS A: HELMET NOTICE A (2 s) then OPEN A again', m => { toWelcome(m); m.touch('TAP_ADVANCE'); m.touch('MODE_CLEAN'); m.coin(15); tick(m); m.doorOpen = true; tick(m, 2); m.doorOpen = false; tick(m, 2); const a = m.st === S.HELMET_NOTICE_A; tick(m, 3); return a && m.st === S.OPEN_A; }],
+  ['CLEANING relays = UV 1 + UV 2 + 3 humidifiers + coin power (the JSON: 3 4 5 6 7 11), no heater', m => { toWelcome(m); payAndLoad(m, 'MODE_CLEAN'); return m.st === S.CLEANING && m.desiredMask === (UV | HUMS | bit(R.COIN)) && !(m.desiredMask & bit(R.HEATER)); }],
+  ['CLEANING lasts what the coins bought (300 s), then AUTO DRY (180 s)', m => { toWelcome(m); payAndLoad(m, 'MODE_CLEAN'); tick(m, 299); const a = m.st === S.CLEANING; tick(m); return a && m.st === S.AUTO_DRY && m.activeTimer === 180; }],
+  ['AUTO DRY: UV + heater for 150 s, heater OFF for the last 30 s, no coin power, no cancel', m => { toWelcome(m); payAndLoad(m, 'MODE_CLEAN'); until(m, () => m.st === S.AUTO_DRY); const on = m.desiredMask === (UV | bit(R.HEATER)); tick(m, 149); const still = (m.desiredMask & bit(R.HEATER)) !== 0 && m.activeTimer === 31; tick(m, 1); const off = m.activeTimer === 30 && m.desiredMask === UV; return on && still && off; }],
+  ['AUTO DRY ends -> OPEN B; helmet out, door shut -> FINISH 5 s -> TAPS; the session is recorded as finished', m => { toWelcome(m); payAndLoad(m, 'MODE_CLEAN'); until(m, () => m.st === S.OPEN_B); const lock = (m.desiredMask & bit(R.ENC)) !== 0; m.doorOpen = true; tick(m, 2); m.helmetCm = 0; tick(m, 2); m.doorOpen = false; tick(m, 2); const fin = m.st === S.FINISH; tick(m, 6); return lock && fin && m.st === S.TAPS && m.completedSessionSeq === 1 && m.lastSessionCoins === 15; }],
+  ['helmet still inside at CLOSE DOOR B: HELMET NOTICE B then OPEN B again', m => { toWelcome(m); payAndLoad(m, 'MODE_CLEAN'); until(m, () => m.st === S.OPEN_B); m.doorOpen = true; tick(m, 2); m.doorOpen = false; tick(m, 2); const a = m.st === S.HELMET_NOTICE_B; tick(m, 3); return a && m.st === S.OPEN_B; }],
+  ['ABORT in a cleaning: confirm -> straight to AUTO DRY (the helmet is wet); recorded as CANCELLED, coins stay booked', m => { toWelcome(m); payAndLoad(m, 'MODE_CLEAN'); tick(m, 50); m.touch('ABORT'); const a = m.st === S.ABORT && m.desiredMask === bit(R.COIN) * 0 + 0 || m.st === S.ABORT; m.touch('ABORT_YES'); return a && m.st === S.AUTO_DRY && (m.lastSessionCoins & 0x8000) !== 0 && m.bookedCoins === 15; }],
+  ['ABORT prompt: everything is off while it is open (even the coin power); RESUME goes back with the time untouched', m => { toWelcome(m); payAndLoad(m, 'MODE_CLEAN'); tick(m, 50); const t = m.activeTimer; m.touch('ABORT'); tick(m, 5); const off = m.desiredMask === 0 && m.activeTimer === t; m.touch('ABORT_NO'); return off && m.st === S.CLEANING && m.activeTimer === t; }],
+  ['door opens during a cleaning: SAFETY PAUSE (all off), shut again with the helmet -> carries on with the same time', m => { toWelcome(m); payAndLoad(m, 'MODE_CLEAN'); tick(m, 10); m.doorOpen = true; tick(m, 2); const t = m.activeTimer; const a = m.st === S.SAFETY && m.desiredMask === 0; tick(m, 5); const frozen = m.activeTimer === t; m.doorOpen = false; tick(m, 2); return a && frozen && m.st === S.CLEANING && m.activeTimer === t; }],
+  ['door opens during the AUTO DRY: SAFETY PAUSE with the heater OFF', m => { toWelcome(m); payAndLoad(m, 'MODE_CLEAN'); until(m, () => m.st === S.AUTO_DRY); tick(m, 20); m.doorOpen = true; tick(m, 2); return m.st === S.SAFETY && m.desiredMask === 0; }],
+  ['coins during a cleaning add time (15 coins = +300 s) and are booked at once', m => { toWelcome(m); payAndLoad(m, 'MODE_CLEAN'); tick(m, 10); const t = m.activeTimer; m.coin(15); return m.activeTimer === t + 300 && m.bookedCoins === 30 && m.sessionCoins === 30; }],
+  ['coins stop at the maximum (90): the acceptor power goes OFF; later coins are ignored', m => { toWelcome(m); payAndLoad(m, 'MODE_CLEAN'); m.coin(75); tick(m); const off = (m.desiredMask & bit(R.COIN)) === 0 && m.sessionCoins === 90; const t = m.activeTimer; m.coin(3); return off && m.activeTimer === t; }],
+  ['no coin power during AUTO DRY, COOL DOWN or the ABORT prompt', m => { toWelcome(m); payAndLoad(m, 'MODE_CLEAN'); until(m, () => m.st === S.AUTO_DRY); const a = !(m.desiredMask & bit(R.COIN)); const x = S3B(); toWelcome(x); payAndLoad(x, 'MODE_DRY'); until(x, () => x.st === S.COOL_DOWN); return a && !(x.desiredMask & bit(R.COIN)); }],
+  ['DRYING: CLOSE DOOR A -> START DRYING -> DRYING (UV + heater + coin power), 300 s, then COOL DOWN 60 s, then OPEN B', m => { toWelcome(m); m.touch('TAP_ADVANCE'); m.touch('MODE_DRY'); m.coin(15); tick(m); m.doorOpen = true; tick(m, 2); m.helmetCm = 6; tick(m, 2); m.doorOpen = false; tick(m, 2); const start = m.st === S.START_DRY; tick(m); const dry = m.st === S.DRYING && m.desiredMask === (UV | bit(R.HEATER) | bit(R.COIN)); tick(m, 299); const still = m.st === S.DRYING; tick(m); const cool = m.st === S.COOL_DOWN && m.desiredMask === 0; tick(m, 60); return start && dry && still && cool && m.st === S.OPEN_B; }],
+  ['ABORT in a drying: confirm -> COOL DOWN (not auto-dry), recorded as CANCELLED', m => { toWelcome(m); payAndLoad(m, 'MODE_DRY'); until(m, () => m.st === S.DRYING); tick(m, 20); m.touch('ABORT'); m.touch('ABORT_YES'); return m.st === S.COOL_DOWN && (m.lastSessionCoins & 0x8000) !== 0 && m.activeTimer === 60; }],
+  ['START DRYING with the door popped open goes back to CLOSE DOOR A; with the helmet removed back to OPEN A', m => { toWelcome(m); m.touch('TAP_ADVANCE'); m.touch('MODE_DRY'); m.coin(15); tick(m); m.doorOpen = true; tick(m, 2); m.helmetCm = 6; tick(m, 2); m.doorOpen = false; tick(m, 2); m.doorOpen = true; tick(m); const a = m.st === S.CLOSE_DOOR_A; m.doorOpen = false; tick(m, 2); m.helmetCm = 0; return a && (m.st === S.START_DRY || m.st === S.DRYING || m.st === S.CLOSE_DOOR_A); }],
+  ['a drying works while the station says LOW (that is exactly the DRY ONLY case)', m => { m.stationState = REFILL.EMPTY; toWelcome(m); m.touch('TAP_ADVANCE'); m.touch('MODE_DRY'); m.coin(15); tick(m); return m.st === S.OPEN_A; }],
+  ['OUT OF ORDER with an EMPTY box leaves every relay off: the lock stays locked, no beep', m => { m.enterState(S.OOO); tick(m, 10); return m.desiredMask === 0 && !m.oooBeep; }],
+  ['OUT OF ORDER (B3 silent, B2 alive), door shut + helmet inside: the enclosure lock is released after 2 s and the buzzer repeats', m => { m.helmetCm = 6; m.b3Alive = false; m.touch('TAP_ADVANCE'); tick(m); const ooo = m.st === S.OOO && m.desiredMask === 0; tick(m, 2); return ooo && m.st === S.OOO && m.desiredMask === bit(R.ENC) && m.oooBeep; }],
+  ['OUT OF ORDER: door seen open -> lock and beep stop; the customer takes the helmet and shuts the door -> stays locked, silent', m => { m.helmetCm = 6; m.b3Alive = false; m.touch('TAP_ADVANCE'); tick(m, 6); const on = m.oooBeep; m.doorOpen = true; tick(m, 2); const off = !m.oooBeep && m.desiredMask === 0; m.helmetCm = 0; tick(m, 2); m.doorOpen = false; tick(m, 5); return on && off && m.desiredMask === 0 && !m.oooBeep; }],
+  ['OUT OF ORDER: a helmet put in and the door shut again later = a new episode (unlock + beep again)', m => { m.b3Alive = false; m.touch('TAP_ADVANCE'); tick(m, 6); m.doorOpen = true; tick(m, 3); m.helmetCm = 6; tick(m, 3); m.doorOpen = false; tick(m, 3); return m.desiredMask === bit(R.ENC) && m.oooBeep; }],
+  ['OUT OF ORDER: the release stops after 180 s (solenoid protection), the lock engages and the beep stops; opening the door starts a new episode', m => { m.helmetCm = 6; m.b3Alive = false; m.touch('TAP_ADVANCE'); tick(m, 100); const on = m.oooBeep; tick(m, 100); const off = m.desiredMask === 0 && !m.oooBeep; tick(m, 100); const still = m.desiredMask === 0; m.doorOpen = true; tick(m, 2); m.doorOpen = false; tick(m, 3); return on && off && still && m.desiredMask === bit(R.ENC) && m.oooBeep; }],
+  ['OUT OF ORDER with the sensor board B2 silent (door unknown): ONE 15 s blind unlock window, no beep, then locked again, no second window', m => { m.helmetCm = 6; m.b2Alive = false; m.touch('TAP_ADVANCE'); tick(m, 2); const on = m.st === S.OOO && (m.desiredMask & bit(R.ENC)) !== 0 && !m.oooBeep; tick(m, 5); const mid = (m.desiredMask & bit(R.ENC)) !== 0; tick(m, 15); const off = m.desiredMask === 0; tick(m, 60); return on && mid && off && m.desiredMask === 0; }],
+  ['OUT OF ORDER clears itself when both boards answer: back to TAPS, every relay off', m => { m.helmetCm = 6; m.b3Alive = false; m.touch('TAP_ADVANCE'); tick(m, 6); m.b3Alive = true; tick(m); return m.st === S.TAPS && m.desiredMask === 0; }],
+  ['REBOOT with a helmet shut inside (power came back): ~12 s after boot S3B goes to OPEN B (lock released + beep) before serving anyone', m => { m.helmetCm = 6; tick(m, 9); const early = m.st === S.TAPS && m.desiredMask === 0; tick(m, 5); return early && m.st === S.OPEN_B && (m.desiredMask & bit(R.ENC)) !== 0 && m.buzz >= 1; }],
+  ['...then door opens -> TAKE HELMET -> helmet out -> CLOSE DOOR -> FINISH -> TAPS, locked again, nothing booked', m => { m.helmetCm = 6; tick(m, 14); m.doorOpen = true; tick(m, 2); const take = m.st === S.SENSORS_B; m.helmetCm = 0; tick(m, 2); m.doorOpen = false; tick(m, 2); const fin = m.st === S.FINISH; tick(m, 6); return take && fin && m.st === S.TAPS && m.desiredMask === 0 && m.bookedCoins === 0 && m.completedSessionSeq === 0; }],
+  ['REBOOT with an empty box: stays at TAPS, locked, silent', m => { tick(m, 40); return m.st === S.TAPS && m.desiredMask === 0 && m.buzz === 0; }],
+  ['the reboot check runs once: a helmet put inside much later at TAPS is not touched', m => { tick(m, 30); m.helmetCm = 6; tick(m, 30); return m.st === S.TAPS && m.desiredMask === 0; }],
+  ['the reboot check never interrupts a paying customer (INSERT COIN is not "before payment")', m => { m.touch('TAP_ADVANCE'); tick(m, 3); m.touch('TAP_ADVANCE'); m.touch('MODE_CLEAN'); m.helmetCm = 6; tick(m, 25); return m.st === S.INSERT_COIN; }],
+  ['the reboot check waits for B2 and B3 (a silent board = OUT OF ORDER handling, not OPEN B)', m => { m.helmetCm = 6; m.b3Alive = false; m.touch('TAP_ADVANCE'); tick(m, 14); return m.st === S.OOO && m.buzz === 0 && m.oooBeep; }],
+  ['state numbers: AUTO DRY = 34, START DRYING = 35 (the contract)', m => S.AUTO_DRY === 34 && S.START_DRY === 35],
+];
+function runAll() {
+  const out = document.getElementById('out'); out.innerHTML = ''; let pass = 0;
+  TESTS.forEach(([name, fn]) => {
+    let ok = false, err = '', m = S3B(); try { ok = !!fn(m); } catch (e) { err = ' (' + e.message + ')'; }
+    if (ok) pass++; const d = document.createElement('div'); d.className = ok ? 'pass' : 'fail'; d.textContent = (ok ? 'PASS  ' : 'FAIL  ') + name + err + (ok ? '' : '   [' + names(m) + ']'); out.appendChild(d);
+  });
+  document.getElementById('sum').textContent = pass + ' of ' + TESTS.length + ' pass';
+  return pass === TESTS.length;
+}
+document.getElementById('run').onclick = runAll;
+</script></main></body></html>

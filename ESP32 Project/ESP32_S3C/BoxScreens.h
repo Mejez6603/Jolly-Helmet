@@ -1,0 +1,58 @@
+// Generated 2026-11-03 from BOX 3 STEP corrected.txt (the 36-step Box 3 flow, Designer preset NEW FLOW) for the S3B.
+// Lives in its own header so the Arduino IDE does not scan it for C functions. The CLEANING / AUTO DRY / DRYING / COOLDOWN screens carry a %lu
+// field = the total in seconds for the progress bar (the Designer's PBAR has no total; the S3B appends it). The Designer's CL / DR twins that are
+// identical (OPEN A, SENSORS, INSERT COIN, FINISH, ABORT, ...) are one constant here (checked equal when this file was generated).
+// No rating, time-picker, method or free-retry screens any more: the new Box 3 flow has none. SCR_SAFETY_PAUSE is the S3B's own (not in the Designer).
+// Every string is <= 199 characters once its fields are filled in.
+#pragma once
+
+const char* const SCR_TAPS =
+    R"SCR(#000000|ST,165,105,#FFFFFF,TAP anywhere to ,MC,2|TT,160,136,#FFFF00,START,500,MC,4)SCR";
+const char* const SCR_CHECKING =
+    R"SCR(#000000|ST,160,84,#FFFFFF,Please Wait...,MC,2|TT,160,120,#FFFF00,Checking Main Container,0,MC,2)SCR";
+const char* const SCR_WELCOME =
+    R"SCR(#000000|ST,160,60,#FFFFFF,Welcome to,BC,2|ST,160,60,#FFFFFF,JOLLY HELMET,TC,4|ST,162,120,#FFFFFF,Make your Helmet,BC,2|ST,160,120,#FFFFFF,Happy Again!,TC,4|TT,160,180,#FFFF00,Tap to START,500,TC,2)SCR";
+const char* const SCR_SELECT_MODE =
+    R"SCR(#000000|ST,160,44,#FFFFFF,SELECT MODE,MC,4|BTN,90,80,140,56,#1C1C20,CLEANING,MODE_CLEAN|BTN,90,152,140,56,#1C1C20,DRYING,MODE_DRY)SCR";
+const char* const SCR_SELECT_DRY_ONLY =
+    R"SCR(#000000|ST,160,44,#FFFFFF,SELECT MODE,MC,4|SHP,90,80,140,56,#555555,0|ST,160,102,#6B6B6B,CLEANING,MC,2|ST,160,124,#6B6B6B,UNAVAILABLE,MC,1|BTN,90,152,140,56,#1C1C20,DRYING,MODE_DRY)SCR";
+const char* const SCR_INSERT_COIN =
+    R"SCR(#000000|ST,160,60,#FFFFFF,INSERT THE REQUIRED COIN,TC,2|TT,144,120,#FFFFFF,/ {REQUIREDCOIN} Coin,0,ML,2|TT,126,120,#FFFF00,{COINS},500,MR,2|BTN,20,190,90,32,#1C1C20,CANCEL,INSERT_CANCEL)SCR";
+const char* const SCR_OPEN_A =
+    R"SCR(#000000|ST,160,88,#FFFFFF,Please,MC,2|ST,160,156,#FFFFFF,Door to Proceed,MC,2|TT,152,120,#FFFF00, OPEN,500,MC,4)SCR";
+const char* const SCR_SENSORS_A =
+    R"SCR(#000000|ST,160,92,#FFFFFF,Please,MC,2|ST,160,148,#FFFFFF, Headgear Inside,MC,2|TT,160,120,#FFFF00,PLACE,500,MC,4)SCR";
+const char* const SCR_CLOSE_DOOR_A =
+    R"SCR(#000000|ST,160,92,#FFFFFF,Please,MC,2|ST,160,148,#FFFFFF,Door to Proceed,MC,2|TT,160,120,#FFFF00,CLOSE,500,MC,4)SCR";
+const char* const SCR_HELMET_NOTICE_A =
+    R"SCR(#000000|TT,160,120,#FFFF00,HELMET,500,MC,4|ST,160,92,#FFFFFF,NO,MC,2|ST,160,152,#FFFFFF,DETECTED,MC,2)SCR";
+const char* const SCR_CLEANING =
+    R"SCR(#000000|ST,160,92,#FFFFFF,Cleaning ...,MC,2|TT,160,120,#00FF00,{MINUTE}:{SECOND},0,MC,2|BTN,215,8,95,32,#000000,CANCEL,ABORT|PBAR,50,137,220,14,#505050,#FFFFFF,%lu|TT,160,180,#949494,{STATUS},0,TC,2)SCR";
+const char* const SCR_AUTO_DRY =
+    R"SCR(#000000|ST,160,92,#FFFFFF,Drying,MC,2|TT,160,120,#00FF00,{MINUTE}:{SECOND},0,MC,2|PBAR,50,137,220,14,#505050,#FFFFFF,%lu|TT,160,180,#949494,{STATUS},0,TC,2|TT,160,60,#FFFF00,PLEASE WAIT...,500,MC,2)SCR";
+const char* const SCR_START_DRY =
+    R"SCR(#000000|TT,160,120,#FFFF00,Please Wait...,500,MC,4)SCR";
+const char* const SCR_DRYING =
+    R"SCR(#000000|ST,160,92,#FFFFFF,Drying...,MC,2|TT,160,120,#00FF00,{MINUTE}:{SECOND},0,MC,2|BTN,215,8,95,32,#000000,CANCEL,ABORT|PBAR,50,137,220,14,#505050,#FFFFFF,%lu|TT,160,180,#949494,{STATUS},0,TC,2)SCR";
+const char* const SCR_COOLDOWN =
+    R"SCR(#000000|ST,160,92,#FFFFFF,Cooling Down...,MC,2|TT,160,120,#00FF00,{MINUTE}:{SECOND},0,MC,2|PBAR,50,137,220,14,#505050,#FFFFFF,%lu|TT,160,180,#949494,{STATUS},0,TC,2)SCR";
+const char* const SCR_OPEN_B =
+    R"SCR(#000000|ST,160,88,#FFFFFF,Please,MC,2|ST,160,156,#FFFFFF,Door to Proceed,MC,2|TT,152,120,#FFFF00, OPEN,500,MC,4)SCR";
+const char* const SCR_SENSORS_B =
+    R"SCR(#000000|ST,160,92,#FFFFFF,Please,MC,2|ST,160,148,#FFFFFF, Headgear Outside,MC,2|TT,160,120,#FFFF00,TAKE,500,MC,4)SCR";
+const char* const SCR_CLOSE_DOOR_B =
+    R"SCR(#000000|ST,160,92,#FFFFFF,Please,MC,2|ST,160,148,#FFFFFF,Door to Proceed,MC,2|TT,160,120,#FFFF00,CLOSE,500,MC,4)SCR";
+const char* const SCR_HELMET_NOTICE_B =
+    R"SCR(#000000|TT,160,120,#FFFF00,HELMET,500,MC,4|ST,160,152,#FFFFFF,DETECTED,MC,2)SCR";
+const char* const SCR_FINISH =
+    R"SCR(#000000|ST,160,76,#FFFFFF,Thank you,MC,2|ST,160,102,#FFFFFF,for your patronage!,MC,2|TT,160,144,#FFFF00,We hope to see you again! :D,500,MC,2)SCR";
+const char* const SCR_ABORT =
+    R"SCR(#000000|ST,160,120,#FFFFFF,COIN(s) won't be Refunded.,MC,2|ST,160,88,#FFFFFF,Cancel operation?,MC,2|BTN,12,154,140,52,#A91414,CONFIRM,ABORT_YES|BTN,168,154,140,52,#069322,RESUME,ABORT_NO)SCR";
+const char* const SCR_CANCEL =
+    R"SCR(#000000|ST,160,88,#FFFFFF,Cancel operation?,MC,2|ST,160,120,#FFFFFF,COIN(s) won't be Refunded.,MC,2|BTN,12,154,140,52,#3B891A,YES,CANCEL_YES|BTN,168,154,140,52,#991414,NO,CANCEL_NO)SCR";
+const char* const SCR_MAINTENANCE =
+    R"SCR(#000000|ST,160,80,#FFFFFF,IT'S ON,TC,2|TT,160,120,#FFD84E,MAINTENANCE,1000,MC,4)SCR";
+const char* const SCR_OUT_OF_ORDER =
+    R"SCR(#000000|TT,160,120,#FF0000,OUT OF ORDER,1000,MC,4)SCR";
+const char* const SCR_SAFETY_PAUSE =
+    R"SCR(#800000|ST,160,90,#FFFFFF,SAFETY PAUSE,MC,4|TT,160,140,#FFFF00,CLOSE THE DOOR,500,MC,2)SCR";

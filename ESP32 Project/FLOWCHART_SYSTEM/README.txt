@@ -96,10 +96,11 @@ SOURCES USED (so the charts can be checked)
   ESP32_ONLINESRV (loop, portal), ONLINE_WEB\DATA_CONTRACT.md (what is written to Blynk and read by the pages), ESP32_ENTRY\README.txt.
 
 THE CHARTS SHOW THE TARGET. What is still different in today's firmware:
-  1. Box 1 (S3A) and Box 2 (S3C) still run their own older flows (ratings, time picker, ACS requests ...). They must be rebuilt to the Box 3 flow (or one common "box main controller"
-     program with a box number). Box 3 (S3B, B1, B2, B3) and the Refilling Station (ESP32_REFILL) are already written for the new design (not yet flashed).
-  2. Box 2 hardware: today Box 2 has C1 (TFT display) and C2 (sensors AND relays) - two terminals. Like Box 3 it needs a TFT display, a sensor board and a relay controller
-     (new device id in Shared_Common.h, new pin map, new firmware).
+  1. DONE 2026-11-12: Box 1 (S3A) and Box 2 (S3C) were rebuilt to the Box 3 flow as ONE program per node type (S3A = S3B = S3C, A1 = B1 = C1, A2 = B2 = C2, A3 = B3 = C3; only box_config.h differs).
+     All three boxes and the Refilling Station are written for the new design and compile, but nothing is flashed yet.
+  2. Box 2 hardware: Box 2 now has C1 (TFT display), C2 (sensors) and C3 (relay controller, device id 15). C3 is a NEW board: Box 2's old relays (on C2) must be re-wired to a
+     13-channel board like B3's. Same for Box 1: A3 gets a heater relay (GPIO 26). The Refilling Station must have the Box 1 and Box 2 sensors and valves wired (or WATCH_BOX set to false).
+     The charts above did not change: they already showed three identical boxes.
   3. The old ACS firmware (ESP32_ACS1 / ESP32_ACS2 / ESP32_ACS_CONFIG_BENCH) is archived, not part of the system any more.
 
 CUSTOMER CLEANING CYCLE, PART 2 (added 2026-11-12, folder CLEANING_CYCLE_PART2)   The user's own older flowchart picture ("1 - Customer cleaning cycle, Part 2", Verdana style, F and A connectors) REDRAWN as a vector page because no source file existed anywhere in the project.

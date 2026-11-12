@@ -52,10 +52,12 @@
 // ---------------------------------------------------------------------
 const uint8_t SENSOR_PIN[3] = { 34, 35, 32 };     // water-level sensors of Box 1 / 2 / 3 (ADC1; 34/35 are input-only, 32 is ADC1 CH4)
 const uint8_t VALVE_PIN[3]  = { 21, 19, 18 };     // valve relays of Box 1 / 2 / 3 (quiet at boot, not strapping pins)
-// WHICH BOXES THE STATION WATCHES AND REFILLS (2026-11-04): for now ONLY Box 3 - Box 1 and Box 2 are still being worked on. An unwatched box is never
-// read for a fault, never queued, its valve is never opened (not even by the manual test) and the station reports it as REFILL_OFF ("not watched") with
-// raw 0. When Box 1 / Box 2 are ready, set their entry to true, reflash the station (and the LocalServer settings pages show the levels again by themselves).
-const bool WATCH_BOX[3] = { false, false, true };
+// WHICH BOXES THE STATION WATCHES AND REFILLS: since 2026-11-12 ALL THREE (Box 1 and Box 2 now run the same firmware as Box 3 and read the station the same way).
+// Until 2026-11-12 it was only Box 3. A box set to false is never read for a fault, never queued, its valve is never opened (not even by the manual test) and
+// the station reports it as REFILL_OFF ("not watched") with raw 0 - set an entry to false while that box's sensor / valve is not wired yet, then reflash the
+// station. NOTE: a watched box whose sensor / valve is not wired shows up as EMPTY or SENSOR FAULT (and a refill that cannot raise the level ends as FAILED), so leave
+// a box at false until its water-level sensor and valve are connected.
+const bool WATCH_BOX[3] = { true, true, true };
 #define VALVE_ACTIVE_LOW 1                        // 1 = active-LOW relay modules (like every other relay board of the project), 0 = active-HIGH
 #if VALVE_ACTIVE_LOW
   #define VALVE_OPEN_LEVEL   LOW                  // relay on = coil energised = valve OPEN (the valves are normally closed)

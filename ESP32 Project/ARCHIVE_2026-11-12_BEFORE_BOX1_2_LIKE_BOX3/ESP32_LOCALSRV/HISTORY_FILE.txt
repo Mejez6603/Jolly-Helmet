@@ -1,0 +1,39 @@
+LOCALSERVER - SESSION LOG, CLOCK AND THE PREVIOUS-DATA FILE (history.json)  (2026-10-14)
+
+BOARD SETTINGS (Arduino IDE)
+  Board ESP32S3 Dev Module | Flash Size 16MB | PSRAM OPI | Partition Scheme "16M Flash (3MB APP/9.9MB FATFS)"
+  The sketch no longer fits the default 1.3 MB app partition of a plain ESP32, and without the FATFS partition the session log is off
+  (the page says "Log storage: NOT AVAILABLE"; the totals keep working).
+
+WHAT THE LOCALSERVER NOW KEEPS
+  * A permanent log of every session the machines report: date, time, box, Finished / Cancelled, coins, minutes. Never a name.
+    The machines are the only thing that adds to it. Entries older than a year are dropped automatically. Download: Home page > "Download log (CSV)".
+  * The clock: no battery clock and no internet, so a phone sets it (automatic the first time the Control Center is opened after a power-on) or type
+    the date and time on the Home page. A power cut loses it. Sessions that finish before it is set are saved as "no date yet" and get their real date
+    and time the moment it is set (only sessions of the same power-on).
+  * The Home page chart: Daily Usage (7 days) / Weekly Usage (12 weeks), and the Storage line (used, free, room left, warning when nearly full).
+
+THE PREVIOUS-DATA FILE (history.json)
+  For the days before the log existed: until then the LocalServer only counted revenue up and kept no date for any customer.
+  The team collects those customers from its own evidence (survey forms, photos, videos ...) after the upgrade and uploads them as ONE JSON file:
+
+    {
+      "source": "previous data collected after the upgrade",
+      "rows": [
+        ["2026-09-17", "14:35", 1, 15, "F", 5],
+        ["2026-09-17", "15:10", 3, 15, "C", 2]
+      ]
+    }
+
+  Each row = one customer:  date YYYY-MM-DD, time HH:MM, box 1-3, coins, F (finished) or C (cancelled), minutes (optional). Never a name.
+  Up to 1000 rows / 64 KB. Download the current file or an empty template from the Home page (or http://192.168.4.1/history.json), edit it on a PC, then
+  "Upload history.json". The LocalServer checks the whole file first and tells you the first bad row; a bad file changes nothing.
+
+  What it does:  the Home page chart reads the machine log AND this file and draws them in the same card. The rows that come from this file are drawn
+  in a LIGHTER shade and the chart shows the legend "lighter = previous data collected by the team after the upgrade" and says how many customers are that. That marking is part
+  of the chart and has no switch.
+  What it does not do:  it never changes the machine log, the totals at the top (Users Served, coins, revenue), the CSV, or what the Online
+  Server receives. Those stay what the machines recorded and they keep matching the cash in the coin boxes. The one place that adds it is the Finished and cancelled card, which says how much of its numbers came from this file.
+
+  "Remove file" on the Home page deletes it from the LocalServer. "Reset Stats" empties the counters, the machine log and the old "corrected" note, but
+  does not touch history.json.

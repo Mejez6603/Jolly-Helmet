@@ -2,6 +2,7 @@
 
 `index.html` only READS one Blynk datastream. The Online Server (`ESP32_ONLINESRV`, an ESP32-S3) writes it in exactly this shape.
 Written 2026-10-09 (updated the same day when the firmware was written). The firmware compiles but has NOT been run on the real boards yet.
+**Changed 2026-11-12:** Box 1 and Box 2 were rebuilt like Box 3, so all three boxes now send the SAME shapes: the same step numbers (one 36-step list), the same 13 relays and 4 doors, and a separate relay board for Box 2 (C3). The `n` string has **13** characters (C3 is the 13th, added at the END so no older place moved). Nothing else in the JSON changed.
 
 ## 1. Blynk setup (once)
 1. Blynk Console > Templates > New template ("Jolly Helmet Online Server", hardware ESP32, connection Wi-Fi).
@@ -24,7 +25,7 @@ monitor page shows a quota bar; leave it at 0 to hide the bar.
 ## 3. The V0 value (one JSON text)
 
 ```json
-{"seq":5,"ts":1791540182,"iv":60,"n":"111111111111",
+{"seq":5,"ts":1791540182,"iv":60,"n":"1111111111111",
  "b":[[12,0,0,0,0,73,-1,0,0],[3,25,6,0,8,58,-1,0,24],[31,40,8,0,6,65,-1,0,4240]],
  "rf":[[0,-2,0,0,500,1000,1200,0],[0,-2,0,0,500,1000,1200,0],[1028,3,0,0,500,1000,1200,0]],
  "st":{"cv":1.00,"ss":41,"cn":331,"rv":331.00,"ad":412,
@@ -46,21 +47,21 @@ monitor page shows a quota bar; leave it at 0 to hide the bar.
 ### Box list `b[i]`
 | Index | Meaning |
 |---|---|
-| 0 | Step number: `MachineState` for Box 1 and Box 3, `Box2State` for Box 2 (the numbers the S3 broadcasts; `js/names.js` has the names). 0 if the brain is not heard. |
+| 0 | Step number: `MachineState`, the same list for all three boxes since 2026-11-12 (the numbers the S3 broadcasts; `js/names.js` has the names). Before that Box 2 used its own `Box2State` list. 0 if the brain is not heard. |
 | 1 | Seconds left in the current step. |
 | 2 | Coins counted (the terminal's pulse counter, as the Control Center Home page shows). 0 if the terminal is not heard. |
-| 3 | Doors open, bit mask: 1 enclosure, 2 panel, 4 back, 8 side. Box 2 has no side door yet. 0 if the sensor board is not heard. |
+| 3 | Doors open, bit mask: 1 enclosure, 2 panel, 4 back, 8 side. Every box has the four door reeds (the side door too). 0 if the sensor board is not heard. |
 | 4 | Helmet ultrasonic distance in cm, 0 = no echo, **-1 = sensor board not heard**. The page says "inside" when 0 < cm < 15. |
 | 5 | **Main container** level 0-100 %, **-1 = unknown**. With the Refilling Station this slot is -1 and the page reads `rf` instead (the box's own container sensors are gone). Every box has one main container (one liquid, filled by the Refilling Station). Since 2026-10-23 the web page is built for this; the firmware (.ino files) is updated later. Firmware older than that sends the ALCOHOL container level here and no `t`, so the page shows that value as the main container and the tank as NOT KNOWN; Box 2 firmware of today sends -1. |
 | 6 | Reserved, send -1 (was the scented container level before 2026-10-23). |
 | 7 | Reserved, send 0 (was the water-sensor bit mask before 2026-10-23; the page no longer shows it). |
-| 8 | Relays that are ON now, bit mask in firmware relay order. Box 1 (A3): 0 enclosure lock, 1 panel lock, 2 back lock, 3 humidifier 1, 4 UV 1, 5 humidifier 2, 6 humidifier 3, 7 UV 2, 8 and 9 unused (the two drain pumps are gone from the design, today's firmware still has them), 10 side door lock, 11 coin power. Box 3 (B3): the same plus 12 heater. Box 2 (C2): 0 enclosure lock, 1 panel lock, 2 back lock, 3 heater, 4 UV, 5 fan. |
+| 8 | Relays that are ON now, bit mask in firmware relay order. The same 13 for ALL THREE boxes since 2026-11-12 (A3 / C3 / B3): 0 enclosure lock, 1 panel lock, 2 back lock, 3 humidifier 1, 4 UV 1, 5 humidifier 2, 6 humidifier 3, 7 UV 2, 8 and 9 unused (the two drain pumps are gone from the design; the relay board never drives them), 10 side door lock, 11 coin power, 12 heater. (Box 2 used to have 6 relays on C2: 0-2 locks, 3 heater, 4 UV, 5 fan; that is gone.) |
 
 Container percent: the S3 holds the LOW line (`alcLowCm`, `sctLowCm`) and the FULL line (`alcHighCm`, `sctHighCm`) of each box and re-broadcasts them
 (CMD_SET_CONFIG, LEVELS). The Online Server computes `percent = clamp(100 * (lowCm - cm) / (lowCm - highCm), 0, 100)`: 0 % = at the refill line, 100 % = full.
 
 ### Names on the web page (since 2026-10-24)
-The page shows plain names, the firmware keeps its codes: A1, B1, C1 = TFT Display; A2, B2 = Sensors; A3, B3 = Relay Controller; C2 = Sensors / Relay Controller;
+The page shows plain names, the firmware keeps its codes: A1, B1, C1 = TFT Display; A2, B2, C2 = Sensors; A3, B3, C3 = Relay Controller;
 S3A, S3B, S3C = Main Controller. (The Refilling Station, D1, is in the `n` flags and in `rf`.) The lock relays are called Enclosure, Panel, Back and Side lock, and the doors Enclosure, Panel, Back and Side.
 
 ### Refilling Station list `rf[i]` (Box 1, Box 2, Box 3)
@@ -69,7 +70,7 @@ S3A, S3B, S3C = Main Controller. (The Refilling Station, D1, is in the `n` flags
 | Index | Meaning |
 |---|---|
 | 0 | Raw water-level sensor value of that box's main container (0 to about 1200; the Refilling Station averages a few readings). |
-| 1 | State, worked out by the station from the box's own edges: **0 EMPTY** (raw 0), **1 LOW** (1 up to below the MID edge), **2 MID** (MID edge up to below the HIGH edge), **3 HIGH** (HIGH edge up to below the MAX edge), **4 MAX** (the MAX edge and above), **-1 unknown** (sensor fault), **-2 not watched** (added 2026-11-04: the station watches and refills Box 3 only for now, so Box 1 and Box 2 are `[0,-2,0,0,500,1000,1200,0]`; the page shows NOT WATCHED and raises no alert). EMPTY and LOW = the box offers DRYING only. |
+| 1 | State, worked out by the station from the box's own edges: **0 EMPTY** (raw 0), **1 LOW** (1 up to below the MID edge), **2 MID** (MID edge up to below the HIGH edge), **3 HIGH** (HIGH edge up to below the MAX edge), **4 MAX** (the MAX edge and above), **-1 unknown** (sensor fault), **-2 not watched** (added 2026-11-04: while the station watched Box 3 only, Box 1 and Box 2 were `[0,-2,0,0,500,1000,1200,0]`; since 2026-11-12 all three are watched, and -2 only appears if an entry of `WATCH_BOX` in the station firmware is set to false; the page then shows NOT WATCHED and raises no alert). EMPTY and LOW = the box offers DRYING only. |
 | 2 | Valve: 1 = this box's solenoid valve is open (refilling now), 0 = closed. |
 | 3 | Failed: 1 = the last refill failed (no rise in the level for 30 s when EMPTY or 5 s when LOW, or 3 minutes in total); stays 1 until a refill works. The station retries every 60 s. |
 | 4, 5, 6 | The box's MID, HIGH and MAX edge (defaults 500, 1000, 1200; calibrated per box on the LocalServer). The dial uses them so its colours always agree with the state. |
@@ -144,4 +145,4 @@ A customer can type a name or nickname (12 characters at most) on the card of a 
   to everybody who opens the page, so the page tells the customer to use a nickname.
 * **Cost:** a few Blynk messages per customer who adds a name (one to save, one to verify, one to clear), nothing for the others.
 * `js/config.js`: `names: false` hides the feature; `namesPin` chooses the datastream.
-| `n` | Characters, `1` = heard in the last 8 seconds, `0` = not heard. Order: A1, A2, A3, S3A, C1, C2, S3C, B1, B2, B3, S3B (the 11 box boards), then **D1 = the Refilling Station** (12 characters). Firmware older than 2026-11-03 sends 13 characters (ACS 1, ACS 2 at the end): the page then does not know the station (it ignores place 12 and 13 unless `rf` is present). |
+| `n` | Characters, `1` = heard in the last 8 seconds, `0` = not heard. Order: A1, A2, A3, S3A, C1, C2, S3C, B1, B2, B3, S3B (the 11 box boards), then **D1 = the Refilling Station**, then **C3 = Box 2's relay board** (13 characters; C3 was added 2026-11-12 at the end). A page / firmware of before 2026-11-12 knows 12: the 13th is simply not read. Firmware older than 2026-11-03 sends 13 characters (ACS 1, ACS 2 at the end): the page then does not know the station (it ignores place 12 and 13 unless `rf` is present). |

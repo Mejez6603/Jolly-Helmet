@@ -1,0 +1,32 @@
+LOCALSERVER - BACKING UP AND RESTORING THE MACHINE LOG                                     (2026-10-15)
+
+WHERE EVERYTHING LIVES (so you know what a "reset to 0" can and cannot take)
+  Totals on the Home page (users served, revenue, finished / cancelled counters), coin value, time zone, the booked-coin baselines
+      -> the board's NVS (small settings memory). Survives power cuts and normal uploads. Lost by "Erase all flash" or "Reset Stats".
+  The session log (every customer with date and time) and history.json
+      -> the FAT file system (the 9.9 MB "FATFS" partition). Survives power cuts and normal uploads with the same partition scheme. It is lost when the partition scheme
+         is changed / the flash is erased, or when a power cut damages the file system: the board then re-creates it EMPTY at the next start.
+         (Before 2026-10-15 that happened silently; now the Home page shows a red message, see below.)
+
+THE BACKUP = the CSV from  Settings > Session log & clock > "Download log (CSV)"
+  Columns: id, date, time, box, status, coins, money_php, minutes, unix_time, seconds     (unix_time + seconds are exact: a restore is not rounded to the minute)
+  The LAST line is  #integrity,<sha256>  = a check over every line above it. Do not delete it, do not open and save the file in a spreadsheet (that rewrites the lines).
+  Keep the downloaded files (one per week is plenty; the newest one is the one you need). A restore only brings back what was in the file.
+
+RESTORE  (Settings > Restore the machine log from a backup)
+  1. Choose the CSV, press "Restore from backup CSV", confirm.
+  2. The board checks the integrity line. A file that was edited by hand, saved again in a spreadsheet, cut short or not made by this log is REFUSED and nothing changes.
+  3. It MERGES: sessions that are on the board now stay; sessions of the file that are not there are added; sessions that are in both are not added twice.
+     So it also works after the board ran alone for a while and started a new log: nothing recorded since is lost.
+  4. The Home page totals are raised to at least what the rebuilt log says (never lowered).
+  5. Sessions that were saved before the clock was set ("no date yet") have no real time in the file and are skipped (the message says how many).
+  The result is shown under the button a few seconds after the upload.
+  Corrections never go through this door. A restore can only put back rows that an earlier download of THIS log contained. Anything the machines did not record is
+  entered in history.json (shown lighter, labelled "previous data collected by the team after the upgrade"), see HISTORY_FILE.txt.
+
+WHEN THE STORAGE WAS DAMAGED
+  The Home page shows a red message "The log storage was damaged and had to be re-created EMPTY at the last start". Open Settings and restore the last backup CSV;
+  push history.json again from the ESP32_ENTRY board (it keeps its own copy).
+
+TEST IT ONCE (so you know it works before you need it)
+  Download the log CSV  ->  note the numbers  ->  Reset Stats  ->  Restore from backup CSV with that same file  ->  the sessions and the totals come back.

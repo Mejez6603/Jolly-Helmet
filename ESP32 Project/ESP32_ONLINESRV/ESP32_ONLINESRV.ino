@@ -229,11 +229,11 @@ static void dayTick(const SnapAll& s) {
 // sets the starting point, so nothing is counted twice and a brain restart (counter back to 0) is ignored.
 // ---------------------------------------------------------------------
 static void usageTick(const SnapAll& s) {
-    const bool seen[3]    = { s.b[0].s3Seen, s.c.s3Seen, s.b[1].s3Seen };
-    const uint32_t seq[3] = { s.b[0].sessSeq, s.c.sessSeq, s.b[1].sessSeq };
+    const bool seen[3]    = { s.b[0].s3Seen, s.b[1].s3Seen, s.b[2].s3Seen };             // Box 1, Box 2, Box 3
+    const uint32_t seq[3] = { s.b[0].sessSeq, s.b[1].sessSeq, s.b[2].sessSeq };
     // Since 2026-10-13 the S3's session coin field also carries SESSION_CANCELLED_FLAG (bit 15 = the customer aborted mid-cycle): only the low 15 bits are coins.
     // An aborted session now counts here too (a session of that box, with the coins that customer paid).
-    const uint16_t cn[3]  = { (uint16_t)(s.b[0].sessCoins & ~SESSION_CANCELLED_FLAG), (uint16_t)(s.c.sessCoins & ~SESSION_CANCELLED_FLAG), (uint16_t)(s.b[1].sessCoins & ~SESSION_CANCELLED_FLAG) };
+    const uint16_t cn[3]  = { (uint16_t)(s.b[0].sessCoins & ~SESSION_CANCELLED_FLAG), (uint16_t)(s.b[1].sessCoins & ~SESSION_CANCELLED_FLAG), (uint16_t)(s.b[2].sessCoins & ~SESSION_CANCELLED_FLAG) };
     bool tv = timeValid();
     if (resetUsageReq) { resetUsageReq = false; memset(&use, 0, sizeof(use)); prefs.putBytes("usage", &use, sizeof(use)); useDirty = false; useLastSaveMs = millis(); }
     if (tv && use.since == 0) { use.since = (uint32_t)time(nullptr); useDirty = true; }
@@ -465,9 +465,10 @@ static void runBurst(bool isTest) {
 
             if (ok && c.extra) {                                                // optional single numbers for Blynk dashboards
                 int running = 0;
-                if (s.on[3]  && (s.b[0].s3State == STATE_CLEANING || s.b[0].s3State == STATE_DRYING || s.b[0].s3State == STATE_COOL_DOWN)) running++;
-                if (s.on[6]  && (s.c.s3State == B2_STATE_HEATING || s.c.s3State == B2_STATE_COOL_DOWN)) running++;
-                if (s.on[10] && (s.b[1].s3State == STATE_CLEANING || s.b[1].s3State == STATE_DRYING || s.b[1].s3State == STATE_COOL_DOWN)) running++;
+                for (int i = 0; i < 3; i++) {                                    // every box runs the same flow now
+                    uint8_t st3 = s.b[i].s3State;
+                    if (s.on[FLAG_S3[i]] && (st3 == STATE_CLEANING || st3 == STATE_DRYING || st3 == STATE_COOL_DOWN || st3 == STATE_AUTO_DRY)) running++;
+                }
                 int nAlerts = __builtin_popcount(alertMask);
                 float cv = s.s.seen ? s.s.p.coinValueX100 / 100.0f : 1.0f;
                 snprintf(path, sizeof(path), "/external/api/batch/update?token=%s&v1=%.2f&v2=%lu&v3=%d&v4=%d", c.token, (double)(s.s.seen ? s.s.p.totalCoins * cv : 0.0f),
@@ -560,7 +561,7 @@ static void apiStatus(AsyncWebServerRequest* r) {
     d["mq"]   = st.mq;
     unlock();
     JsonObject ra = d["radio"].to<JsonObject>();
-    { char nb[13]; for (int i = 0; i < 12; i++) nb[i] = s.on[i] ? '1' : '0'; nb[12] = '\0'; ra["n"] = nb; }        // A1 A2 A3 S3A C1 C2 S3C B1 B2 B3 S3B ACS1 ACS2
+    { char nb[FLAG_COUNT + 1]; for (int i = 0; i < FLAG_COUNT; i++) nb[i] = s.on[i] ? '1' : '0'; nb[FLAG_COUNT] = '\0'; ra["n"] = nb; }        // A1 A2 A3 S3A C1 C2 S3C B1 B2 B3 S3B REFILL C3
     ra["heard"] = snapHeardCount(s); ra["rs"] = s.rsHave ? (int)s.rs.rev : 0; ra["stats"] = s.s.seen ? 1 : 0; ra["statsAge"] = s.s.seen ? (int)((now - s.s.ms) / 1000UL) : -1;
     if (timeValid()) {
         time_t t = time(nullptr) + (long)(cfg.tz * 3600.0f); struct tm tmv; gmtime_r(&t, &tmv);

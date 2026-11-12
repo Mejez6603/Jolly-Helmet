@@ -1,4 +1,11 @@
 // =====================================================================
+// *** ONE PROGRAM FOR THE THREE RELAY BOARDS (2026-11-12) ***  ESP32_A3 (Box 1), ESP32_B3 (Box 3) and ESP32_C3 (Box 2, NEW) contain exactly this program; the only
+// file that differs is box_config.h (device IDs, the settings state tag, the flash namespace). Fix a bug here, copy the .ino to the other two folders (same text,
+// only the file name changes). The comments below were written for Box 3 and say B2 / B3 / S3B: in Box 1 read A2 / A3 / S3A, in Box 2 read C2 / C3 / S3C.
+// Every box has the same 13-channel relay board (12 outputs + the HEATER on GPIO26) with the same pin map. Box 1's A3 has no heater relay wired yet (GPIO26 just
+// drives nothing); Box 2's C3 is a new board - its heater relay replaces the old C2's GPIO18 heater, so check the wiring against the pin list below before powering loads.
+// =====================================================================
+// =====================================================================
 //  NODE B3 - BOX 3 RELAY CONTROLLER                       (ESP32, core 3.3.7)
 //  Created 2026-10-03 from Box 1's relay controller (ESP32_A3.ino). NOT YET FLASHED - bench-test first with the loads unplugged.
 //  2026-11-03: the two DRAIN PUMPS are gone from the design (a manual valve instead; their switching noise made random coin pulses). Mask bits 8 and 9
@@ -17,9 +24,9 @@
 //   3. S3B-LOSS WATCHDOG: no sign of S3B for 15 s -> everything is forced OFF (humidifiers, UV, HEATER, coin power,
 //      panel/back/side locks). The one exception: if a helmet is trapped in a closed enclosure, the ENCLOSURE lock is released
 //      (see below). Because B3 has no sensors, it listens to B2's broadcast report for the door and helmet.
-//   4. STATUS: broadcasts an A3StatusPacket (deviceID DEVICE_B3) once a second (applied mask + watchdog state).
+//   4. STATUS: broadcasts an A3StatusPacket (deviceID MY_ID) once a second (applied mask + watchdog state).
 //
-//  "Proof of life" from S3B = CMD_HEARTBEAT with subIndex DEVICE_S3B, or any command addressed to DEVICE_B3 (S3B re-sends the mask
+//  "Proof of life" from S3B = CMD_HEARTBEAT with subIndex MY_S3, or any command addressed to MY_ID (S3B re-sends the mask
 //  every ~2 s, so one lost heartbeat is harmless).
 //
 //  Trapped-helmet release (only while orphaned):
@@ -31,7 +38,7 @@
 //   - A solenoid is never held energized forever: UNLOCK_WINDOW_MS on, UNLOCK_REST_MS off, and at most UNLOCK_MAX_WINDOWS windows
 //         until the door has been seen open or S3B comes back.
 //
-//  DEPENDS ON: B2 (ESP32_B2.ino) broadcasting A2SensorPacket with deviceID DEVICE_B2 (doorEnclosure true = OPEN, usHelmetCm).
+//  DEPENDS ON: B2 (ESP32_B2.ino) broadcasting A2SensorPacket with deviceID MY_SENS (doorEnclosure true = OPEN, usHelmetCm).
 //  NOTE: pins 16/17 are unusable on ESP32-WROVER (PSRAM) - this board is a plain WROOM DevKit.
 // =====================================================================
 #include <WiFi.h>
@@ -39,6 +46,7 @@
 #include <esp_now.h>
 #include <Preferences.h>
 #include "Shared_Common.h"
+#include "box_config.h"   // which board this is (the ONLY file that differs between A3 / B3 / C3)
 
 // ---------------------------------------------------------------------
 // Relay pins - index = bit position in the mask (0-11 = A3RelayIndex, 12 = heater). Active-LOW: LOW = ON/energized.
@@ -134,7 +142,7 @@ void onDataRecv(const esp_now_recv_info_t *info, const uint8_t *incomingData, in
 
         // Broadcast heartbeat (targetDeviceID 0) - meant for every node, checked before the filter.
         if (cmd.commandID == CMD_HEARTBEAT) {
-            if (cmd.subIndex == DEVICE_S3B) {
+            if (cmd.subIndex == MY_S3) {
                 portENTER_CRITICAL(&rxMux);
                 lastSeenS3B = millis();
                 portEXIT_CRITICAL(&rxMux);
@@ -145,7 +153,7 @@ void onDataRecv(const esp_now_recv_info_t *info, const uint8_t *incomingData, in
         // S3B's settings list (every 2 s, broadcast, state 3 = Box 3's copy): subIndex 2 = SENSORS = "helmetCm,offlineSec". The first number is the LocalServer's
         // "helmet counts as inside under" - the watchdog must use the same cutoff as S3B.
         if (cmd.commandID == CMD_SET_CONFIG) {
-            if (cmd.targetDeviceID == 0 && cmd.state == 3 && cmd.subIndex == 2) {
+            if (cmd.targetDeviceID == 0 && cmd.state == BOX_TAG && cmd.subIndex == 2) {
                 cmd.payloadStr[sizeof(cmd.payloadStr) - 1] = '\0';
                 float v = strtof(cmd.payloadStr, nullptr);
                 if (v >= 1.0f && v <= 200.0f) {
@@ -157,7 +165,7 @@ void onDataRecv(const esp_now_recv_info_t *info, const uint8_t *incomingData, in
             return;
         }
 
-        if (cmd.targetDeviceID != DEVICE_B3) return; // traffic for another node
+        if (cmd.targetDeviceID != MY_ID) return; // traffic for another node
 
         if (cmd.commandID == CMD_SET_RELAY_MASK) {
             portENTER_CRITICAL(&rxMux);
@@ -182,7 +190,7 @@ void onDataRecv(const esp_now_recv_info_t *info, const uint8_t *incomingData, in
     if (len == (int)sizeof(A2SensorPacket)) {
         A2SensorPacket t;
         memcpy(&t, incomingData, sizeof(A2SensorPacket));
-        if (t.deviceID != DEVICE_B2) return;
+        if (t.deviceID != MY_SENS) return;
         portENTER_CRITICAL(&rxMux);
         b2DoorOpen = t.doorEnclosure;
         b2Helmet   = t.usHelmetCm;
@@ -200,7 +208,7 @@ void driveRelay(uint8_t index, bool on) {
     digitalWrite(B3_PINS[index], on ? RELAY_ACTIVE : RELAY_INACTIVE);
     if (on) appliedMask = (uint16_t)(appliedMask | A3_BIT(index));
     else    appliedMask = (uint16_t)(appliedMask & (uint16_t)(~A3_BIT(index)));
-    Serial.printf("[B3] %-20s (GPIO %2d) -> %s\n", B3_NAMES[index], B3_PINS[index], on ? "ON" : "OFF");
+    Serial.printf("[" NODE_NAME "] %-20s (GPIO %2d) -> %s\n", B3_NAMES[index], B3_PINS[index], on ? "ON" : "OFF");
 }
 
 // Turn-offs happen immediately; turn-ons one at a time, RELAY_ON_STAGGER_MS apart, lowest bit first
@@ -243,14 +251,14 @@ void setup() {
     Serial.begin(115200);
     delay(100);
     Serial.println("\n=======================================================");
-    Serial.println("   NODE B3: BOX 3 RELAY CONTROLLER (CORE 3.3.7)");
+    Serial.println("   NODE " NODE_NAME ": " BOX_NAME " RELAY CONTROLLER (CORE 3.3.7)");
     Serial.println("=======================================================");
-    Serial.println("[B3] RELAYS: all 13 outputs (incl. the HEATER on GPIO26; 8 and 9 are never driven) forced HIGH (OFF / locked) before anything else.");
+    Serial.println("[" NODE_NAME "] RELAYS: all 13 outputs (incl. the HEATER on GPIO26; 8 and 9 are never driven) forced HIGH (OFF / locked) before anything else.");
 
-    prefs.begin("b3_nvs", false);
+    prefs.begin(BOX_NVS, false);
     helmetCm = prefs.getFloat("helm_cm", HELMET_DEFAULT_CM);
     if (!(helmetCm >= 1.0f && helmetCm <= 200.0f)) helmetCm = HELMET_DEFAULT_CM;
-    Serial.printf("[B3] Helmet counts as inside under %.1f cm (the LocalServer value S3B last told us; default %.0f).\n", (double)helmetCm, (double)HELMET_DEFAULT_CM);
+    Serial.printf("[" NODE_NAME "] Helmet counts as inside under %.1f cm (the LocalServer value " S3_NAME " last told us; default %.0f).\n", (double)helmetCm, (double)HELMET_DEFAULT_CM);
 
     // 2. Wi-Fi channel 1 + ESP-NOW broadcast peer - identical to the other nodes.
     WiFi.mode(WIFI_STA);
@@ -259,7 +267,7 @@ void setup() {
     esp_wifi_set_channel(ESPNOW_WIFI_CHANNEL, WIFI_SECOND_CHAN_NONE);
 
     if (esp_now_init() != ESP_OK) {
-        Serial.println("[B3] ESP-NOW: init failed - restarting in 3 s (relays stay OFF).");
+        Serial.println("[" NODE_NAME "] ESP-NOW: init failed - restarting in 3 s (relays stay OFF).");
         delay(3000);
         ESP.restart();
     }
@@ -272,13 +280,13 @@ void setup() {
     peerInfo.channel = ESPNOW_WIFI_CHANNEL;
     peerInfo.encrypt = false;
     esp_now_add_peer(&peerInfo);
-    Serial.println("[B3] ESP-NOW: channel 1 broadcast peer registered.");
+    Serial.println("[" NODE_NAME "] ESP-NOW: channel 1 broadcast peer registered.");
 
     // S3B gets the full 15 s from power-up to introduce itself before the watchdog may fire.
     portENTER_CRITICAL(&rxMux);
     lastSeenS3B = millis();
     portEXIT_CRITICAL(&rxMux);
-    Serial.println("[B3] READY - waiting for S3B (CMD_SET_RELAY_MASK / heartbeat).");
+    Serial.println("[" NODE_NAME "] READY - waiting for " S3_NAME " (CMD_SET_RELAY_MASK / heartbeat).");
 }
 
 void loop() {
@@ -299,7 +307,7 @@ void loop() {
     if (heardCm >= 1.0f && fabsf(heardCm - helmetCm) > 0.04f) {     // the LocalServer value changed: adopt it, keep it through a power cut
         helmetCm = heardCm;
         prefs.putFloat("helm_cm", helmetCm);
-        Serial.printf("[B3] Helmet cutoff is now %.1f cm (from the LocalServer via S3B).\n", (double)helmetCm);
+        Serial.printf("[" NODE_NAME "] Helmet cutoff is now %.1f cm (from the LocalServer via " S3_NAME ").\n", (double)helmetCm);
     }
     // millis() is read AFTER the snapshot on purpose: every timestamp above is then <= now, so the
     // unsigned subtractions below can never wrap into a huge "age" (the race A1/A2 had to fix).
@@ -315,11 +323,11 @@ void loop() {
         portENTER_CRITICAL(&rxMux);
         cmdMask = 0;
         portEXIT_CRITICAL(&rxMux);
-        Serial.println("[B3] WATCHDOG: no sign of S3B for 15 s -> forcing all outputs OFF (heater included).");
+        Serial.println("[" NODE_NAME "] WATCHDOG: no sign of " S3_NAME " for 15 s -> forcing all outputs OFF (heater included).");
     } else if (!orphanedNow && orphaned) {
         orphaned = false;
         resetWatchdogLock();
-        Serial.println("[B3] WATCHDOG: S3B is back - normal operation (waiting for a fresh relay mask).");
+        Serial.println("[" NODE_NAME "] WATCHDOG: " S3_NAME " is back - normal operation (waiting for a fresh relay mask).");
     }
 
     // ---- 3. B2 door/helmet ticks (B2 reports once a second) ----
@@ -345,11 +353,11 @@ void loop() {
                 wdLockOn      = false;       // door confirmed open - stop energizing the solenoid
                 wdWindows     = 0;           // a later re-closed door with the helmet still in = new episode
                 wdRestUntilMs = now;
-                Serial.println("[B3] WATCHDOG: door confirmed open - releasing the enclosure lock.");
+                Serial.println("[" NODE_NAME "] WATCHDOG: door confirmed open - releasing the enclosure lock.");
             } else if (now - wdLockSinceMs >= wdWindowMs) {
                 wdLockOn      = false;       // cap reached - let the coil rest
                 wdRestUntilMs = now + UNLOCK_REST_MS;
-                Serial.println("[B3] WATCHDOG: unlock window used up - resting the solenoid.");
+                Serial.println("[" NODE_NAME "] WATCHDOG: unlock window used up - resting the solenoid.");
             }
         } else if (now >= wdRestUntilMs) {
             bool want = false;
@@ -365,7 +373,7 @@ void loop() {
                 wdLockSinceMs  = now;
                 wdWindowMs     = b2Known ? UNLOCK_WINDOW_MS : UNLOCK_BLIND_WINDOW_MS;
                 wdWindows++;
-                Serial.printf("[B3] WATCHDOG: enclosure UNLOCKED for a possibly trapped helmet (window %u, B2 %s).\n",
+                Serial.printf("[" NODE_NAME "] WATCHDOG: enclosure UNLOCKED for a possibly trapped helmet (window %u, " SENS_NAME " %s).\n",
                               (unsigned)wdWindows, b2Known ? "sees door shut + helmet inside" : "unknown");
             }
         }
@@ -382,7 +390,7 @@ void loop() {
         lastStatusMs = now;
         A3StatusPacket st;
         memset(&st, 0, sizeof(st));
-        st.deviceID      = DEVICE_B3;
+        st.deviceID      = MY_ID;
         st.relayMask     = appliedMask;
         st.orphaned      = orphaned;
         st.watchdogState = !orphaned ? 0 : (wdLockOn ? 2 : 1);
@@ -390,7 +398,7 @@ void loop() {
     }
     if (now - lastSummaryMs >= SERIAL_SUMMARY_MS) {
         lastSummaryMs = now;
-        Serial.printf("[B3] mask applied=0x%04X wanted=0x%04X | S3B age %lu ms%s | B2 %s door=%s helmet=%.1f cm (inside under %.1f)\n",
+        Serial.printf("[" NODE_NAME "] mask applied=0x%04X wanted=0x%04X | " S3_NAME " age %lu ms%s | " SENS_NAME " %s door=%s helmet=%.1f cm (inside under %.1f)\n",
                       (unsigned)appliedMask, (unsigned)wantMask, (unsigned long)(now - lastS3B),
                       orphaned ? " (ORPHANED)" : "",
                       b2Known ? "ok" : "silent", doorOpen ? "OPEN" : "CLOSED", (double)helmet, (double)helmetCm);

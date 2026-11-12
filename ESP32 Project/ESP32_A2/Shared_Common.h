@@ -35,11 +35,19 @@ enum DeviceID : uint8_t {
     // --- 2026-11-03: the REFILLING STATION ("D1", an ESP32-WROOM with 3 water-level sensors and 3 normally closed solenoid valves, one pair per box)
     // replaces ACS 1 and ACS 2 (DEVICE_ACS / DEVICE_ACS2 stay here until the ACS firmware is removed everywhere). It works ALONE: it opens a box's valve
     // when that box's container is EMPTY or LOW and tells everybody the result in a RefillStatusPacket; the boxes never ask it for anything. ---
-    DEVICE_REFILL = 14
+    DEVICE_REFILL = 14,
+    // --- 2026-11-12: BOX 1 AND BOX 2 ARE NOW BUILT LIKE BOX 3 (same main-controller program, same 13-channel relay board, same sensor board, same terminal).
+    // The three boxes use these ID sets:  Box 1 = S3A(6) / A1(1) terminal / A2(2) sensors / A3(8) relays;  Box 2 = S3C(7) / C1(4) terminal / C2(5) sensors / C3(15) relays;
+    // Box 3 = S3B(12) / B1(9) terminal / B2(10) sensors / B3(11) relays.  C2 used to be Box 2's sensors AND relays in one board (TelemetryPacket); it is now sensors only
+    // (A2SensorPacket with deviceID = DEVICE_C2) and the relays moved to the NEW board C3 (A3StatusPacket with deviceID = DEVICE_C3), exactly like B2 / B3. ---
+    DEVICE_C3     = 15  // Box 2 relay controller (13 channels incl. the heater, same pins as B3)
 };
 
-// Box 2's state machine - shared here (not Master-local) so both Node S3C (which runs it)
-// and Local Server (which just displays it, via BoxStatusPacket) can name its states.
+// *** SUPERSEDED 2026-11-12: Box 2 no longer has its own state machine. S3C runs the same program as S3A and S3B and numbers its steps with MachineState
+// (STATE_*), like every other box, so the LocalServer, the Online Server and the web page use ONE list of step names. Nothing sends or reads Box2State any more;
+// the enum below stays only so old notes and archived sketches still make sense. ***
+// Box 2's old state machine - shared here (not Master-local) so both Node S3C (which ran it)
+// and Local Server (which just displayed it, via BoxStatusPacket) could name its states.
 enum Box2State : uint8_t {
     B2_STATE_IDLE           = 0, // SUPERSEDED 2026-09-14 by the TAPS/WELCOME/.../INSERT_COIN intro
                                   // sequence below - nothing transitions into this anymore (kept
@@ -178,6 +186,10 @@ enum CommandOpcode : uint8_t {
                                  //          switches, start/end part lengths of each, and 6 relay patterns each incl. the heater),
                                  //          4 DRYING (1 number: coolDownSec). S3B re-broadcasts them as CMD_SET_CONFIG (target 0)
                                  //          with state = 3.
+                                 // *** 2026-11-12: S3A (Box 1) and S3C (Box 2) now run the SAME program and the SAME settings protocol as S3B (the NEW Box 3 list,
+                                 //     not the old levels / phases / heat lists above): subIndex 1 RULES `rateCoins,rateValue,rateUnitMin,maxCoins`, 2 SENSORS
+                                 //     `helmetCm,offlineSec`, 3 AUTO-DRY `autoDrySec,heaterOffTailSec`, 4 DRYING `coolDownSec`, 5 refresh masks, 6 auto refresh, 7 beep.
+                                 //     Each re-broadcasts them as CMD_SET_CONFIG (target 0) with its own state tag: Box 1 = 0, Box 2 = 2, Box 3 = 3 (4 = the Refilling Station). ***
     CMD_HEARTBEAT         = 12, // Broadcast every ~1s by Master AND by each S3 host (S3A/S3C) so
                                  // every node can independently tell whether it's lost contact
                                  // with EITHER one - subIndex carries the sender's own DeviceID
@@ -517,7 +529,7 @@ struct HubStatsPacket {
 // cumulative and kept in the S3's flash, so a lost packet changes nothing: the LocalServer books the difference to the last value it saw
 // (same idea as the old raw pulse counter, but it can never contain noise, and it has no per-session reset). Box 2 does not send it.
 struct CoinBookPacket {
-    uint8_t  deviceID;          // DEVICE_S3A or DEVICE_S3B
+    uint8_t  deviceID;          // DEVICE_S3A, DEVICE_S3B or DEVICE_S3C (all three boxes since 2026-11-12)
     uint8_t  magic;             // COINBOOK_MAGIC
     uint32_t bookedCoins;       // cumulative, never reset by a session
     uint16_t seq;               // +1 on every broadcast
